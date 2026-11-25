@@ -9,7 +9,7 @@
  */
 
 import { transpileSwfToAst, type SwfTranspileResult } from '../../utils/swfAstParser';
-import { buildFlashArcadeSampleSwf, buildFlashPendulumSampleSwf } from '../../utils/swfSampleBuilder';
+import { buildFlashArcadeSampleSwf, buildFlashPacmanSampleSwf, buildFlashPendulumSampleSwf } from '../../utils/swfSampleBuilder';
 import {
   distillSwfStatesToNativeCartridge,
   generateEcoCheckpoints,
@@ -541,6 +541,12 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
   samplesWrap.appendChild(sampleLabel);
 
   const samples = [
+    {
+      id: 'pacman',
+      title: 'Pac-Man Arcade (pacman.swf)',
+      desc: 'Live binary SWF v8 Pac-Man with chomping sprite, Arrow/WASD steering, GlowFilter walls/ghosts, PCM waka/power Web Audio, Color.setRGB frightened ghosts, and editable player input.',
+      mockBytes: () => buildFlashPacmanSampleSwf(),
+    },
     {
       id: 'flash-arcade-target',
       title: 'Flash AVM1 Arcade Target',

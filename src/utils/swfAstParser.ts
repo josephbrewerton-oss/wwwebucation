@@ -9,6 +9,47 @@
  * and modernize them into 0-cloud, zero-battery-drain, accessible 60 FPS vector components.
  */
 
+import {
+  parseDefineSoundTag,
+  parseStartSoundTag,
+  parseSwfBitmapTag,
+  type SwfSoundDef,
+  type SwfStartSoundEvent,
+  type SwfBitmapDef,
+} from './swfMediaDecoders';
+
+export interface SwfSurfaceFilter {
+  /** 'ds'=DropShadow, 'bl'=Blur, 'gl'=Glow, 'cm'=ColorMatrix */
+  t: 'ds' | 'bl' | 'gl' | 'cm';
+  c?: string;
+  bx?: number;
+  by?: number;
+  ang?: number;
+  d?: number;
+  s?: number;
+  m?: number[];
+}
+
+export interface SwfGradientDef {
+  id: string;
+  /** 'l'=linear, 'r'=radial */
+  t: 'l' | 'r';
+  m: number[];
+  st: Array<[number, string]>;
+  fp?: number;
+}
+
+export interface SwfBitmapPatternDef {
+  id: string;
+  b: number;
+  m: number[];
+}
+
+interface SwfFillDefsCollector {
+  gradients: SwfGradientDef[];
+  patterns: SwfBitmapPatternDef[];
+}
+
 export interface SwfMetadata {
   signature: 'FWS' | 'CWS' | 'ZWS' | 'UNKNOWN';
   version: number;
@@ -69,6 +110,10 @@ class BitReader {
 
   get length(): number {
     return this.buffer.length;
+  }
+
+  get bytes(): Uint8Array {
+    return this.buffer;
   }
 
   get offset(): number {
@@ -559,7 +604,11 @@ function chainStrokeEdges(rawEdges: SwfDirectedEdge[]): string {
   return subPaths.join(' ');
 }
 
-function readFillStyle(reader: BitReader, tagVersion: number): string {
+function readFillStyle(
+  reader: BitReader,
+  tagVersion: number,
+  defsCollector?: SwfFillDefsCollector
+): string {
   const fillType = reader.readUI8();
   const hasAlpha = tagVersion >= 3;
   if (fillType === 0x00) {
@@ -567,27 +616,69 @@ function readFillStyle(reader: BitReader, tagVersion: number): string {
     return reader.readRGBA(hasAlpha);
   } else if (fillType === 0x10 || fillType === 0x12 || fillType === 0x13) {
     // Linear (0x10), radial (0x12), or focal radial (0x13) gradient
-    reader.readMatrix();
+    const mat = reader.readMatrix();
     const numGradients = reader.readUI8() & 0x0F;
     let firstColor = '#38bdf8';
+    const stops: Array<[number, string]> = [];
     for (let g = 0; g < numGradients; g++) {
-      reader.readUI8(); // ratio
+      const ratio = reader.readUI8();
       const col = reader.readRGBA(hasAlpha);
       if (g === 0) firstColor = col;
+      stops.push([Number((ratio / 255).toFixed(3)), col]);
     }
+    let focalPoint: number | undefined;
     if (fillType === 0x13) {
-      reader.readSI16(); // FocalPoint (FIXED8) in SWF 8+ / DefineShape4
+      focalPoint = Number((reader.readSI16() / 256).toFixed(3)); // FocalPoint (FIXED8) in SWF 8+ / DefineShape4
+    }
+    if (defsCollector && stops.length >= 2) {
+      const gid = `swf-g-${defsCollector.gradients.length}`;
+      const gDef: SwfGradientDef = {
+        id: gid,
+        t: fillType === 0x10 ? 'l' : 'r',
+        m: [
+          Number(mat.scaleX.toFixed(4)),
+          Number(mat.rotateSkew0.toFixed(4)),
+          Number(mat.rotateSkew1.toFixed(4)),
+          Number(mat.scaleY.toFixed(4)),
+          Number(mat.transX.toFixed(2)),
+          Number(mat.transY.toFixed(2)),
+        ],
+        st: stops,
+      };
+      if (focalPoint !== undefined && Math.abs(focalPoint) > 0.001) gDef.fp = focalPoint;
+      defsCollector.gradients.push(gDef);
+      return `url(#${gid})`;
     }
     return firstColor;
   } else {
     // Pattern or bitmap fill (0x40-0x43)
-    reader.readUI16();
-    reader.readMatrix();
+    const bitmapId = reader.readUI16();
+    const mat = reader.readMatrix();
+    if (defsCollector && bitmapId !== 0xFFFF && bitmapId > 0) {
+      const pid = `swf-p-${defsCollector.patterns.length}`;
+      defsCollector.patterns.push({
+        id: pid,
+        b: bitmapId,
+        m: [
+          Number((mat.scaleX / 20).toFixed(4)),
+          Number((mat.rotateSkew0 / 20).toFixed(4)),
+          Number((mat.rotateSkew1 / 20).toFixed(4)),
+          Number((mat.scaleY / 20).toFixed(4)),
+          Number(mat.transX.toFixed(2)),
+          Number(mat.transY.toFixed(2)),
+        ],
+      });
+      return `url(#${pid})`;
+    }
     return '#6366f1';
   }
 }
 
-function readFillStyleArray(reader: BitReader, tagVersion: number): string[] {
+function readFillStyleArray(
+  reader: BitReader,
+  tagVersion: number,
+  defsCollector?: SwfFillDefsCollector
+): string[] {
   reader.syncBits();
   let fillCount = reader.readUI8();
   if (fillCount === 0xFF && tagVersion >= 2) {
@@ -595,7 +686,7 @@ function readFillStyleArray(reader: BitReader, tagVersion: number): string[] {
   }
   const fillStyles: string[] = ['none'];
   for (let f = 0; f < fillCount && reader.offset < reader.length; f++) {
-    fillStyles.push(readFillStyle(reader, tagVersion));
+    fillStyles.push(readFillStyle(reader, tagVersion, defsCollector));
   }
   return fillStyles;
 }
@@ -646,7 +737,8 @@ function parseSwfShape(
   reader: BitReader,
   shapeId: number,
   tagVersion: number,
-  tagEndOffset?: number
+  tagEndOffset?: number,
+  defsCollector?: SwfFillDefsCollector
 ): { id: string; charId: number; svg: string; primitives?: SwfShapePrimitive[]; bbox: { x: number; y: number; w: number; h: number } } {
   const shapeBounds = reader.readRect();
   if (tagVersion === 4) {
@@ -655,7 +747,7 @@ function parseSwfShape(
   }
   reader.syncBits();
 
-  const fillStyles = readFillStyleArray(reader, tagVersion);
+  const fillStyles = readFillStyleArray(reader, tagVersion, defsCollector);
   const lineStyles = readLineStyleArray(reader, tagVersion);
 
   reader.syncBits();
@@ -667,6 +759,7 @@ function parseSwfShape(
     lineStyles,
     tagVersion,
     endOffset: tagEndOffset,
+    defsCollector,
   });
   reader.syncBits();
 
@@ -695,6 +788,7 @@ interface ParseShapeRecordsOptions {
   initialX?: number;
   initialY?: number;
   endOffset?: number;
+  defsCollector?: SwfFillDefsCollector;
 }
 
 /**
@@ -788,7 +882,7 @@ function parseShapeRecords(
         // In-place StateNewStyles (DefineShape2 / DefineShape3 / DefineShape4)
         flushStyleBuckets();
         reader.syncBits();
-        curFillStyles = readFillStyleArray(reader, tagVersion);
+        curFillStyles = readFillStyleArray(reader, tagVersion, options.defsCollector);
         curLineStyles = readLineStyleArray(reader, tagVersion);
         reader.syncBits();
         curNumFillBits = reader.readUBits(4);
@@ -1064,6 +1158,11 @@ export interface SwfEditTextDef {
   varName: string;
   text: string;
   isHtml: boolean;
+  editable?: boolean;
+  password?: boolean;
+  multiline?: boolean;
+  border?: boolean;
+  maxLength?: number;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -1103,6 +1202,7 @@ export interface SwfDisplayEntry {
   characterId: number;
   matrix?: SwfMatrix | null;
   cxform?: SwfColorTransform | null;
+  filters?: SwfSurfaceFilter[];
   ratio?: number;
   name?: string;
   clipDepth?: number;
@@ -1120,6 +1220,7 @@ export interface SwfSpriteDefinition {
   frames: SwfFrameSnapshot[];
   labels: { frame: number; name: string }[];
   actions: SwfActionRecord[];
+  sounds?: SwfStartSoundEvent[];
   hasTimelineMotion: boolean;
 }
 
@@ -1334,41 +1435,80 @@ function avm1ValToRawLiteral(val: Avm1StackVal | undefined): any {
 }
 
 /**
- * Skips Flash 8+ SurfaceFilterList cleanly without bitstream drift (used by DefineButton2 and PlaceObject3).
+ * Parses Flash 8+ SurfaceFilterList into pure W3C SVG filter descriptors (DropShadow, Blur, Glow, ColorMatrix)
+ * while skipping unsupported filter types cleanly without bitstream drift.
  */
-function skipSwfFilterList(reader: BitReader, tagEndOffset: number): void {
-  if (reader.offset >= tagEndOffset) return;
+function parseSwfFilterList(reader: BitReader, tagEndOffset: number): SwfSurfaceFilter[] {
+  const filters: SwfSurfaceFilter[] = [];
+  if (reader.offset >= tagEndOffset) return filters;
   const count = reader.readUI8();
+  const readFixed16 = () => {
+    const lo = reader.readUI16();
+    const hi = reader.readSI16();
+    return Number((hi + lo / 65536).toFixed(2));
+  };
+  const readFixed8 = () => {
+    const v = reader.readSI16();
+    return Number((v / 256).toFixed(2));
+  };
+  const readF32 = () => {
+    const b = reader.readBytes(4);
+    const dv = new DataView(b.buffer, b.byteOffset, 4);
+    return Number(dv.getFloat32(0, true).toFixed(4));
+  };
+
   for (let i = 0; i < count && reader.offset < tagEndOffset; i++) {
     const filterId = reader.readUI8();
-    if (filterId === 0) {
+    if (filterId === 0 && reader.offset + 23 <= tagEndOffset) {
       // DropShadowFilter: RGBA(4)+BlurX(4)+BlurY(4)+Angle(4)+Dist(4)+Strength(2)+Flags(1) = 23
-      reader.readBytes(23);
-    } else if (filterId === 1) {
+      const c = reader.readRGBA(true);
+      const bx = Math.max(0, readFixed16());
+      const by = Math.max(0, readFixed16());
+      const ang = readFixed16();
+      const d = readFixed16();
+      const s = readFixed8();
+      reader.readUI8(); // flags
+      filters.push({ t: 'ds', c, bx, by, ang, d, s });
+    } else if (filterId === 1 && reader.offset + 9 <= tagEndOffset) {
       // BlurFilter: BlurX(4)+BlurY(4)+Flags(1) = 9
-      reader.readBytes(9);
-    } else if (filterId === 2) {
+      const bx = Math.max(0, readFixed16());
+      const by = Math.max(0, readFixed16());
+      reader.readUI8(); // flags
+      filters.push({ t: 'bl', bx, by });
+    } else if (filterId === 2 && reader.offset + 15 <= tagEndOffset) {
       // GlowFilter: RGBA(4)+BlurX(4)+BlurY(4)+Strength(2)+Flags(1) = 15
-      reader.readBytes(15);
+      const c = reader.readRGBA(true);
+      const bx = Math.max(0, readFixed16());
+      const by = Math.max(0, readFixed16());
+      const s = readFixed8();
+      reader.readUI8(); // flags
+      filters.push({ t: 'gl', c, bx, by, s });
     } else if (filterId === 3) {
-      // BevelFilter: RGBA(4)+RGBA(4)+BlurX(4)+BlurY(4)+Angle(4)+Dist(4)+Strength(2)+Flags(1) = 27
+      // BevelFilter: 27 bytes
       reader.readBytes(27);
     } else if (filterId === 4 || filterId === 7) {
-      // GradientGlowFilter / GradientBevelFilter: NumColors(1) + colors(N*4) + ratios(N) + 19 bytes
+      // GradientGlowFilter / GradientBevelFilter
       const numColors = reader.readUI8();
       reader.readBytes(numColors * 5 + 19);
     } else if (filterId === 5) {
-      // ConvolutionFilter: MatrixX(1)+MatrixY(1)+Divisor(4)+Bias(4)+Matrix(X*Y*4)+DefaultColor(4)+Flags(1)
+      // ConvolutionFilter
       const mx = reader.readUI8();
       const my = reader.readUI8();
       reader.readBytes(8 + mx * my * 4 + 5);
-    } else if (filterId === 6) {
-      // ColorMatrixFilter: 20 float32 = 80 bytes
-      reader.readBytes(80);
+    } else if (filterId === 6 && reader.offset + 80 <= tagEndOffset) {
+      // ColorMatrixFilter: 20 float32 values
+      const m: number[] = [];
+      for (let k = 0; k < 20; k++) m.push(readF32());
+      filters.push({ t: 'cm', m });
     } else {
       break;
     }
   }
+  return filters;
+}
+
+function skipSwfFilterList(reader: BitReader, tagEndOffset: number): void {
+  parseSwfFilterList(reader, tagEndOffset);
 }
 
 let _activeSymbolicLiftRemaining = 25000;
@@ -2287,6 +2427,7 @@ function parseDefineSprite(
   const frames: SwfFrameSnapshot[] = [];
   const labels: { frame: number; name: string }[] = [];
   const actions: SwfActionRecord[] = [];
+  const sounds: SwfStartSoundEvent[] = [];
   const activeDisplay = new Map<number, SwfDisplayEntry>();
   let currentFrame = 1;
   let hasTimelineMotion = false;
@@ -2317,6 +2458,9 @@ function parseDefineSprite(
     } else if (tagType === 43) {
       const lbl = reader.readString();
       if (lbl) labels.push({ frame: currentFrame, name: lbl });
+    } else if (tagType === 15) {
+      const ev = parseStartSoundTag(reader.bytes, reader.offset, nextTagOffset, currentFrame);
+      if (ev) sounds.push(ev);
     } else if (tagType === 12 || tagType === 59) {
       if (tagType === 59) reader.readUI16(); // DoInitAction SpriteID
       actions.push(parseDoAction(reader, nextTagOffset, currentFrame, { fileLength }));
@@ -2353,6 +2497,7 @@ function parseDefineSprite(
     frames,
     labels,
     actions,
+    sounds: sounds.length > 0 ? sounds : undefined,
     hasTimelineMotion: hasTimelineMotion || frames.length > 1,
   };
 }
@@ -2363,6 +2508,7 @@ interface ParsedPlaceTag {
   characterId?: number;
   matrix?: SwfMatrix;
   cxform?: SwfColorTransform;
+  filters?: SwfSurfaceFilter[];
   ratio?: number;
   name?: string;
   clipDepth?: number;
@@ -2441,7 +2587,7 @@ function parsePlaceObjectTag(
     const ratio = hasRatio ? reader.readUI16() : undefined;
     const name = hasName ? reader.readString() : undefined;
     const clipDepth = hasClipDepth ? reader.readUI16() : undefined;
-    if (hasFilterList) skipSwfFilterList(reader, tagEndOffset);
+    const filters = hasFilterList ? parseSwfFilterList(reader, tagEndOffset) : undefined;
     if (hasBlendMode) reader.readUI8();
     if (hasCacheAsBitmap) reader.readUI8();
     if (hasVisible) reader.readUI8();
@@ -2449,7 +2595,18 @@ function parsePlaceObjectTag(
     const clipPrefix = name ? sanitizeAstIdent(name) : `depth_${depth}`;
     const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix, fileLength) : undefined;
 
-    return { depth, hasMove, characterId, matrix, cxform, ratio, name, clipDepth, clipActions };
+    return {
+      depth,
+      hasMove,
+      characterId,
+      matrix,
+      cxform,
+      filters: filters && filters.length > 0 ? filters : undefined,
+      ratio,
+      name,
+      clipDepth,
+      clipActions,
+    };
   }
 
   return null;
@@ -2463,6 +2620,7 @@ function applyPlaceToDisplayMap(activeDisplay: Map<number, SwfDisplayEntry>, pla
       characterId: placed.characterId !== undefined ? placed.characterId : existing.characterId,
       matrix: placed.matrix !== undefined ? placed.matrix : existing.matrix,
       cxform: placed.cxform !== undefined ? placed.cxform : existing.cxform,
+      filters: placed.filters !== undefined ? placed.filters : existing.filters,
       ratio: placed.ratio !== undefined ? placed.ratio : existing.ratio,
       name: placed.name !== undefined ? placed.name : existing.name,
       clipDepth: placed.clipDepth !== undefined ? placed.clipDepth : existing.clipDepth,
@@ -2474,6 +2632,7 @@ function applyPlaceToDisplayMap(activeDisplay: Map<number, SwfDisplayEntry>, pla
       characterId: placed.characterId,
       matrix: placed.matrix || null,
       cxform: placed.cxform || null,
+      filters: placed.filters,
       ratio: placed.ratio,
       name: placed.name,
       clipDepth: placed.clipDepth,
@@ -2577,6 +2736,12 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const sprites = new Map<number, SwfSpriteDefinition>();
     const buttons = new Map<number, SwfButtonDefinition>();
     const editTexts = new Map<number, SwfEditTextDef>();
+    const sounds = new Map<number, SwfSoundDef>();
+    const startSounds: SwfStartSoundEvent[] = [];
+    const bitmaps = new Map<number, SwfBitmapDef>();
+    const fillDefsCollector: SwfFillDefsCollector = { gradients: [], patterns: [] };
+    let totalSoundBytes = 0;
+    let totalBitmapBytes = 0;
     const exportsMap: Record<string, number> = {};
     const initActions: { c: number; b64: string }[] = [];
     const actionBlocks: SwfActionRecord[] = [];
@@ -2610,11 +2775,45 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         break;
       } else if (tagType === 9) {
         backgroundColor = reader.readRGBA(false);
+      } else if (tagType === 14) {
+        // DefineSound (Tag 14): PCM / SWF IMA ADPCM / MP3 audio asset
+        if (totalSoundBytes < 3 * 1024 * 1024) {
+          try {
+            const snd = parseDefineSoundTag(payload, reader.offset, nextTagOffset);
+            if (snd) {
+              sounds.set(snd.id, snd);
+              totalSoundBytes += Math.ceil((snd.b64.length * 3) / 4);
+            }
+          } catch {}
+        }
+      } else if (tagType === 15) {
+        // StartSound (Tag 15): timeline sound trigger
+        try {
+          const ev = parseStartSoundTag(payload, reader.offset, nextTagOffset, currentFrame);
+          if (ev) startSounds.push(ev);
+        } catch {}
+      } else if (tagType === 20 || tagType === 21 || tagType === 35 || tagType === 36) {
+        // DefineBitsLossless (20), DefineBitsJPEG2 (21), DefineBitsJPEG3 (35), DefineBitsLossless2 (36)
+        if (totalBitmapBytes < 2 * 1024 * 1024) {
+          try {
+            const bmp = await parseSwfBitmapTag(
+              tagType,
+              payload,
+              reader.offset,
+              nextTagOffset,
+              decompressSwfPayload
+            );
+            if (bmp) {
+              bitmaps.set(bmp.id, bmp);
+              totalBitmapBytes += bmp.uri.length;
+            }
+          } catch {}
+        }
       } else if (tagType === 2 || tagType === 22 || tagType === 32 || tagType === 83) {
         const shapeId = reader.readUI16();
         const tagVer = tagType === 2 ? 1 : (tagType === 22 ? 2 : (tagType === 32 ? 3 : 4));
         try {
-          const shape = parseSwfShape(reader, shapeId, tagVer, nextTagOffset);
+          const shape = parseSwfShape(reader, shapeId, tagVer, nextTagOffset, fillDefsCollector);
           shapes.push(shape);
         } catch {
           shapes.push({
@@ -2752,9 +2951,13 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const hasFont = (flags1 & 0x01) !== 0;
           const hasMaxLength = (flags1 & 0x02) !== 0;
           const hasTextColor = (flags1 & 0x04) !== 0;
+          const isReadOnly = (flags1 & 0x08) !== 0;
+          const isPassword = (flags1 & 0x10) !== 0;
+          const isMultiline = (flags1 & 0x20) !== 0;
           const hasText = (flags1 & 0x80) !== 0;
           const hasFontClass = (flags2 & 0x80) !== 0;
           const hasLayout = (flags2 & 0x20) !== 0;
+          const hasBorder = (flags2 & 0x08) !== 0;
           const isHtml = (flags2 & 0x02) !== 0;
 
           let fontSize = 14;
@@ -2772,8 +2975,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           if (hasTextColor) {
             textColor = reader.readRGBA(true);
           }
+          let maxLength = 0;
           if (hasMaxLength) {
-            reader.readUI16();
+            maxLength = reader.readUI16();
           }
           let align = 0;
           if (hasLayout) {
@@ -2789,11 +2993,11 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           if (isHtml) {
             let prev: string;
             do {
-          prev = plainText;
-            plainText = plainText.replace(/<[^>]*>/g, '');
+              prev = plainText;
+              plainText = plainText.replace(/<[^>]*>/g, '');
             } while (plainText !== prev);
-              plainText = plainText.replace(/[<>]/g, '');
-            }
+            plainText = plainText.replace(/[<>]/g, '');
+          }
           editTexts.set(charId, {
             charId,
             x: Number(bounds.xMin.toFixed(2)),
@@ -2806,6 +3010,11 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             varName: variableName || '',
             text: plainText,
             isHtml,
+            editable: !isReadOnly,
+            password: isPassword,
+            multiline: isMultiline,
+            border: hasBorder,
+            maxLength: maxLength > 0 ? maxLength : undefined,
           });
 
           if (plainText.trim() || variableName) {
@@ -4235,9 +4444,31 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             const item: any = { d, c: e.characterId };
             const cm = compactMat(e.matrix);
             if (cm) item.m = cm;
-            if (e.cxform && Math.abs(e.cxform.alpha - 1) > 0.001) {
-              item.a = Number(formatNum(e.cxform.alpha));
+            if (e.cxform) {
+              if (Math.abs(e.cxform.alpha - 1) > 0.001) {
+                item.a = Number(formatNum(e.cxform.alpha));
+              }
+              const hasRgbTransform =
+                e.cxform.rMult !== 256 ||
+                e.cxform.gMult !== 256 ||
+                e.cxform.bMult !== 256 ||
+                e.cxform.rAdd !== 0 ||
+                e.cxform.gAdd !== 0 ||
+                e.cxform.bAdd !== 0;
+              if (hasRgbTransform) {
+                item.cx = [
+                  e.cxform.rMult,
+                  e.cxform.gMult,
+                  e.cxform.bMult,
+                  e.cxform.aMult,
+                  e.cxform.rAdd,
+                  e.cxform.gAdd,
+                  e.cxform.bAdd,
+                  e.cxform.aAdd,
+                ];
+              }
             }
+            if (e.filters && e.filters.length > 0) item.fl = e.filters;
             if (e.name) item.n = e.name;
             if (e.clipDepth && e.clipDepth > d) item.cd = e.clipDepth;
             if (e.ratio !== undefined && e.ratio > 0) item.r = e.ratio;
@@ -4295,7 +4526,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       }
       const vmEditTexts: Record<number, any> = {};
       editTexts.forEach((et, cid) => {
-        vmEditTexts[cid] = {
+        const o: any = {
           x: et.x,
           y: et.y,
           w: et.w,
@@ -4307,6 +4538,12 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           t: et.text,
           html: et.isHtml ? 1 : 0,
         };
+        if (et.editable) o.ed = 1;
+        if (et.password) o.pw = 1;
+        if (et.multiline) o.ml = 1;
+        if (et.border) o.bd = 1;
+        if (et.maxLength) o.mx = et.maxLength;
+        vmEditTexts[cid] = o;
       });
       const vmButtons: Record<number, any> = {};
       buttons.forEach((btn, bid) => {
@@ -4325,7 +4562,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       });
       const vmSprites: Record<number, any> = {};
       sprites.forEach((sp, sid) => {
-        vmSprites[sid] = {
+        const spObj: any = {
           fc: sp.frameCount,
           l: sp.labels,
           fr: serializeFrameList(sp.frames, sp.frameCount),
@@ -4333,6 +4570,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             .filter((a) => Boolean(a.rawBytecodeB64))
             .map((a) => ({ f: a.frame, bi: internBytecode(a.rawBytecodeB64!) })),
         };
+        if (sp.sounds && sp.sounds.length > 0) spObj.sf = sp.sounds;
+        vmSprites[sid] = spObj;
       });
 
       const vmInitActions = initActions.map((ia) => ({
@@ -4369,6 +4608,19 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         fr: serializeFrameList(timelineFrames, totalFrames),
         ac: vmMainActions,
       };
+      if (sounds.size > 0) {
+        const vmSounds: Record<number, SwfSoundDef> = {};
+        sounds.forEach((s, id) => { vmSounds[id] = s; });
+        vmProgram.sn = vmSounds;
+      }
+      if (startSounds.length > 0) vmProgram.sf = startSounds;
+      if (bitmaps.size > 0) {
+        const vmBitmaps: Record<number, { w?: number; h?: number; u: string }> = {};
+        bitmaps.forEach((b, id) => { vmBitmaps[id] = { w: b.w, h: b.h, u: b.uri }; });
+        vmProgram.bm = vmBitmaps;
+      }
+      if (fillDefsCollector.gradients.length > 0) vmProgram.gr = fillDefsCollector.gradients;
+      if (fillDefsCollector.patterns.length > 0) vmProgram.bp = fillDefsCollector.patterns;
       if (documentClass) vmProgram.dc = documentClass;
       const vmB64 = utf8ToBase64(JSON.stringify(vmProgram));
       swfVmAst = `\n  (:swf-vm "${vmB64}")\n`;

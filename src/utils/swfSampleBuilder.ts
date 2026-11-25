@@ -335,13 +335,22 @@ class Avm1Asm {
   div(): this { return this.op(0x0d); }
   less2(): this { return this.op(0x48); }
   greater(): this { return this.op(0x67); }
+  equals2(): this { return this.op(0x49); }
+  and(): this { return this.op(0x10); }
+  or(): this { return this.op(0x11); }
   not(): this { return this.op(0x12); }
   getVar(): this { return this.op(0x1c); }
   setVar(): this { return this.op(0x1d); }
   getMember(): this { return this.op(0x4e); }
   setMember(): this { return this.op(0x4f); }
+  newObject(): this { return this.op(0x40); }
   callFunction(): this { return this.op(0x3d); }
   callMethod(): this { return this.op(0x52); }
+  trace(): this { return this.op(0x26); }
+
+  pushBool(val: boolean): this {
+    return this.emitLen(0x96, new Uint8Array([5, val ? 1 : 0]));
+  }
 
   pushStr(s: string): this {
     const w = new SwfBitWriter();
@@ -713,3 +722,517 @@ export function buildFlashPendulumSampleSwf(): Uint8Array {
 
   return assembleFwsSwf(600, 400, 30, 1, tags.toUint8Array());
 }
+
+// =========================================================================
+// Additional SWF v8 Builders for Rich Arcade Emulation (pacman.swf)
+// =========================================================================
+
+function buildPolygonShape(
+  shapeId: number,
+  pointsPx: Array<[number, number]>,
+  rgba: [number, number, number, number]
+): Uint8Array {
+  const w = new SwfBitWriter();
+  const pts = pointsPx.map(([x, y]) => [Math.round(x * 20), Math.round(y * 20)] as [number, number]);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [x, y] of pts) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+
+  w.writeUI16(shapeId);
+  w.writeRect(minX, maxX, minY, maxY);
+
+  // FillStyleArray (DefineShape3 = RGBA)
+  w.writeUI8(1);
+  w.writeUI8(0x00); // solid fill
+  w.writeUI8(rgba[0]);
+  w.writeUI8(rgba[1]);
+  w.writeUI8(rgba[2]);
+  w.writeUI8(rgba[3]);
+
+  // LineStyleArray (0 lines)
+  w.writeUI8(0);
+
+  // NumFillBits = 1, NumLineBits = 0
+  w.writeUB(1, 4);
+  w.writeUB(0, 4);
+
+  // StyleChangeRecord: MoveTo pts[0], FillStyle1 = 1
+  const [x0, y0] = pts[0];
+  w.writeUB(0, 1); // non-edge
+  w.writeUB(0, 1); // newStyles
+  w.writeUB(0, 1); // lineStyle
+  w.writeUB(1, 1); // fillStyle1
+  w.writeUB(0, 1); // fillStyle0
+  w.writeUB(1, 1); // moveTo
+  const moveMax = Math.max(Math.abs(x0), Math.abs(y0), 1);
+  const moveBits = Math.min(31, Math.ceil(Math.log2(moveMax + 1)) + 2);
+  w.writeUB(moveBits, 5);
+  w.writeSB(x0, moveBits);
+  w.writeSB(y0, moveBits);
+  w.writeUB(1, 1); // fillStyle1 = 1
+
+  for (let i = 0; i < pts.length; i++) {
+    const [cx, cy] = pts[i];
+    const [nx, ny] = pts[(i + 1) % pts.length];
+    const dx = nx - cx;
+    const dy = ny - cy;
+    if (dx === 0 && dy === 0) continue;
+    const maxAbs = Math.max(Math.abs(dx), Math.abs(dy), 1);
+    const bits = Math.max(2, Math.min(17, Math.ceil(Math.log2(maxAbs + 1)) + 2));
+    w.writeUB(1, 1); // edge
+    w.writeUB(1, 1); // straight
+    w.writeUB(bits - 2, 4);
+    w.writeUB(1, 1); // general line (both dx & dy)
+    w.writeSB(dx, bits);
+    w.writeSB(dy, bits);
+  }
+
+  w.writeUB(0, 6); // EndShapeRecord
+  w.align();
+  return w.toUint8Array();
+}
+
+function buildEditableTextField(
+  charId: number,
+  xPx: number,
+  yPx: number,
+  wPx: number,
+  hPx: number,
+  varName: string,
+  initialText: string,
+  rgba: [number, number, number, number],
+  fontSizePx = 14,
+  maxLength = 12
+): Uint8Array {
+  const w = new SwfBitWriter();
+  w.writeUI16(charId);
+  w.writeRect(Math.round(xPx * 20), Math.round((xPx + wPx) * 20), Math.round(yPx * 20), Math.round((yPx + hPx) * 20));
+  // Flags1: HasText(1) WordWrap(0) Multiline(0) Password(0) ReadOnly(0=editable!) HasTextColor(1) HasMaxLength(1) HasFont(1)
+  w.writeUB(1, 1);
+  w.writeUB(0, 1);
+  w.writeUB(0, 1);
+  w.writeUB(0, 1);
+  w.writeUB(0, 1); // editable!
+  w.writeUB(1, 1); // HasTextColor
+  w.writeUB(1, 1); // HasMaxLength
+  w.writeUB(1, 1); // HasFont
+  // Flags2: HasFontClass(0) AutoSize(0) HasLayout(1) NoSelect(0) Border(1) WasStatic(0) HTML(0) UseOutlines(0)
+  w.writeUB(0, 1);
+  w.writeUB(0, 1);
+  w.writeUB(1, 1); // HasLayout
+  w.writeUB(0, 1);
+  w.writeUB(1, 1); // Border
+  w.writeUB(0, 1);
+  w.writeUB(0, 1);
+  w.writeUB(0, 1);
+
+  w.writeUI16(0); // FontID
+  w.writeUI16(Math.round(fontSizePx * 20));
+  w.writeUI8(rgba[0]);
+  w.writeUI8(rgba[1]);
+  w.writeUI8(rgba[2]);
+  w.writeUI8(rgba[3]);
+  w.writeUI16(maxLength);
+  // Layout
+  w.writeUI8(0); // left align
+  w.writeUI16(0);
+  w.writeUI16(0);
+  w.writeUI16(0);
+  w.writeSI16(0);
+  w.writeCString(varName);
+  w.writeCString(initialText);
+  return w.toUint8Array();
+}
+
+function buildPlaceObject3WithGlow(opts: {
+  depth: number;
+  characterId: number;
+  txPx: number;
+  tyPx: number;
+  name?: string;
+  glowRgba: [number, number, number, number];
+  blurPx?: number;
+}): Uint8Array {
+  const w = new SwfBitWriter();
+  let flags1 = 0x02 | 0x04; // hasCharacter | hasMatrix
+  if (opts.name) flags1 |= 0x20;
+  w.writeUI8(flags1);
+  w.writeUI8(0x01); // flags2: hasFilterList
+  w.writeUI16(opts.depth);
+  w.writeUI16(opts.characterId);
+  w.writeMatrix(opts.txPx, opts.tyPx);
+  if (opts.name) w.writeCString(opts.name);
+  // FilterList: 1 GlowFilter (id = 2)
+  w.writeUI8(1);
+  w.writeUI8(2); // GlowFilter
+  w.writeUI8(opts.glowRgba[0]);
+  w.writeUI8(opts.glowRgba[1]);
+  w.writeUI8(opts.glowRgba[2]);
+  w.writeUI8(opts.glowRgba[3]);
+  const blurFixed = Math.round((opts.blurPx || 8) * 65536);
+  w.writeUI32(blurFixed); // blurX
+  w.writeUI32(blurFixed); // blurY
+  w.writeUI16(Math.round(1.5 * 256)); // strength 8.8 fixed
+  w.writeUI8(0x01); // passes=1
+  return w.toUint8Array();
+}
+
+function buildDefinePcmSound(
+  soundId: number,
+  freqStartHz: number,
+  freqEndHz: number,
+  durationMs: number
+): Uint8Array {
+  const rate = 11025; // rateCode = 1
+  const samples = Math.max(64, Math.floor((rate * durationMs) / 1000));
+  const w = new SwfBitWriter();
+  w.writeUI16(soundId);
+  // fmt=3 (LE PCM), rateCode=1 (11025Hz), 16-bit=1, stereo=0 -> (3<<4)|(1<<2)|(1<<1)|0 = 0x36
+  w.writeUI8(0x36);
+  w.writeUI32(samples);
+  let phase = 0;
+  for (let i = 0; i < samples; i++) {
+    const u = i / samples;
+    const freq = freqStartHz + (freqEndHz - freqStartHz) * u;
+    phase += (2 * Math.PI * freq) / rate;
+    const env = Math.sin(u * Math.PI);
+    const val = Math.round(Math.sin(phase) * env * 14000);
+    w.writeSI16(val);
+  }
+  return w.toUint8Array();
+}
+
+/**
+ * Builds a complete, playable binary SWF v8 Pac-Man Arcade cartridge (`pacman.swf`):
+ * - Real vector maze corridors with Flash 8 GlowFilter walls
+ * - 2-frame animated chomping Pac-Man MovieClip with Arrow/WASD steering, rotation & warp tunnel
+ * - 2 chasing ghosts (Blinky & Pinky) with Flash 8 GlowFilter & live `new Color(ghost).setRGB()` frightened-blue tinting
+ * - Collectible dots & power pellets + Web Audio 16-bit PCM `DefineSound` ("waka" & "power")
+ * - Live `DefineEditText` HUD (Score, Lives, plus editable Player Name input box) & Restart button
+ */
+export function buildFlashPacmanSampleSwf(): Uint8Array {
+  const tags = new SwfBitWriter();
+
+  // SetBackgroundColor (#050816 classic arcade dark)
+  writeTag(tags, 9, new Uint8Array([5, 8, 22]));
+
+  // Retro Web Audio PCM Sounds (Tag 14 DefineSound)
+  writeTag(tags, 14, buildDefinePcmSound(90, 320, 620, 65));  // "waka" chomp
+  writeTag(tags, 14, buildDefinePcmSound(91, 440, 1100, 140)); // "power" chime
+
+  // Helper to build circle / pac-man wedge polygons
+  const makePacPoints = (mouthDeg: number, r = 13): Array<[number, number]> => {
+    const pts: Array<[number, number]> = [[0, 0]];
+    const startRad = (mouthDeg * Math.PI) / 180;
+    const endRad = ((360 - mouthDeg) * Math.PI) / 180;
+    const steps = 14;
+    for (let i = 0; i <= steps; i++) {
+      const a = startRad + ((endRad - startRad) * i) / steps;
+      pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+    return pts;
+  };
+
+  const makeGhostPoints = (): Array<[number, number]> => [
+    [-12, 12], [-12, -2], [-10, -9], [-5, -13], [0, -14], [5, -13], [10, -9], [12, -2],
+    [12, 12], [8, 8], [4, 12], [0, 8], [-4, 12], [-8, 8],
+  ];
+
+  const makeOctagon = (r: number): Array<[number, number]> => {
+    const pts: Array<[number, number]> = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4;
+      pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+    return pts;
+  };
+
+  // Shapes:
+  // 1: Pac-Man Mouth Open (golden yellow)
+  writeTag(tags, 32, buildPolygonShape(1, makePacPoints(36, 13), [250, 204, 21, 255]));
+  // 2: Pac-Man Mouth Nearly Closed
+  writeTag(tags, 32, buildPolygonShape(2, makePacPoints(8, 13), [250, 204, 21, 255]));
+  // 3: Blinky (Red Ghost)
+  writeTag(tags, 32, buildPolygonShape(3, makeGhostPoints(), [239, 68, 68, 255]));
+  // 4: Pinky (Magenta-Pink Ghost)
+  writeTag(tags, 32, buildPolygonShape(4, makeGhostPoints(), [244, 114, 182, 255]));
+  // 5: Ghost Eyes (white pupils offset inside sprite)
+  writeTag(tags, 32, buildRectShape(5, -7, -6, 5, 5, [255, 255, 255, 255]));
+  writeTag(tags, 32, buildRectShape(6, 2, -6, 5, 5, [255, 255, 255, 255]));
+  // 7: Golden Dot
+  writeTag(tags, 32, buildPolygonShape(7, makeOctagon(4), [253, 224, 71, 255]));
+  // 8: Glowing Cyan Power Pellet
+  writeTag(tags, 32, buildPolygonShape(8, makeOctagon(8), [56, 189, 248, 255]));
+  // 9: Maze Horizontal Wall (560x10)
+  writeTag(tags, 32, buildRectShape(9, 0, 0, 560, 10, [37, 99, 235, 255]));
+  // 10: Maze Vertical Outer Wall Segment (10x130)
+  writeTag(tags, 32, buildRectShape(10, 0, 0, 10, 130, [37, 99, 235, 255]));
+  // 11: Inner Maze Block (110x44)
+  writeTag(tags, 32, buildRectShape(11, 0, 0, 110, 44, [29, 78, 216, 255]));
+  // 12: Central Ghost House Wall (140x12)
+  writeTag(tags, 32, buildRectShape(12, 0, 0, 140, 12, [96, 165, 250, 255]));
+  // 13: Reset Button Plate (86x26)
+  writeTag(tags, 32, buildRectShape(13, 0, 0, 86, 26, [30, 64, 175, 255]));
+
+  // Animated 2-Frame Chomping Pac-Man Sprite (ID 20, 6 frames = 3 open / 3 closed)
+  const pacInner = new SwfBitWriter();
+  writeTag(pacInner, 26, buildPlaceObject2({ depth: 1, characterId: 1 }));
+  writeTag(pacInner, 1, new Uint8Array(0));
+  writeTag(pacInner, 1, new Uint8Array(0));
+  writeTag(pacInner, 1, new Uint8Array(0));
+  writeTag(pacInner, 28, buildRemoveObject2(1));
+  writeTag(pacInner, 26, buildPlaceObject2({ depth: 1, characterId: 2 }));
+  writeTag(pacInner, 1, new Uint8Array(0));
+  writeTag(pacInner, 1, new Uint8Array(0));
+  writeTag(pacInner, 1, new Uint8Array(0));
+  writeTag(pacInner, 0, new Uint8Array(0));
+  writeTag(tags, 39, buildSprite(20, 6, pacInner.toUint8Array()));
+
+  // Ghost Sprites (ID 21 Blinky, ID 22 Pinky) with body + eyes
+  const makeGhostSprite = (spriteId: number, bodyShapeId: number) => {
+    const inner = new SwfBitWriter();
+    writeTag(inner, 26, buildPlaceObject2({ depth: 1, characterId: bodyShapeId }));
+    writeTag(inner, 26, buildPlaceObject2({ depth: 2, characterId: 5 }));
+    writeTag(inner, 26, buildPlaceObject2({ depth: 3, characterId: 6 }));
+    writeTag(inner, 1, new Uint8Array(0));
+    writeTag(inner, 0, new Uint8Array(0));
+    writeTag(tags, 39, buildSprite(spriteId, 1, inner.toUint8Array()));
+  };
+  makeGhostSprite(21, 3);
+  makeGhostSprite(22, 4);
+
+  // Dot Sprite (ID 23) & Power Pellet Sprite (ID 24)
+  const makeSimpleSprite = (spriteId: number, shapeId: number) => {
+    const inner = new SwfBitWriter();
+    writeTag(inner, 26, buildPlaceObject2({ depth: 1, characterId: shapeId }));
+    writeTag(inner, 1, new Uint8Array(0));
+    writeTag(inner, 0, new Uint8Array(0));
+    writeTag(tags, 39, buildSprite(spriteId, 1, inner.toUint8Array()));
+  };
+  makeSimpleSprite(23, 7);
+  makeSimpleSprite(24, 8);
+
+  // ExportAssets: "waka" -> 90, "power" -> 91
+  writeTag(tags, 56, buildExportAssets([
+    { id: 90, name: 'waka' },
+    { id: 91, name: 'power' },
+  ]));
+
+  // DefineEditText HUD fields
+  // 30: Score & Lives live HUD
+  writeTag(tags, 37, buildEditText(30, 18, 10, 310, 28, 'hudText', 'SCORE: 0   LIVES: 3   ARROWS / WASD', [253, 224, 71, 255], 14, 0));
+  // 31: Editable Player Tag (interactive DefineEditText!)
+  writeTag(tags, 37, buildEditableTextField(31, 345, 10, 130, 24, 'playerName', 'PAC-1', [226, 232, 240, 255], 13, 10));
+  // 32: Reset button label
+  writeTag(tags, 37, buildEditText(32, 496, 14, 86, 22, 'rstLbl', 'RESTART', [255, 255, 255, 255], 12, 2));
+
+  // DefineButton2 (ID 40): Restart game state
+  const resetAct = new Avm1Asm()
+    .setRootVar('score', (v) => v.pushInt(0))
+    .setRootVar('lives', (v) => v.pushInt(3))
+    .setRootVar('fright', (v) => v.pushInt(0))
+    .setProp('pac', '_x', (v) => v.pushInt(300))
+    .setProp('pac', '_y', (v) => v.pushInt(310))
+    .setProp('blinky', '_x', (v) => v.pushInt(260))
+    .setProp('blinky', '_y', (v) => v.pushInt(155))
+    .setProp('pinky', '_x', (v) => v.pushInt(340))
+    .setProp('pinky', '_y', (v) => v.pushInt(155))
+    .toByteArray();
+  writeTag(tags, 34, buildDefineButton2(40, 13, 496, 10, 0x0008, resetAct));
+
+  // Place Maze Walls (Depths 1..11)
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 1, characterId: 9, txPx: 20, tyPx: 46, glowRgba: [59, 130, 246, 220], blurPx: 6 })); // top border
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 2, characterId: 9, txPx: 20, tyPx: 374, glowRgba: [59, 130, 246, 220], blurPx: 6 })); // bottom border
+  writeTag(tags, 26, buildPlaceObject2({ depth: 3, characterId: 10, txPx: 20, tyPx: 56 }));   // left upper
+  writeTag(tags, 26, buildPlaceObject2({ depth: 4, characterId: 10, txPx: 20, tyPx: 244 }));  // left lower (tunnel gap at y=186..244)
+  writeTag(tags, 26, buildPlaceObject2({ depth: 5, characterId: 10, txPx: 570, tyPx: 56 }));  // right upper
+  writeTag(tags, 26, buildPlaceObject2({ depth: 6, characterId: 10, txPx: 570, tyPx: 244 })); // right lower
+  // Symmetric inner maze blocks
+  writeTag(tags, 26, buildPlaceObject2({ depth: 7, characterId: 11, txPx: 76, tyPx: 92 }));
+  writeTag(tags, 26, buildPlaceObject2({ depth: 8, characterId: 11, txPx: 414, tyPx: 92 }));
+  writeTag(tags, 26, buildPlaceObject2({ depth: 9, characterId: 11, txPx: 76, tyPx: 256 }));
+  writeTag(tags, 26, buildPlaceObject2({ depth: 10, characterId: 11, txPx: 414, tyPx: 256 }));
+  // Central Ghost House bar
+  writeTag(tags, 26, buildPlaceObject2({ depth: 11, characterId: 12, txPx: 230, tyPx: 210 }));
+
+  // Place Collectible Dots (Depths 20..29) along top/mid/bottom corridors
+  const dotCoords: Array<[number, number]> = [
+    [120, 72], [220, 72], [300, 72], [380, 72], [480, 72],
+    [340, 310], [380, 310], [420, 310], [220, 310], [160, 310],
+  ];
+  dotCoords.forEach(([x, y], idx) => {
+    writeTag(tags, 26, buildPlaceObject2({ depth: 20 + idx, characterId: 23, txPx: x, tyPx: y, name: `dot${idx}` }));
+  });
+
+  // Place 2 Glowing Power Pellets (Depths 30..31)
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 30, characterId: 24, txPx: 460, tyPx: 310, name: 'pwr0', glowRgba: [56, 189, 248, 255], blurPx: 10 }));
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 31, characterId: 24, txPx: 60, tyPx: 72, name: 'pwr1', glowRgba: [56, 189, 248, 255], blurPx: 10 }));
+
+  // Place Animated Pac-Man (Depth 40) + Glowing Ghosts (Depths 41, 42)
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 40, characterId: 20, txPx: 300, tyPx: 310, name: 'pac', glowRgba: [250, 204, 21, 200], blurPx: 6 }));
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 41, characterId: 21, txPx: 260, tyPx: 155, name: 'blinky', glowRgba: [239, 68, 68, 210], blurPx: 8 }));
+  writeTag(tags, 70, buildPlaceObject3WithGlow({ depth: 42, characterId: 22, txPx: 340, tyPx: 155, name: 'pinky', glowRgba: [244, 114, 182, 210], blurPx: 8 }));
+
+  // Place HUD & Buttons (Depths 50..52)
+  writeTag(tags, 26, buildPlaceObject2({ depth: 50, characterId: 30 }));
+  writeTag(tags, 26, buildPlaceObject2({ depth: 51, characterId: 31, name: 'playerInput' }));
+  writeTag(tags, 26, buildPlaceObject2({ depth: 52, characterId: 40 }));
+  writeTag(tags, 26, buildPlaceObject2({ depth: 53, characterId: 32 }));
+
+  // Frame 1 AVM1 Game Loop Bytecode
+  const gameAsm = new Avm1Asm()
+    .stop()
+    .setRootVar('score', (v) => v.pushInt(0))
+    .setRootVar('lives', (v) => v.pushInt(3))
+    .setRootVar('fright', (v) => v.pushInt(0))
+    .setRootVar('dirX', (v) => v.pushInt(0))
+    .setRootVar('dirY', (v) => v.pushInt(0))
+    .setRootVar('bvx', (v) => v.pushInt(2))
+    .setRootVar('pvx', (v) => v.pushInt(-2))
+    // Sound objects attached to exported DefineSound clips
+    .setRootVar('sfxWaka', (v) => v.pushInt(0).pushStr('Sound').newObject())
+    .callObjMethod('sfxWaka', 'attachSound', [(a) => a.pushStr('waka')]).pop()
+    .setRootVar('sfxPower', (v) => v.pushInt(0).pushStr('Sound').newObject())
+    .callObjMethod('sfxPower', 'attachSound', [(a) => a.pushStr('power')]).pop()
+    // Color objects for live Ghost RGB frightened tinting
+    .setRootVar('colBlinky', (v) => v.getRootVar('blinky').pushInt(1).pushStr('Color').newObject())
+    .setRootVar('colPinky', (v) => v.getRootVar('pinky').pushInt(1).pushStr('Color').newObject())
+    .pushStr('pacman_ready').trace()
+    .setRootVar('onEnterFrame', (b) => {
+      b.defineFunction('', [], (fn) => {
+        // 1. Arrow / WASD Keyboard Steering (Key.isDown)
+        // Right (39) or D (68)
+        fn.callObjMethod('Key', 'isDown', [(a) => a.pushInt(39)])
+          .callObjMethod('Key', 'isDown', [(a) => a.pushInt(68)])
+          .or()
+          .ifFalseSkip((s) => {
+            s.setRootVar('dirX', (v) => v.pushInt(4));
+            s.setRootVar('dirY', (v) => v.pushInt(0));
+            s.setProp('pac', '_rotation', (v) => v.pushInt(0));
+          });
+        // Left (37) or A (65)
+        fn.callObjMethod('Key', 'isDown', [(a) => a.pushInt(37)])
+          .callObjMethod('Key', 'isDown', [(a) => a.pushInt(65)])
+          .or()
+          .ifFalseSkip((s) => {
+            s.setRootVar('dirX', (v) => v.pushInt(-4));
+            s.setRootVar('dirY', (v) => v.pushInt(0));
+            s.setProp('pac', '_rotation', (v) => v.pushInt(180));
+          });
+        // Up (38) or W (87)
+        fn.callObjMethod('Key', 'isDown', [(a) => a.pushInt(38)])
+          .callObjMethod('Key', 'isDown', [(a) => a.pushInt(87)])
+          .or()
+          .ifFalseSkip((s) => {
+            s.setRootVar('dirX', (v) => v.pushInt(0));
+            s.setRootVar('dirY', (v) => v.pushInt(-4));
+            s.setProp('pac', '_rotation', (v) => v.pushInt(-90));
+          });
+        // Down (40) or S (83)
+        fn.callObjMethod('Key', 'isDown', [(a) => a.pushInt(40)])
+          .callObjMethod('Key', 'isDown', [(a) => a.pushInt(83)])
+          .or()
+          .ifFalseSkip((s) => {
+            s.setRootVar('dirX', (v) => v.pushInt(0));
+            s.setRootVar('dirY', (v) => v.pushInt(4));
+            s.setProp('pac', '_rotation', (v) => v.pushInt(90));
+          });
+
+        // 2. Move Pac-Man & clamp/warp within arcade arena
+        fn.setProp('pac', '_x', (v) => v.getProp('pac', '_x').getRootVar('dirX').add2());
+        fn.setProp('pac', '_y', (v) => v.getProp('pac', '_y').getRootVar('dirY').add2());
+        fn.getProp('pac', '_x').pushInt(36).less2().ifFalseSkip((s) => {
+          s.setProp('pac', '_x', (v) => v.pushInt(562));
+        });
+        fn.getProp('pac', '_x').pushInt(564).greater().ifFalseSkip((s) => {
+          s.setProp('pac', '_x', (v) => v.pushInt(38));
+        });
+        fn.getProp('pac', '_y').pushInt(70).less2().ifFalseSkip((s) => {
+          s.setProp('pac', '_y', (v) => v.pushInt(70));
+        });
+        fn.getProp('pac', '_y').pushInt(356).greater().ifFalseSkip((s) => {
+          s.setProp('pac', '_y', (v) => v.pushInt(356));
+        });
+
+        // 3. Dot Eating Checks (dot0..dot9)
+        for (let i = 0; i < dotCoords.length; i++) {
+          const dName = `dot${i}`;
+          fn.getProp(dName, '_visible').ifFalseSkip((s) => {
+            s.callObjMethod('Math', 'abs', [(a) => a.getProp('pac', '_x').getProp(dName, '_x').sub()])
+              .pushInt(18).less2()
+              .callObjMethod('Math', 'abs', [(a) => a.getProp('pac', '_y').getProp(dName, '_y').sub()])
+              .pushInt(18).less2()
+              .and()
+              .ifFalseSkip((hit) => {
+                hit.setProp(dName, '_visible', (v) => v.pushBool(false));
+                hit.setRootVar('score', (v) => v.getRootVar('score').pushInt(10).add2());
+                hit.callObjMethod('sfxWaka', 'start', []).pop();
+                hit.pushStr(`ate_${dName}`).trace();
+              });
+          });
+        }
+
+        // 4. Power Pellet Eating Checks (pwr0, pwr1 -> triggers frightened-blue Color.setRGB!)
+        for (const pName of ['pwr0', 'pwr1']) {
+          fn.getProp(pName, '_visible').ifFalseSkip((s) => {
+            s.callObjMethod('Math', 'abs', [(a) => a.getProp('pac', '_x').getProp(pName, '_x').sub()])
+              .pushInt(20).less2()
+              .callObjMethod('Math', 'abs', [(a) => a.getProp('pac', '_y').getProp(pName, '_y').sub()])
+              .pushInt(20).less2()
+              .and()
+              .ifFalseSkip((hit) => {
+                hit.setProp(pName, '_visible', (v) => v.pushBool(false));
+                hit.setRootVar('score', (v) => v.getRootVar('score').pushInt(50).add2());
+                hit.setRootVar('fright', (v) => v.pushInt(150));
+                hit.callObjMethod('sfxPower', 'start', []).pop();
+                hit.callObjMethod('colBlinky', 'setRGB', [(a) => a.pushInt(0x2563eb)]).pop();
+                hit.callObjMethod('colPinky', 'setRGB', [(a) => a.pushInt(0x2563eb)]).pop();
+                hit.pushStr(`power_${pName}`).trace();
+              });
+          });
+        }
+
+        // 5. Frightened Countdown
+        fn.getRootVar('fright').pushInt(0).greater().ifFalseSkip((s) => {
+          s.setRootVar('fright', (v) => v.getRootVar('fright').pushInt(1).sub());
+        });
+
+        // 6. Ghost Patrol AI (Blinky & Pinky bounce horizontally across corridor)
+        fn.setProp('blinky', '_x', (v) => v.getProp('blinky', '_x').getRootVar('bvx').add2());
+        fn.getProp('blinky', '_x').pushInt(530).greater().ifFalseSkip((s) => {
+          s.setRootVar('bvx', (v) => v.pushInt(-2));
+        });
+        fn.getProp('blinky', '_x').pushInt(70).less2().ifFalseSkip((s) => {
+          s.setRootVar('bvx', (v) => v.pushInt(2));
+        });
+
+        fn.setProp('pinky', '_x', (v) => v.getProp('pinky', '_x').getRootVar('pvx').add2());
+        fn.getProp('pinky', '_x').pushInt(530).greater().ifFalseSkip((s) => {
+          s.setRootVar('pvx', (v) => v.pushInt(-2));
+        });
+        fn.getProp('pinky', '_x').pushInt(70).less2().ifFalseSkip((s) => {
+          s.setRootVar('pvx', (v) => v.pushInt(2));
+        });
+
+        // 7. Update Live Score & Lives HUD
+        fn.setRootVar('hudText', (v) =>
+          v.pushStr('SCORE: ')
+            .getRootVar('score').add2()
+            .pushStr('   LIVES: ').add2()
+            .getRootVar('lives').add2()
+        );
+      });
+    })
+    .toByteArray();
+
+  writeTag(tags, 12, gameAsm);
+  writeTag(tags, 1, new Uint8Array(0));
+  writeTag(tags, 0, new Uint8Array(0));
+
+  return assembleFwsSwf(600, 400, 30, 1, tags.toUint8Array());
+}
+
