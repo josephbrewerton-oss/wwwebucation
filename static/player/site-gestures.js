@@ -45,6 +45,7 @@
   class ASTDirectGestureSubsystem {
     constructor(engine, options = {}) {
       this.engine = engine;
+      if (engine && typeof engine === 'object') engine.gestures = this;
       this.options = options;
       this._scriptBaseUrl = SCRIPT_BASE_URL;
       this.stageSvg = null;
@@ -60,6 +61,7 @@
         : {
           defaults: {},
           universalKeys: [],
+          mediaRoutes: [],
           whiteboard: { tools: [], widths: [], palette: [] },
           tones: {},
           skills: new Map()
@@ -103,11 +105,13 @@
       this._activePressVars = new Map();
       this._holdRafId = null;
       this._holdLastTs = 0;
-      // Bound listeners & extension registries
+      // Bound listeners, extension registries & media-agnostic input sinks
       this._boundStageSvg = null;
       this._windowListenersBound = false;
       this._customActions = new Map();
       this._customGestureSkills = new Map();
+      this._mediaInputSinks = new Map();
+      this._mediaRouteThrottleTs = new Map();
       this._syncingTimelineVar = false;
       this._lastSyncedTimelineVal = null;
       this._timelineSyncBound = false;
@@ -118,6 +122,7 @@
       this.handlePointerUp = this.handlePointerUp.bind(this);
       this.handlePointerCancel = this.handlePointerCancel.bind(this);
       this.handlePointerLeave = this.handlePointerLeave.bind(this);
+      this.handleWheel = this.handleWheel.bind(this);
       this.handleTouchEnd = this.handleTouchEnd.bind(this);
       this.handleStageClick = this.handleStageClick.bind(this);
       this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -391,10 +396,12 @@
         if (this._boundStageSvg) {
           this._boundStageSvg.removeEventListener('pointerdown', this.handlePointerDown);
           this._boundStageSvg.removeEventListener('pointerleave', this.handlePointerLeave);
+          this._boundStageSvg.removeEventListener('wheel', this.handleWheel);
           this._boundStageSvg.removeEventListener('click', this.handleStageClick);
         }
         this.stageSvg.addEventListener('pointerdown', this.handlePointerDown, { passive: false });
         this.stageSvg.addEventListener('pointerleave', this.handlePointerLeave);
+        this.stageSvg.addEventListener('wheel', this.handleWheel, { passive: true });
         this.stageSvg.addEventListener('click', this.handleStageClick, { passive: true });
         this._boundStageSvg = this.stageSvg;
       }
@@ -639,6 +646,138 @@
       if (_i && typeof _i.handlePointerCancel === 'function') _i.handlePointerCancel.call(this, e);
     }
 
+    handleWheel(e) {
+      const _i = _getGesturesInput();
+      if (_i && typeof _i.handleWheel === 'function') _i.handleWheel.call(this, e);
+    }
+
+    // =========================================================================
+    // Universal Media-Agnostic Input Route Bus (Decoupled from any media runtime)
+    // =========================================================================
+
+    registerMediaInputSink(id, sink) {
+      if (!id || !sink || typeof sink !== 'object') return this;
+      this._mediaInputSinks.set(String(id), sink);
+      return this;
+    }
+
+    unregisterMediaInputSink(id) {
+      if (!id) return this;
+      this._mediaInputSinks.delete(String(id));
+      return this;
+    }
+
+    hasActiveMediaInputSink(channel = null) {
+      if (!this._mediaInputSinks || this._mediaInputSinks.size === 0) return false;
+      if (!channel) return true;
+      for (const sink of this._mediaInputSinks.values()) {
+        if (sink && (typeof sink.onInput === 'function' || typeof sink[channel] === 'function')) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    _getMediaInputRoute(eventName) {
+      const routes = this.playerProfile && Array.isArray(this.playerProfile.mediaRoutes)
+        ? this.playerProfile.mediaRoutes
+        : [];
+      return routes.find(r => r && r.event === eventName) || null;
+    }
+
+    routeMediaInputEvent(eventName, rawEvent, svgPt = null) {
+      if (!this._mediaInputSinks || this._mediaInputSinks.size === 0) return null;
+      const route = this._getMediaInputRoute(eventName);
+      if (!route || !route.channel) return null;
+      if (route.switch && !this._isControlEnabled(route.switch)) return null;
+      if (route.gate === 'whiteboard' && this.isPenActive && this._isControlEnabled('whiteboard')) {
+        return null;
+      }
+      if (route.throttleMs && route.throttleMs > 0) {
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const prev = this._mediaRouteThrottleTs.get(route.channel) || 0;
+        if (now - prev < route.throttleMs) return { routed: true, throttled: true };
+        this._mediaRouteThrottleTs.set(route.channel, now);
+      }
+
+      const payload = {
+        channel: route.channel,
+        eventName,
+        route,
+        originalEvent: rawEvent || null,
+        svgPt: svgPt || (
+          route.coords === 'svg' && rawEvent && typeof rawEvent.clientX === 'number'
+            ? this.screenToSvg(rawEvent.clientX, rawEvent.clientY)
+            : null
+        )
+      };
+
+      if (rawEvent && (route.channel === 'key-down' || route.channel === 'key-up')) {
+        payload.code = typeof rawEvent.code === 'string' ? rawEvent.code : '';
+        payload.key = typeof rawEvent.key === 'string' ? rawEvent.key : '';
+        payload.keyCode = typeof rawEvent.keyCode === 'number' ? rawEvent.keyCode : 0;
+        payload.repeat = Boolean(rawEvent.repeat);
+      } else if (rawEvent && route.channel === 'wheel') {
+        payload.deltaY = typeof rawEvent.deltaY === 'number' ? rawEvent.deltaY : 0;
+      }
+
+      let routed = false;
+      let consumed = false;
+      let exclusive = false;
+      for (const sink of this._mediaInputSinks.values()) {
+        if (!sink) continue;
+        const handler = typeof sink[route.channel] === 'function'
+          ? sink[route.channel]
+          : (typeof sink.onInput === 'function' ? sink.onInput : null);
+        if (!handler) continue;
+        routed = true;
+        try {
+          const res = handler.call(sink, payload);
+          if (res === true || (res && res.consumed)) consumed = true;
+          if (res && res.exclusive) exclusive = true;
+        } catch (err) {
+          console.warn('[ASTDirectGestureSubsystem] Media input sink error:', err);
+        }
+        if (route.channel === 'pointer-down' && sink.exclusivePointer !== false) {
+          exclusive = true;
+        }
+        if (route.channel === 'key-down' && sink.exclusiveKeyboard !== false) {
+          exclusive = true;
+        }
+      }
+
+      if (routed && rawEvent && typeof rawEvent.preventDefault === 'function' && route.channel === 'key-down') {
+        const shouldCapture = consumed || (
+          Array.isArray(route.captureKeys) &&
+          (route.captureKeys.includes(payload.code) || route.captureKeys.includes(payload.key))
+        );
+        if (shouldCapture) rawEvent.preventDefault();
+      }
+
+      return routed ? { routed, consumed, exclusive, channel: route.channel } : null;
+    }
+
+    dispatchExternalMediaInput(channel, payload = {}) {
+      if (!this._mediaInputSinks || this._mediaInputSinks.size === 0) return false;
+      if (!this._isControlEnabled('media-input')) return false;
+      const packet = { ...payload, channel, external: true };
+      let routed = false;
+      for (const sink of this._mediaInputSinks.values()) {
+        if (!sink) continue;
+        const handler = typeof sink[channel] === 'function'
+          ? sink[channel]
+          : (typeof sink.onInput === 'function' ? sink.onInput : null);
+        if (!handler) continue;
+        routed = true;
+        try {
+          handler.call(sink, packet);
+        } catch (err) {
+          console.warn('[ASTDirectGestureSubsystem] External media input sink error:', err);
+        }
+      }
+      return routed;
+    }
+
     handleTrackballDrag(e) {
       const _i = _getGesturesInput();
       if (_i && typeof _i.handleTrackballDrag === 'function') _i.handleTrackballDrag.call(this, e);
@@ -845,6 +984,8 @@
         controls: { ...this.activeControls },
         defaults: { ...this.playerProfile.defaults },
         primitives: Array.isArray(this.playerProfile.primitives) ? [...this.playerProfile.primitives] : [],
+        mediaRoutes: Array.isArray(this.playerProfile.mediaRoutes) ? [...this.playerProfile.mediaRoutes] : [],
+        mediaSinks: this._mediaInputSinks ? Array.from(this._mediaInputSinks.keys()) : [],
         universalActions: Array.from(new Set([
           ...this.playerProfile.universalKeys.map(k => k.action).filter(Boolean),
           'step-slide',

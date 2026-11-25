@@ -13,7 +13,8 @@
     (:whiteboard :on)
     (:xray       :on)
     (:audio      :on)
-    (:param-hud  :on))
+    (:param-hud  :on)
+    (:media-input :on))
 
   ;; 2. Supported Declarative Gesture Primitives (Extracted from ASTDirectGestureSubsystem)
   ;; Zero-JS declarative actions handled natively by site-gestures.js so Nano can reason in pure AST.
@@ -25,6 +26,19 @@
     (:primitive :type "rotatable" :attrs ("cx" "cy" "var"))
     (:primitive :type "trackball" :attrs ("yawVar" "pitchVar" "pitchMin" "pitchMax") :default-pitch-min -65 :default-pitch-max 65)
     (:primitive :type "key"       :attrs ("code" "key" "action" "delta" "count" "var" "route" "preset" "prompt" "set-var" "toggle-var" "step-var" "hold-var" "clear-var" "reset-var" "reset-val" "rate" "tone" "speak" "speak-var")))
+
+  ;; 2b. Universal Media Input Route Mapping (100% Media-Agnostic Sink Contract)
+  ;; Embedded media runtimes (AVM1, retro emulators, interactive SVG apps) subscribe independently
+  ;; to normalized channels; site-gestures.js owns browser DOM listeners & whiteboard/focus gating.
+  (:media-routes
+    (:route :event "keydown"       :channel "key-down"     :switch :media-input :gate "focus"      :capture-keys ("Space" "Tab" "ArrowLeft" "ArrowRight" "ArrowUp" "ArrowDown"))
+    (:route :event "keyup"         :channel "key-up"       :switch :media-input)
+    (:route :event "pointermove"   :channel "pointer-move" :switch :media-input :gate "whiteboard" :coords "svg" :throttle-ms 15)
+    (:route :event "pointerdown"   :channel "pointer-down" :switch :media-input :gate "whiteboard" :coords "svg")
+    (:route :event "pointerup"     :channel "pointer-up"   :switch :media-input :gate "whiteboard" :coords "svg")
+    (:route :event "wheel"         :channel "wheel"        :switch :media-input :gate "whiteboard")
+    (:route :event "pointercancel" :channel "release-all"  :switch :media-input)
+    (:route :event "blur"          :channel "release-all"  :switch :media-input))
 
   ;; 3. Universal Keyboard & Switch Navigation Rules (Inherited by all cartridges)
   (:universal-keys

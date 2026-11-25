@@ -385,21 +385,37 @@
     }
   };
 
-  handlers.SWF_KEY_EVENT = ({ engine, data }) => {
-    if (!engine || !engine._avm1Vm || typeof engine._avm1Vm.handleForwardedKeyEvent !== 'function') return;
+  const dispatchForwardedKey = ({ engine, data }) => {
+    if (!engine) return;
     const kind = data && data.kind === 'keyup' ? 'keyup' : 'keydown';
-    engine._avm1Vm.handleForwardedKeyEvent(kind, {
+    const channel = kind === 'keyup' ? 'key-up' : 'key-down';
+    const payload = {
       code: typeof data.code === 'string' ? data.code : '',
       key: typeof data.key === 'string' ? data.key : '',
       keyCode: typeof data.keyCode === 'number' ? data.keyCode : 0,
-    });
+    };
+    if (engine.gestures && typeof engine.gestures.dispatchExternalMediaInput === 'function') {
+      if (engine.gestures.dispatchExternalMediaInput(channel, payload)) return;
+    }
+    if (engine._avm1Vm && typeof engine._avm1Vm.handleForwardedKeyEvent === 'function') {
+      engine._avm1Vm.handleForwardedKeyEvent(kind, payload);
+    }
   };
 
-  handlers.SWF_RELEASE_INPUTS = ({ engine }) => {
-    if (engine && engine._avm1Vm && typeof engine._avm1Vm.releaseAllInputs === 'function') {
+  const dispatchReleaseAll = ({ engine }) => {
+    if (!engine) return;
+    if (engine.gestures && typeof engine.gestures.dispatchExternalMediaInput === 'function') {
+      if (engine.gestures.dispatchExternalMediaInput('release-all', {})) return;
+    }
+    if (engine._avm1Vm && typeof engine._avm1Vm.releaseAllInputs === 'function') {
       engine._avm1Vm.releaseAllInputs();
     }
   };
+
+  handlers.SWF_KEY_EVENT = dispatchForwardedKey;
+  handlers.MEDIA_KEY_EVENT = dispatchForwardedKey;
+  handlers.SWF_RELEASE_INPUTS = dispatchReleaseAll;
+  handlers.MEDIA_RELEASE_INPUTS = dispatchReleaseAll;
 
   handlers.DOWNLOAD_OFFLINE_ZIP = ({ engine }) => {
     if (typeof engine.downloadOfflineZipSuite === 'function') {

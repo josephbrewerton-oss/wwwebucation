@@ -23,8 +23,20 @@
     'whiteboard': true,
     'xray': true,
     'audio': true,
-    'param-hud': true
+    'param-hud': true,
+    'media-input': true
   };
+
+  const DEFAULT_MEDIA_ROUTES = [
+    { event: 'keydown',       channel: 'key-down',     switch: 'media-input', gate: 'focus',      captureKeys: ['Space', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] },
+    { event: 'keyup',         channel: 'key-up',       switch: 'media-input' },
+    { event: 'pointermove',   channel: 'pointer-move', switch: 'media-input', gate: 'whiteboard', coords: 'svg', throttleMs: 15 },
+    { event: 'pointerdown',   channel: 'pointer-down', switch: 'media-input', gate: 'whiteboard', coords: 'svg' },
+    { event: 'pointerup',     channel: 'pointer-up',   switch: 'media-input', gate: 'whiteboard', coords: 'svg' },
+    { event: 'wheel',         channel: 'wheel',        switch: 'media-input', gate: 'whiteboard' },
+    { event: 'pointercancel', channel: 'release-all',  switch: 'media-input' },
+    { event: 'blur',          channel: 'release-all',  switch: 'media-input' }
+  ];
 
   const DEFAULT_UNIVERSAL_KEYS = [
     { code: 'ArrowRight', switch: 'arrow-step', action: 'step-primary-var', delta: 1, tone: 440 },
@@ -351,6 +363,7 @@
     return {
       defaults: { ...DEFAULT_CONTROLS },
       universalKeys: [...DEFAULT_UNIVERSAL_KEYS],
+      mediaRoutes: DEFAULT_MEDIA_ROUTES.map(r => ({ ...r, captureKeys: r.captureKeys ? [...r.captureKeys] : undefined })),
       whiteboard: {
         tools: [...DEFAULT_WHITEBOARD.tools],
         widths: [...DEFAULT_WHITEBOARD.widths],
@@ -1157,6 +1170,32 @@
       this.playerProfile.primitives = this._extractChildSexps(primBlock)
         .map(item => this._parseKeywordAttrs(item))
         .filter(p => p.type);
+    }
+
+    // 2b. (:media-routes ...) declarative browser-to-media-sink input route mapping
+    const routesBlock = this._extractSexpBlock(clean, '(:media-routes');
+    if (routesBlock) {
+      const routeItems = this._extractChildSexps(routesBlock)
+        .map(item => {
+          const a = this._parseKeywordAttrs(item);
+          const capMatch = item.match(/:capture-keys\s+\(([^)]+)\)/);
+          const captureKeys = capMatch
+            ? (capMatch[1].match(/"([^"]+)"/g) || []).map(s => s.slice(1, -1))
+            : undefined;
+          return {
+            event: a.event || '',
+            channel: a.channel || '',
+            switch: a.switch || 'media-input',
+            gate: a.gate || undefined,
+            coords: a.coords || undefined,
+            throttleMs: typeof a['throttle-ms'] === 'number' ? a['throttle-ms'] : (typeof a.throttleMs === 'number' ? a.throttleMs : undefined),
+            captureKeys
+          };
+        })
+        .filter(r => r.event && r.channel);
+      if (routeItems.length > 0) {
+        this.playerProfile.mediaRoutes = routeItems;
+      }
     }
 
     // 3. (:universal-keys ...)

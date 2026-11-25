@@ -813,10 +813,131 @@ async function testInteractiveEditText() {
   console.log('✓ Test 3 passed: Interactive Editable DefineEditText (Focus, Caret, Typing, maxChars, Backspace, Var Sync, onChanged, Password Masking)');
 }
 
+// ============================================================================
+// TEST 4: Decoupled Universal Media Input Route (player-gestures.ast -> site-gestures.js -> Independent Media Sink)
+// ============================================================================
+
+async function testDecoupledMediaInputRoute() {
+  const gesturesSrc = fs.readFileSync(path.resolve('static/player/site-gestures.js'), 'utf8');
+  const gesturesInputSrc = fs.readFileSync(path.resolve('static/player/site-gestures-input.js'), 'utf8');
+  const gesturesProfileSrc = fs.readFileSync(path.resolve('static/player/site-gestures-profile.js'), 'utf8');
+  const gesturesAstSrc = fs.readFileSync(path.resolve('static/player/player-gestures.ast'), 'utf8');
+  const avm1Src = fs.readFileSync(path.resolve('static/player/ast-avm1-vm.js'), 'utf8');
+
+  // 1. Static independence invariant: site-gestures.js and site-gestures-input.js must have ZERO hardcoded Flash/AVM1 references
+  assert.equal(/avm1|swf/i.test(gesturesSrc), false, 'site-gestures.js must be 100% media-agnostic (no swf/avm1 coupling)');
+  assert.equal(/_avm1Vm|ASTAVM1Runtime/i.test(gesturesInputSrc), false, 'site-gestures-input.js must have zero hardcoded _avm1Vm coupling');
+
+  const windowListeners: Record<string, Function[]> = {};
+  const mockDoc = {
+    createElementNS: (_ns: string, tag: string) => new MockSvgNode(tag),
+    createElement: (tag: string) => new MockSvgNode(tag),
+    querySelector: () => null,
+    getElementById: () => null,
+  };
+  const sandbox: any = {
+    console, Math, Date, Number, String, Boolean, Array, Object, Map, Set, RegExp, JSON,
+    Uint8Array, Float32Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
+    atob: (s: string) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s: string) => Buffer.from(s, 'binary').toString('base64'),
+    performance: { now: () => Date.now() },
+    document: mockDoc,
+    addEventListener(ev: string, fn: Function) {
+      if (!windowListeners[ev]) windowListeners[ev] = [];
+      windowListeners[ev].push(fn);
+    },
+    removeEventListener(ev: string, fn: Function) {
+      if (windowListeners[ev]) windowListeners[ev] = windowListeners[ev].filter((f) => f !== fn);
+    },
+  };
+  sandbox.globalThis = sandbox;
+  sandbox.window = sandbox;
+
+  vm.runInNewContext(gesturesProfileSrc, sandbox);
+  vm.runInNewContext(gesturesInputSrc, sandbox);
+  vm.runInNewContext(gesturesSrc, sandbox);
+  vm.runInNewContext(avm1Src, sandbox);
+
+  const stageSvg = new MockSvgNode('svg');
+  (stageSvg as any).hasAttribute = (k: string) => Object.prototype.hasOwnProperty.call(stageSvg.attrs, k);
+  (stageSvg as any).getBoundingClientRect = () => ({ left: 0, top: 0, width: 600, height: 400 });
+  (stageSvg as any).createSVGPoint = () => ({ x: 0, y: 0, matrixTransform() { return { x: this.x, y: this.y }; } });
+  (stageSvg as any).getScreenCTM = () => ({ inverse: () => ({}) });
+  (stageSvg as any).closest = () => null;
+  (stageSvg as any).querySelector = () => null;
+
+  const engine: any = { vars: {}, scene: { id: 'swf-route-test', gestures: [] }, progress: 0 };
+  const gestures = new sandbox.ASTDirectGestureSubsystem(engine);
+  gestures.stageSvg = stageSvg;
+  gestures._parsePlayerGesturesAST(gesturesAstSrc);
+  gestures.setupEventListeners();
+
+  // Verify (:media-routes ...) parsed from player-gestures.ast
+  const caps = gestures.getCapabilities();
+  assert.ok(Array.isArray(caps.mediaRoutes) && caps.mediaRoutes.length >= 8, 'player-gestures.ast (:media-routes ...) must parse into capabilities');
+  assert.equal(engine.gestures, gestures, 'engine.gestures must expose universal gesture bus');
+
+  // Snapshot window listener count before mounting ASTAVM1Runtime
+  const keydownCountBefore = (windowListeners.keydown || []).length;
+
+  const progB64 = Buffer.from(
+    JSON.stringify({ v: 1, swfVer: 8, fps: 30, w: 600, h: 400, bg: '#050816', fc: 1, l: [], sh: {}, et: {}, bt: {}, sp: {}, exp: {}, bc: [], fr: [[]], ac: [] })
+  ).toString('base64');
+  const runtime = new sandbox.ASTAVM1Runtime(progB64, { engine });
+  runtime.mount(stageSvg, stageSvg);
+
+  // Verify ZERO duplicate window listeners added by ASTAVM1Runtime
+  assert.equal((windowListeners.keydown || []).length, keydownCountBefore, 'ASTAVM1Runtime must attach ZERO duplicate window keydown listeners when hosted on site-gestures.js');
+  assert.equal(runtime._standaloneListenersBound, false, 'ASTAVM1Runtime must subscribe to gesture bus instead of standalone listeners');
+  assert.equal(gestures.hasActiveMediaInputSink('key-down'), true, 'Universal gesture bus must report active media input sink');
+
+  // 2. Route keydown, pointermove, pointerdown, wheel, and blur exclusively through site-gestures.js!
+  let wheelTotal = 0;
+  let mouseDownHits = 0;
+  runtime._global.Mouse.addListener({
+    onMouseDown() { mouseDownHits++; },
+    onMouseWheel(d: number) { wheelTotal += d; },
+  });
+
+  let prevented = false;
+  gestures.handleKeyDown({ code: 'ArrowRight', key: 'ArrowRight', keyCode: 39, target: stageSvg, preventDefault() { prevented = true; } });
+  assert.equal(runtime._global.Key.isDown(39), true, 'ArrowRight must route through site-gestures.js to AVM1 sink');
+  assert.equal(prevented, true, 'Capture keys from player-gestures.ast must call preventDefault()');
+
+  gestures.handlePointerMove({ clientX: 150, clientY: 220, target: stageSvg });
+  gestures.handlePointerDown({ clientX: 150, clientY: 220, target: stageSvg, preventDefault() {} });
+  assert.equal(mouseDownHits, 1, 'PointerDown must route through site-gestures.js to AVM1 sink');
+
+  gestures.handleWheel({ deltaY: -120 });
+  assert.equal(wheelTotal, 3, 'Wheel must route through site-gestures.js to AVM1 sink');
+
+  // 3. Whiteboard Pen Mode must gate pointer & wheel away from media sink
+  gestures.isPenActive = true;
+  gestures.handleWheel({ deltaY: -120 });
+  assert.equal(wheelTotal, 3, 'Whiteboard pen mode must gate wheel away from media sink');
+  gestures.isPenActive = false;
+
+  // 4. Window blur must route release-all and clear held keys
+  gestures.handleWindowBlur();
+  assert.equal(runtime._global.Key.isDown(39), false, 'Blur must route release-all through site-gestures.js');
+
+  // 5. External bridge dispatch (e.g., parent iframe -> ast-bridge-cartridge -> site-gestures)
+  gestures.dispatchExternalMediaInput('key-down', { code: 'Space', key: ' ', keyCode: 32 });
+  assert.equal(runtime._global.Key.isDown(32), true, 'dispatchExternalMediaInput must deliver parent-bridged keys to active sink');
+  gestures.dispatchExternalMediaInput('release-all', {});
+  assert.equal(runtime._global.Key.isDown(32), false);
+
+  // 6. Destroy cleanly unregisters sink from universal bus
+  runtime.destroy();
+  assert.equal(gestures.hasActiveMediaInputSink(), false, 'destroy() must unregister media sink cleanly');
+  console.log('✓ Test 4 passed: Decoupled Universal Media Input Route (player-gestures.ast -> site-gestures.js -> Independent Media Sink)');
+}
+
 (async () => {
   await testSwfSoundEngine();
   await testPureSvgVisualFx();
   await testInteractiveEditText();
+  await testDecoupledMediaInputRoute();
   console.log('ALL RUFFLE-PARITY SWF ENGINE TESTS PASSED!');
   process.exit(0);
 })();
