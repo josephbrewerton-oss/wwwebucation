@@ -475,7 +475,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       Drop a Legacy Adobe Flash (.swf) File Here
     </strong>
     <p style="margin:0 0 12px 0; font-size:0.77rem; color:#94a3b8;">
-      100% offline local parser for FWS &amp; CWS Flash binaries — runs on pure W3C SVG DOM with zero external requests.
+      100% offline local parser for FWS, CWS &amp; ZWS (LZMA) Flash binaries — runs on pure W3C SVG DOM with zero external requests.
     </p>
     <div style="display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;">
       <label class="stj-btn stj-btn-primary stj-btn-sm" style="cursor:pointer; font-size:0.76rem; white-space:nowrap;">

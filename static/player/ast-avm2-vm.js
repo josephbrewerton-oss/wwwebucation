@@ -1392,6 +1392,12 @@
       this._svgEl = null;
       this._transformDirty = true;
       this._fxDirty = false;
+      this._mask = null;
+      this._maskTarget = null;
+      this._maskClipPathId = null;
+      this._maskClipPathEl = null;
+      this._maskDirty = false;
+      this._timelineClipPathId = null;
       this.mouseEnabled = true;
       this.buttonMode = false;
       this.useHandCursor = true;
@@ -1444,6 +1450,44 @@
       this._filters = Array.isArray(arr) ? arr.slice() : [];
       this._fxDirty = true;
       this._syncSvgFx();
+    }
+    get mask() { return this._mask; }
+    set mask(maskObj) {
+      if (this._mask === maskObj) return;
+      if (this._mask) {
+        const prev = this._mask;
+        this._mask = null;
+        if (prev._maskTarget === this) {
+          prev._maskTarget = null;
+          prev._transformDirty = true;
+        }
+      }
+      if (this._maskClipPathEl) {
+        if (this._maskClipPathEl.parentNode) {
+          this._maskClipPathEl.parentNode.removeChild(this._maskClipPathEl);
+        }
+        this._maskClipPathEl = null;
+      }
+      this._maskClipPathId = null;
+      if (this._svgEl) {
+        if (this._timelineClipPathId) {
+          this._svgEl.setAttribute('clip-path', `url(#${this._timelineClipPathId})`);
+        } else {
+          this._svgEl.removeAttribute('clip-path');
+        }
+      }
+      if (maskObj && maskObj instanceof AS3DisplayObject && maskObj !== this) {
+        if (maskObj._maskTarget && maskObj._maskTarget !== this) {
+          maskObj._maskTarget.mask = null;
+        }
+        this._mask = maskObj;
+        maskObj._maskTarget = this;
+        maskObj._transformDirty = true;
+        this._maskDirty = true;
+        if (this._vm && this._vm._doc) {
+          this._syncDynamicMask(this._vm._doc);
+        }
+      }
     }
 
     get mouseX() {
@@ -1524,9 +1568,43 @@
       this._fxDirty = false;
     }
 
+    _syncDynamicMask(doc) {
+      if (!this._mask || !this._vm || !this._vm._defsEl || !doc) return;
+      const el = this._ensureSvg(doc);
+      if (!el) return;
+      const maskObj = this._mask;
+      const maskEl = maskObj._ensureSvg(doc);
+      if (maskObj.graphics && maskObj._graphicsEl) {
+        maskObj.graphics.syncToSvg(doc, maskObj._graphicsEl);
+      }
+      if (!this._maskClipPathId) {
+        this._maskClipPathId = `as3-dyn-mask-${++this._vm._maskSeq}`;
+        const cp = doc.createElementNS(SVG_NS, 'clipPath');
+        cp.setAttribute('id', this._maskClipPathId);
+        cp.setAttribute('data-swf-vm-def', '1');
+        this._vm._defsEl.appendChild(cp);
+        this._maskClipPathEl = cp;
+      }
+      const cp = this._maskClipPathEl;
+      while (cp.firstChild) cp.removeChild(cp.firstChild);
+
+      const tg = this._getGlobalPosition();
+      const mg = maskObj._getGlobalPosition();
+      const relParts = [];
+      const dx = mg.x - tg.x;
+      const dy = mg.y - tg.y;
+      if (dx !== 0 || dy !== 0) relParts.push(`translate(${fmtN(dx)} ${fmtN(dy)})`);
+      if (maskObj._rotation !== 0) relParts.push(`rotate(${fmtN(maskObj._rotation)})`);
+      if (maskObj._scaleX !== 1 || maskObj._scaleY !== 1) relParts.push(`scale(${fmtN(maskObj._scaleX)} ${fmtN(maskObj._scaleY)})`);
+      this._vm._populateClipPathFromSvg(cp, maskEl, relParts.join(' '), true);
+      el.setAttribute('clip-path', `url(#${this._maskClipPathId})`);
+      this._maskDirty = false;
+    }
+
     _syncSvg(doc) {
       const el = this._ensureSvg(doc);
       if (!el) return;
+      const wasDirty = this._transformDirty;
       if (this._transformDirty) {
         const parts = [];
         if (this._x !== 0 || this._y !== 0) parts.push(`translate(${fmtN(this._x)} ${fmtN(this._y)})`);
@@ -1538,14 +1616,26 @@
         if (this._alpha < 0.999) el.setAttribute('opacity', fmtN(this._alpha));
         else el.removeAttribute('opacity');
 
-        if (!this._visible) el.setAttribute('display', 'none');
-        else el.removeAttribute('display');
+        const hideAsMask = Boolean(this._maskTarget);
+        if (!this._visible || hideAsMask) {
+          el.setAttribute('display', 'none');
+          if (hideAsMask) el.setAttribute('pointer-events', 'none');
+        } else {
+          el.removeAttribute('display');
+          el.removeAttribute('pointer-events');
+        }
 
         if (this.name) el.setAttribute('data-as3-name', this.name);
         if (this.buttonMode) el.setAttribute('cursor', 'pointer');
         this._transformDirty = false;
       }
       if (this._fxDirty) this._syncSvgFx();
+      if (this._maskTarget && (wasDirty || (this.graphics && this.graphics._dirty))) {
+        this._maskTarget._maskDirty = true;
+      }
+      if (this._mask && (this._maskDirty || wasDirty || (this._mask.graphics && this._mask.graphics._dirty))) {
+        this._syncDynamicMask(doc);
+      }
     }
   }
 
@@ -1742,12 +1832,15 @@
     constructor(vm, timelineDef) {
       super(vm);
       this._timelineDef = timelineDef || null;
-      this.totalFrames = (timelineDef && timelineDef.fc) || 1;
+      const frLen = timelineDef && Array.isArray(timelineDef.fr) ? timelineDef.fr.length : 0;
+      this.totalFrames = Math.max(1, (timelineDef && timelineDef.fc) || frLen || 1);
       this.currentFrame = 1;
       this._playing = this.totalFrames > 1;
       this._frameScripts = new Map();
       this._labels = (timelineDef && timelineDef.l) || [];
       this._timelineMountedFrame = 0;
+      this._timelineByDepth = new Map();
+      this._lastScriptFrame = 0;
     }
     get currentLabel() {
       let lbl = null;
@@ -1767,14 +1860,24 @@
       }
       return clampNum(Number(frame) || 1, 1, this.totalFrames) | 0;
     }
+    _syncTimeline() {
+      if (!this._vm || !this._timelineDef || !Array.isArray(this._timelineDef.fr) || this._timelineDef.fr.length === 0) {
+        return;
+      }
+      if (this._timelineMountedFrame === this.currentFrame) return;
+      this._timelineMountedFrame = this.currentFrame;
+      this._vm._syncTimelineFrame(this, this._timelineDef, this.currentFrame);
+    }
     gotoAndPlay(frame) {
       this.currentFrame = this._resolveFrame(frame);
       this._playing = true;
+      this._syncTimeline();
       this._runFrameScript();
     }
     gotoAndStop(frame) {
       this.currentFrame = this._resolveFrame(frame);
       this._playing = false;
+      this._syncTimeline();
       this._runFrameScript();
     }
     addFrameScript() {
@@ -1787,11 +1890,16 @@
     }
     _runFrameScript() {
       const fn = this._frameScripts.get(this.currentFrame);
+      this._lastScriptFrame = this.currentFrame;
       if (typeof fn === 'function') fn.call(this);
     }
     _stepTimeline() {
-      if (this._playing && this.totalFrames > 1) {
+      if (this._lastScriptFrame === 0 && this._frameScripts.has(this.currentFrame)) {
+        this._syncTimeline();
+        this._runFrameScript();
+      } else if (this._playing && this.totalFrames > 1) {
         this.currentFrame = this.currentFrame >= this.totalFrames ? 1 : this.currentFrame + 1;
+        this._syncTimeline();
         this._runFrameScript();
       }
       for (let i = 0; i < this._children.length; i++) {
@@ -2067,6 +2175,374 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 4b. Everyday AS3 Data & Offline Persistence APIs:
+  //     flash.utils.Endian, flash.utils.ByteArray, flash.net.SharedObject,
+  //     __AS3__.vec.Vector
+  // ---------------------------------------------------------------------------
+  const AS3Endian = {
+    BIG_ENDIAN: 'bigEndian',
+    LITTLE_ENDIAN: 'littleEndian',
+  };
+
+  const MAX_BYTEARRAY_BYTES = 8 * 1024 * 1024;
+
+  function encodeUtf8Bytes(str) {
+    const s = String(str == null ? '' : str);
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(s);
+    const out = [];
+    for (let i = 0; i < s.length; i++) {
+      let c = s.charCodeAt(i);
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+      else out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+    }
+    return new Uint8Array(out);
+  }
+
+  function decodeUtf8Bytes(bytes) {
+    if (typeof TextDecoder !== 'undefined') {
+      try { return new TextDecoder('utf-8').decode(bytes); } catch (_) {}
+    }
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return s;
+  }
+
+  class AS3ByteArray {
+    constructor() {
+      this._buf = new Uint8Array(64);
+      this._len = 0;
+      this._pos = 0;
+      this.endian = AS3Endian.BIG_ENDIAN;
+      this.objectEncoding = 3;
+    }
+    get position() { return this._pos; }
+    set position(v) { this._pos = Math.max(0, Math.min(MAX_BYTEARRAY_BYTES, Number(v) >>> 0)); }
+    get length() { return this._len; }
+    set length(v) {
+      const next = Math.max(0, Math.min(MAX_BYTEARRAY_BYTES, Number(v) >>> 0));
+      if (next > this._buf.length) this._ensureCap(next);
+      if (next < this._len) this._buf.fill(0, next, this._len);
+      this._len = next;
+      if (this._pos > this._len) this._pos = this._len;
+    }
+    get bytesAvailable() { return Math.max(0, this._len - this._pos); }
+    _isLE() { return this.endian === AS3Endian.LITTLE_ENDIAN; }
+    _ensureCap(needed) {
+      if (needed > MAX_BYTEARRAY_BYTES) throw new RangeError('ByteArray exceeds 8 MB offline safety cap');
+      if (needed <= this._buf.length) return;
+      let cap = Math.max(64, this._buf.length);
+      while (cap < needed) cap = Math.min(MAX_BYTEARRAY_BYTES, cap * 2);
+      const next = new Uint8Array(cap);
+      next.set(this._buf.subarray(0, this._len), 0);
+      this._buf = next;
+    }
+    _advanceWrite(n) {
+      this._pos += n;
+      if (this._pos > this._len) this._len = this._pos;
+    }
+    clear() { this._len = 0; this._pos = 0; }
+    writeByte(v) {
+      this._ensureCap(this._pos + 1);
+      this._buf[this._pos] = Number(v) & 0xff;
+      this._advanceWrite(1);
+    }
+    writeBoolean(v) { this.writeByte(v ? 1 : 0); }
+    writeShort(v) {
+      this._ensureCap(this._pos + 2);
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      dv.setInt16(this._pos, Number(v) | 0, this._isLE());
+      this._advanceWrite(2);
+    }
+    writeInt(v) {
+      this._ensureCap(this._pos + 4);
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      dv.setInt32(this._pos, Number(v) | 0, this._isLE());
+      this._advanceWrite(4);
+    }
+    writeUnsignedInt(v) {
+      this._ensureCap(this._pos + 4);
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      dv.setUint32(this._pos, Number(v) >>> 0, this._isLE());
+      this._advanceWrite(4);
+    }
+    writeFloat(v) {
+      this._ensureCap(this._pos + 4);
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      dv.setFloat32(this._pos, Number(v) || 0, this._isLE());
+      this._advanceWrite(4);
+    }
+    writeDouble(v) {
+      this._ensureCap(this._pos + 8);
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      dv.setFloat64(this._pos, Number(v) || 0, this._isLE());
+      this._advanceWrite(8);
+    }
+    writeUTFBytes(str) {
+      const bytes = encodeUtf8Bytes(str);
+      this._ensureCap(this._pos + bytes.length);
+      this._buf.set(bytes, this._pos);
+      this._advanceWrite(bytes.length);
+    }
+    writeUTF(str) {
+      const bytes = encodeUtf8Bytes(str);
+      this.writeShort(bytes.length & 0xffff);
+      this._ensureCap(this._pos + bytes.length);
+      this._buf.set(bytes, this._pos);
+      this._advanceWrite(bytes.length);
+    }
+    writeBytes(src, offset, len) {
+      if (!(src instanceof AS3ByteArray)) return;
+      const off = Math.max(0, Number(offset) >>> 0);
+      const avail = Math.max(0, src._len - off);
+      const count = len && Number(len) > 0 ? Math.min(avail, Number(len) >>> 0) : avail;
+      if (count <= 0) return;
+      this._ensureCap(this._pos + count);
+      this._buf.set(src._buf.subarray(off, off + count), this._pos);
+      this._advanceWrite(count);
+    }
+    readUnsignedByte() {
+      if (this._pos + 1 > this._len) return 0;
+      return this._buf[this._pos++];
+    }
+    readByte() {
+      const b = this.readUnsignedByte();
+      return b & 0x80 ? b - 256 : b;
+    }
+    readBoolean() { return this.readUnsignedByte() !== 0; }
+    readUnsignedShort() {
+      if (this._pos + 2 > this._len) { this._pos = this._len; return 0; }
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      const v = dv.getUint16(this._pos, this._isLE());
+      this._pos += 2;
+      return v;
+    }
+    readShort() {
+      if (this._pos + 2 > this._len) { this._pos = this._len; return 0; }
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      const v = dv.getInt16(this._pos, this._isLE());
+      this._pos += 2;
+      return v;
+    }
+    readInt() {
+      if (this._pos + 4 > this._len) { this._pos = this._len; return 0; }
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      const v = dv.getInt32(this._pos, this._isLE());
+      this._pos += 4;
+      return v;
+    }
+    readUnsignedInt() {
+      if (this._pos + 4 > this._len) { this._pos = this._len; return 0; }
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      const v = dv.getUint32(this._pos, this._isLE());
+      this._pos += 4;
+      return v;
+    }
+    readFloat() {
+      if (this._pos + 4 > this._len) { this._pos = this._len; return 0; }
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      const v = dv.getFloat32(this._pos, this._isLE());
+      this._pos += 4;
+      return v;
+    }
+    readDouble() {
+      if (this._pos + 8 > this._len) { this._pos = this._len; return 0; }
+      const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
+      const v = dv.getFloat64(this._pos, this._isLE());
+      this._pos += 8;
+      return v;
+    }
+    readUTFBytes(len) {
+      const count = Math.min(this.bytesAvailable, Math.max(0, Number(len) >>> 0));
+      const slice = this._buf.subarray(this._pos, this._pos + count);
+      this._pos += count;
+      return decodeUtf8Bytes(slice);
+    }
+    readUTF() {
+      const byteLen = this.readUnsignedShort();
+      return this.readUTFBytes(byteLen);
+    }
+    readBytes(dest, offset, len) {
+      if (!(dest instanceof AS3ByteArray)) return;
+      const count = len && Number(len) > 0 ? Math.min(this.bytesAvailable, Number(len) >>> 0) : this.bytesAvailable;
+      if (count <= 0) return;
+      const off = Math.max(0, Number(offset) >>> 0);
+      dest._ensureCap(off + count);
+      dest._buf.set(this._buf.subarray(this._pos, this._pos + count), off);
+      if (off + count > dest._len) dest._len = off + count;
+      this._pos += count;
+    }
+    toString() {
+      return decodeUtf8Bytes(this._buf.subarray(0, this._len));
+    }
+  }
+
+  // Offline-only local SharedObject store (zero cloud egress)
+  const _sharedObjectStore = new Map();
+
+  function _sanitizeSoKey(name, localPath) {
+    const cleanName = String(name || 'default').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 96);
+    const cleanPath = String(localPath || '/').replace(/[^a-zA-Z0-9._/-]/g, '_').slice(0, 64);
+    return `ast_swf_so_${cleanPath}_${cleanName}`;
+  }
+
+  class AS3SharedObject extends BaseDispatcher {
+    constructor(storageKey, initialData) {
+      super();
+      this._storageKey = storageKey;
+      this.data = initialData && typeof initialData === 'object' ? initialData : {};
+    }
+    get size() {
+      try { return JSON.stringify(this.data || {}).length; } catch (_) { return 0; }
+    }
+    flush() {
+      try {
+        const serialized = JSON.stringify(this.data || {});
+        if (serialized.length > 512 * 1024) return 'pending';
+        _sharedObjectStore.set(this._storageKey, serialized);
+        if (typeof global !== 'undefined' && global.localStorage) {
+          try { global.localStorage.setItem(this._storageKey, serialized); } catch (_) {}
+        }
+        return 'flushed';
+      } catch (_) {
+        return 'pending';
+      }
+    }
+    clear() {
+      this.data = {};
+      _sharedObjectStore.delete(this._storageKey);
+      if (typeof global !== 'undefined' && global.localStorage) {
+        try { global.localStorage.removeItem(this._storageKey); } catch (_) {}
+      }
+    }
+    close() {}
+    static getLocal(name, localPath) {
+      const key = _sanitizeSoKey(name, localPath);
+      let raw = _sharedObjectStore.get(key);
+      if (raw === undefined && typeof global !== 'undefined' && global.localStorage) {
+        try { raw = global.localStorage.getItem(key) || undefined; } catch (_) {}
+      }
+      let parsed = {};
+      if (typeof raw === 'string' && raw.length > 0) {
+        try {
+          const obj = JSON.parse(raw);
+          if (obj && typeof obj === 'object' && !Array.isArray(obj)) parsed = obj;
+        } catch (_) {}
+      }
+      return new AS3SharedObject(key, parsed);
+    }
+  }
+
+  function _coerceVectorElem(val, elemType) {
+    if (!elemType || elemType === '*' || elemType === 'Object') return val;
+    if (elemType === 'int') return Number(val) | 0;
+    if (elemType === 'uint') return Number(val) >>> 0;
+    if (elemType === 'Number') return Number(val);
+    if (elemType === 'Boolean') return Boolean(val);
+    if (elemType === 'String') return val === null || val === undefined ? null : String(val);
+    return val;
+  }
+
+  function _defaultVectorElem(elemType) {
+    if (elemType === 'int' || elemType === 'uint' || elemType === 'Number') return 0;
+    if (elemType === 'Boolean') return false;
+    return null;
+  }
+
+  class AS3Vector {
+    constructor(length, fixed, elemType) {
+      this._elemType = elemType || '*';
+      this._fixed = Boolean(fixed);
+      const len = Math.max(0, Math.min(100000, Number(length) >>> 0));
+      this._items = new Array(len);
+      const def = _defaultVectorElem(this._elemType);
+      for (let i = 0; i < len; i++) this._items[i] = def;
+    }
+    get length() { return this._items.length; }
+    set length(v) {
+      if (this._fixed) return;
+      const next = Math.max(0, Math.min(100000, Number(v) >>> 0));
+      const prev = this._items.length;
+      this._items.length = next;
+      if (next > prev) {
+        const def = _defaultVectorElem(this._elemType);
+        for (let i = prev; i < next; i++) this._items[i] = def;
+      }
+    }
+    get fixed() { return this._fixed; }
+    set fixed(v) { this._fixed = Boolean(v); }
+    _getAt(idx) { return this._items[idx]; }
+    _setAt(idx, val) {
+      if (idx < 0 || (this._fixed && idx >= this._items.length)) return;
+      this._items[idx] = _coerceVectorElem(val, this._elemType);
+    }
+    push() {
+      if (this._fixed) return this._items.length;
+      for (let i = 0; i < arguments.length; i++) {
+        this._items.push(_coerceVectorElem(arguments[i], this._elemType));
+      }
+      return this._items.length;
+    }
+    pop() { return this._fixed ? undefined : this._items.pop(); }
+    shift() { return this._fixed ? undefined : this._items.shift(); }
+    unshift() {
+      if (this._fixed) return this._items.length;
+      const vals = [];
+      for (let i = 0; i < arguments.length; i++) vals.push(_coerceVectorElem(arguments[i], this._elemType));
+      return this._items.unshift(...vals);
+    }
+    slice(s, e) {
+      const out = new AS3Vector(0, false, this._elemType);
+      out._items = this._items.slice(s, e);
+      return out;
+    }
+    splice(start, deleteCount) {
+      if (this._fixed) return new AS3Vector(0, false, this._elemType);
+      const add = [];
+      for (let i = 2; i < arguments.length; i++) add.push(_coerceVectorElem(arguments[i], this._elemType));
+      const removed = this._items.splice(start, deleteCount === undefined ? this._items.length : deleteCount, ...add);
+      const out = new AS3Vector(0, false, this._elemType);
+      out._items = removed;
+      return out;
+    }
+    concat() {
+      const out = new AS3Vector(0, false, this._elemType);
+      out._items = this._items.slice();
+      for (let i = 0; i < arguments.length; i++) {
+        const a = arguments[i];
+        if (a instanceof AS3Vector) out._items.push(...a._items);
+        else if (Array.isArray(a)) out._items.push(...a.map((x) => _coerceVectorElem(x, this._elemType)));
+        else out._items.push(_coerceVectorElem(a, this._elemType));
+      }
+      return out;
+    }
+    indexOf(val, from) { return this._items.indexOf(val, from); }
+    lastIndexOf(val, from) { return from === undefined ? this._items.lastIndexOf(val) : this._items.lastIndexOf(val, from); }
+    reverse() { this._items.reverse(); return this; }
+    sort(cmp) {
+      if (typeof cmp === 'function') this._items.sort(cmp);
+      else if (this._elemType === 'int' || this._elemType === 'uint' || this._elemType === 'Number') this._items.sort((a, b) => a - b);
+      else this._items.sort();
+      return this;
+    }
+    join(sep) { return this._items.join(sep); }
+    forEach(fn, thisArg) { this._items.forEach((v, i) => fn.call(thisArg, v, i, this)); }
+    map(fn, thisArg) {
+      const out = new AS3Vector(0, false, this._elemType);
+      out._items = this._items.map((v, i) => _coerceVectorElem(fn.call(thisArg, v, i, this), this._elemType));
+      return out;
+    }
+    filter(fn, thisArg) {
+      const out = new AS3Vector(0, false, this._elemType);
+      out._items = this._items.filter((v, i) => fn.call(thisArg, v, i, this));
+      return out;
+    }
+    every(fn, thisArg) { return this._items.every((v, i) => fn.call(thisArg, v, i, this)); }
+    some(fn, thisArg) { return this._items.some((v, i) => fn.call(thisArg, v, i, this)); }
+    toString() { return this._items.join(','); }
+  }
+
   function decodeKeyCode(key, code) {
     const map = {
       ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40,
@@ -2121,6 +2597,7 @@
       this._intervalSeq = 0;
       this._filterCache = new Map();
       this._filterSeq = 0;
+      this._maskSeq = 0;
       this._defsEl = null;
       this._rootGroup = null;
       this._gestureUnregister = null;
@@ -2174,8 +2651,8 @@
       this._globalScope.String = String;
       this._globalScope.Number = Number;
       this._globalScope.Boolean = Boolean;
-      this._globalScope.int = (v) => (Number(v) | 0);
-      this._globalScope.uint = (v) => (Number(v) >>> 0);
+      this._globalScope.int = function int(v) { return Number(v) | 0; };
+      this._globalScope.uint = function uint(v) { return Number(v) >>> 0; };
       this._globalScope.Date = Date;
       this._globalScope.RegExp = RegExp;
       this._globalScope.Error = Error;
@@ -2251,9 +2728,17 @@
       // flash.utils & flash.ui
       this._registerBuiltin('flash.utils.Timer', function (d, r) { return new AS3Timer(self, d, r); }, {}, 'flash.events.EventDispatcher');
       this._registerBuiltin('flash.utils.Dictionary', function () { return new Map(); }, {});
+      this._registerBuiltin('flash.utils.Endian', function () { return {}; }, AS3Endian);
+      this._registerBuiltin('flash.utils.ByteArray', function () { return new AS3ByteArray(); }, {});
       this._registerBuiltin('flash.ui.Keyboard', function () { return {}; }, AS3Keyboard);
 
-      // Offline-safe flash.net stubs (air-gap invariant: zero external network requests)
+      // __AS3__.vec.Vector
+      this._registerBuiltin('__AS3__.vec.Vector', function (len, fixed) { return new AS3Vector(len, fixed, '*'); }, {});
+
+      // Offline-safe flash.net (SharedObject = local offline persistence; zero external network requests)
+      this._registerBuiltin('flash.net.SharedObject', function () { return AS3SharedObject.getLocal('default'); }, {
+        getLocal: (name, localPath) => AS3SharedObject.getLocal(name, localPath),
+      }, 'flash.events.EventDispatcher');
       this._registerBuiltin('flash.net.URLRequest', function (u) { return { url: String(u || '') }; }, {});
       this._registerBuiltin('flash.net.URLLoader', function () {
         const d = new BaseDispatcher();
@@ -2432,7 +2917,10 @@
       if (nativeAncestor && nativeAncestor.qname === 'flash.media.Sound') {
         obj = new AS3Sound(this, clsDesc.symbolCharId || 0);
       } else if (nativeAncestor && nativeAncestor.qname === 'flash.display.MovieClip') {
-        const tlDef = clsDesc.symbolCharId > 0 ? this.program.sp && this.program.sp[clsDesc.symbolCharId] : null;
+        const isRootDocClass = clsDesc.qname === this.program.dc || clsDesc.simpleName === this.program.dc;
+        const tlDef = clsDesc.symbolCharId > 0
+          ? (this.program.sp && this.program.sp[clsDesc.symbolCharId])
+          : (isRootDocClass ? { fc: this.program.fc || 1, l: this.program.l || [], fr: this.program.fr || [] } : null);
         obj = new AS3MovieClip(this, tlDef);
       } else if (nativeAncestor && nativeAncestor.nativeCtor) {
         obj = nativeAncestor.nativeCtor.apply(null, []);
@@ -2488,9 +2976,11 @@
 
       // If this class is bound to a SymbolClass Sprite or Document Class (charId === 0), attach timeline children
       if (clsDesc.symbolCharId > 0 && this.program.sp && this.program.sp[clsDesc.symbolCharId]) {
-        this._populateTimelineFrame(obj, this.program.sp[clsDesc.symbolCharId].fr && this.program.sp[clsDesc.symbolCharId].fr[0]);
+        if (obj instanceof AS3MovieClip) obj._syncTimeline();
+        else this._syncTimelineFrame(obj, this.program.sp[clsDesc.symbolCharId], 1);
       } else if (clsDesc.qname === this.program.dc || clsDesc.simpleName === this.program.dc) {
-        this._populateTimelineFrame(obj, this.program.fr && this.program.fr[0]);
+        if (obj instanceof AS3MovieClip) obj._syncTimeline();
+        else this._syncTimelineFrame(obj, { fr: this.program.fr || [] }, 1);
       }
 
       // Run instance constructor (iinit)
@@ -2554,6 +3044,16 @@
         if (c) return c;
       }
       if (obj instanceof Map) return obj.get(name);
+      if (obj instanceof AS3Vector) {
+        const nIdx = Number(name);
+        if (Number.isInteger(nIdx) && nIdx >= 0 && String(nIdx) === String(name)) return obj._getAt(nIdx);
+      }
+      if (obj instanceof AS3ByteArray) {
+        const nIdx = Number(name);
+        if (Number.isInteger(nIdx) && nIdx >= 0 && String(nIdx) === String(name)) {
+          return nIdx < obj._len ? obj._buf[nIdx] : 0;
+        }
+      }
       if (name in obj) return obj[name];
       if (typeof obj.getChildByName === 'function') {
         const ch = obj.getChildByName(name);
@@ -2571,6 +3071,22 @@
       if (obj instanceof Map) {
         obj.set(name, val);
         return;
+      }
+      if (obj instanceof AS3Vector) {
+        const nIdx = Number(name);
+        if (Number.isInteger(nIdx) && nIdx >= 0 && String(nIdx) === String(name)) {
+          obj._setAt(nIdx, val);
+          return;
+        }
+      }
+      if (obj instanceof AS3ByteArray) {
+        const nIdx = Number(name);
+        if (Number.isInteger(nIdx) && nIdx >= 0 && String(nIdx) === String(name)) {
+          obj._ensureCap(nIdx + 1);
+          obj._buf[nIdx] = Number(val) & 0xff;
+          if (nIdx + 1 > obj._len) obj._len = nIdx + 1;
+          return;
+        }
       }
       obj[name] = val;
     }
@@ -2849,6 +3365,30 @@
                 const obj = stack.pop();
                 const ctor = this._getProp(obj, mn.name, mn.qname) || this._resolveClass(mn.qname) || this._resolveClass(mn.name);
                 stack.push(this._instantiateClass(ctor, callArgs));
+                break;
+              }
+              case 0x53: { // applytype (e.g. Vector.<int>)
+                const argCount = readU30();
+                const typeArgs = argCount > 0 ? stack.splice(stack.length - argCount, argCount) : [];
+                const baseType = stack.pop();
+                const elemTypeObj = typeArgs[0];
+                const elemTypeName =
+                  elemTypeObj instanceof AS3ClassDescriptor
+                    ? elemTypeObj.simpleName
+                    : (typeof elemTypeObj === 'function' ? elemTypeObj.name : '*');
+                const specialized = new AS3ClassDescriptor({
+                  qname: `${(baseType && baseType.qname) || '__AS3__.vec.Vector'}.<${elemTypeName}>`,
+                  simpleName: `Vector.<${elemTypeName}>`,
+                  nativeCtor: function (len, fixed) {
+                    if (Array.isArray(len)) {
+                      const v = new AS3Vector(0, false, elemTypeName);
+                      for (let i = 0; i < len.length; i++) v.push(len[i]);
+                      return v;
+                    }
+                    return new AS3Vector(len, fixed, elemTypeName);
+                  },
+                });
+                stack.push(specialized);
                 break;
               }
 
@@ -3232,6 +3772,30 @@
       return `url(#${fid})`;
     }
 
+    _populateClipPathFromSvg(clipPathEl, sourceEl, rootTransformStr, skipRootTransform) {
+      if (!clipPathEl || !sourceEl) return;
+      const collect = (el, chain, isRoot) => {
+        if (!el) return;
+        const tag = (el.nodeName || el.tagName || '').toLowerCase();
+        const ownT = (!isRoot || !skipRootTransform) && el.getAttribute ? el.getAttribute('transform') : '';
+        const nextChain = ownT ? (chain ? `${chain} ${ownT}` : ownT) : chain;
+        if (tag === 'path' || tag === 'rect' || tag === 'circle' || tag === 'ellipse' || tag === 'polygon' || tag === 'polyline') {
+          const clone = el.cloneNode(false);
+          if (clone.removeAttribute) {
+            clone.removeAttribute('id');
+            clone.removeAttribute('fill');
+            clone.removeAttribute('stroke');
+          }
+          if (nextChain && clone.setAttribute) clone.setAttribute('transform', nextChain);
+          clipPathEl.appendChild(clone);
+          return;
+        }
+        const kids = el.childNodes || el.children || [];
+        for (let i = 0; i < kids.length; i++) collect(kids[i], nextChain, false);
+      };
+      collect(sourceEl, rootTransformStr || '', true);
+    }
+
     _buildShapeDisplayObject(charId) {
       const shDef = this.program.sh && this.program.sh[charId];
       if (!shDef) return null;
@@ -3244,13 +3808,18 @@
         const prims = Array.isArray(shDef.p) ? shDef.p : [];
         for (let i = 0; i < prims.length; i++) {
           const p = prims[i];
+          const d = Array.isArray(p) ? (p[0] || '') : (p.d || '');
+          const fill = Array.isArray(p) ? (p[1] || 'none') : (p.f || 'none');
+          const stroke = Array.isArray(p) ? (p[2] || 'none') : (p.s || 'none');
+          const sw = Array.isArray(p) ? (p[3] || 0) : (p.sw || 1);
+          const fillRule = Array.isArray(p) ? 'evenodd' : (p.fr || '');
           const path = this._doc.createElementNS(SVG_NS, 'path');
-          path.setAttribute('d', p.d || '');
-          path.setAttribute('fill', p.f || 'none');
-          if (p.fr) path.setAttribute('fill-rule', p.fr);
-          if (p.s) {
-            path.setAttribute('stroke', p.s);
-            path.setAttribute('stroke-width', String(p.sw || 1));
+          path.setAttribute('d', d);
+          path.setAttribute('fill', fill);
+          if (fillRule) path.setAttribute('fill-rule', fillRule);
+          if (stroke && stroke !== 'none') {
+            path.setAttribute('stroke', stroke);
+            path.setAttribute('stroke-width', String(sw || 1));
             path.setAttribute('stroke-linecap', 'round');
             path.setAttribute('stroke-linejoin', 'round');
           } else {
@@ -3262,31 +3831,104 @@
       return shape;
     }
 
-    _populateTimelineFrame(parentContainer, frameEntries) {
-      if (!Array.isArray(frameEntries)) return;
+    _resolveTimelineFrameEntries(timelineDef, frame1Based) {
+      if (!timelineDef || !Array.isArray(timelineDef.fr) || timelineDef.fr.length === 0) return [];
+      const fr = timelineDef.fr;
+      let idx = Math.max(0, Math.min(fr.length - 1, (frame1Based | 0) - 1));
+      while (idx > 0 && fr[idx] === '=') idx--;
+      return Array.isArray(fr[idx]) ? fr[idx] : [];
+    }
+
+    _syncTimelineFrame(parentContainer, timelineDef, frame1Based) {
+      const frameEntries = this._resolveTimelineFrameEntries(timelineDef, frame1Based);
+      if (!parentContainer._timelineByDepth) parentContainer._timelineByDepth = new Map();
+      const byDepth = parentContainer._timelineByDepth;
+
+      const nextByDepth = new Map();
+      for (let i = 0; i < frameEntries.length; i++) {
+        const item = frameEntries[i];
+        if (item) nextByDepth.set(item.d !== undefined ? item.d : i, item);
+      }
+
+      // 1. Remove stale timeline depth entries (leaving script-added addChild children untouched)
+      byDepth.forEach((slot, depth) => {
+        const nextItem = nextByDepth.get(depth);
+        const nextIsMask = Boolean(nextItem && nextItem.cd && nextItem.cd > depth);
+        if (!nextItem || nextItem.c !== slot.charId || Boolean(slot.clipDepth) !== nextIsMask) {
+          if (slot.child && slot.child.parent === parentContainer) {
+            parentContainer.removeChild(slot.child);
+          }
+          if (slot.maskEl && slot.maskEl.parentNode) {
+            slot.maskEl.parentNode.removeChild(slot.maskEl);
+          }
+          byDepth.delete(depth);
+        }
+      });
+
+      // 2. Reconcile active timeline entries in ascending depth order with clipDepth SVG <clipPath> masking
+      const activeMasks = [];
       for (let i = 0; i < frameEntries.length; i++) {
         const item = frameEntries[i];
         if (!item) continue;
-        let child = null;
-        if (this.program.et && this.program.et[item.c]) {
-          child = new AS3TextField(this, this.program.et[item.c]);
-        } else if (this.program.sp && this.program.sp[item.c]) {
-          const symName = this.program.sym && this.program.sym[item.c];
-          const clsDesc = symName ? this._resolveClass(symName) : null;
-          if (clsDesc) {
-            child = this._instantiateClass(clsDesc, []);
-          } else {
-            child = new AS3MovieClip(this, this.program.sp[item.c]);
-            this._populateTimelineFrame(child, this.program.sp[item.c].fr && this.program.sp[item.c].fr[0]);
+        const depth = item.d !== undefined ? item.d : i;
+
+        if (item.cd && item.cd > depth) {
+          let slot = byDepth.get(depth);
+          if (!slot && this._doc && this._defsEl) {
+            const maskId = `as3-tl-mask-${++this._maskSeq}`;
+            const cp = this._doc.createElementNS(SVG_NS, 'clipPath');
+            cp.setAttribute('id', maskId);
+            cp.setAttribute('data-swf-vm-def', '1');
+            const maskShape = this._buildShapeDisplayObject(item.c);
+            const matStr = Array.isArray(item.m) && item.m.length === 6
+              ? `matrix(${item.m.map(fmtN).join(' ')})`
+              : '';
+            if (maskShape && maskShape._svgEl) {
+              this._populateClipPathFromSvg(cp, maskShape._svgEl, matStr, true);
+            }
+            this._defsEl.appendChild(cp);
+            slot = { depth, charId: item.c, clipDepth: item.cd, maskId, maskEl: cp };
+            byDepth.set(depth, slot);
           }
-        } else if (this.program.sh && this.program.sh[item.c]) {
-          child = this._buildShapeDisplayObject(item.c);
+          if (slot) activeMasks.push({ clipDepth: item.cd, maskId: slot.maskId });
+          continue;
         }
-        if (!child) continue;
-        if (item.n) {
-          child.name = item.n;
-          parentContainer[item.n] = child;
+
+        let maskId = null;
+        for (let mi = activeMasks.length - 1; mi >= 0; mi--) {
+          if (depth <= activeMasks[mi].clipDepth) {
+            maskId = activeMasks[mi].maskId;
+            break;
+          }
         }
+
+        let slot = byDepth.get(depth);
+        let child = slot ? slot.child : null;
+        if (!child) {
+          if (this.program.et && this.program.et[item.c]) {
+            child = new AS3TextField(this, this.program.et[item.c]);
+          } else if (this.program.sp && this.program.sp[item.c]) {
+            const symName = this.program.sym && this.program.sym[item.c];
+            const clsDesc = symName ? this._resolveClass(symName) : null;
+            if (clsDesc) {
+              child = this._instantiateClass(clsDesc, []);
+            } else {
+              child = new AS3MovieClip(this, this.program.sp[item.c]);
+              child._syncTimeline();
+            }
+          } else if (this.program.sh && this.program.sh[item.c]) {
+            child = this._buildShapeDisplayObject(item.c);
+          }
+          if (!child) continue;
+          if (item.n) {
+            child.name = item.n;
+            parentContainer[item.n] = child;
+          }
+          parentContainer.addChild(child);
+          slot = { depth, charId: item.c, child };
+          byDepth.set(depth, slot);
+        }
+
         if (Array.isArray(item.m) && item.m.length === 6) {
           child._scaleX = item.m[0];
           child._scaleY = item.m[3];
@@ -3302,8 +3944,20 @@
             item.cx[4], item.cx[5], item.cx[6], item.cx[7]
           );
         }
-        parentContainer.addChild(child);
+
+        child._timelineClipPathId = maskId;
+        if (!child._mask && this._doc) {
+          const el = child._ensureSvg(this._doc);
+          if (el) {
+            if (maskId) el.setAttribute('clip-path', `url(#${maskId})`);
+            else el.removeAttribute('clip-path');
+          }
+        }
       }
+    }
+
+    _populateTimelineFrame(parentContainer, frameEntries) {
+      this._syncTimelineFrame(parentContainer, { fr: [frameEntries || []] }, 1);
     }
 
     // -------------------------------------------------------------------------
@@ -3352,8 +4006,8 @@
         }
       }
       if (!docInst) {
-        docInst = new AS3MovieClip(this, { fc: this.program.fc || 1, l: this.program.l || [] });
-        this._populateTimelineFrame(docInst, this.program.fr && this.program.fr[0]);
+        docInst = new AS3MovieClip(this, { fc: this.program.fc || 1, l: this.program.l || [], fr: this.program.fr || [] });
+        docInst._syncTimeline();
       }
 
       this.rootDoc = docInst;
@@ -3615,6 +4269,9 @@
       this._traces = [];
       this._warnings = [];
       this._budgetHits = 0;
+      this._filterCache.clear();
+      this._filterSeq = 0;
+      this._maskSeq = 0;
       this.mount(this._container, this._stageSvg);
     }
 

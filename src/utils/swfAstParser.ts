@@ -17,6 +17,7 @@ import {
   type SwfStartSoundEvent,
   type SwfBitmapDef,
 } from './swfMediaDecoders';
+import { decompressZwsSwf } from './swfLzmaDecoder';
 
 export interface SwfSurfaceFilter {
   /** 'ds'=DropShadow, 'bl'=Blur, 'gl'=Glow, 'cm'=ColorMatrix */
@@ -61,6 +62,8 @@ export interface SwfMetadata {
   backgroundColor: string;
   shapeCount: number;
   morphShapeCount?: number;
+  fontCount?: number;
+  staticTextCount?: number;
   spriteCount?: number;
   buttonCount?: number;
   actionCount?: number;
@@ -970,6 +973,344 @@ function parseShapeRecords(
   flushStyleBuckets();
 
   return { pathCommands, svgPaths, primitives, curFill0, curFill1, curLine };
+}
+
+type SwfGlyphCmd = ['M' | 'L', number, number] | ['Q', number, number, number, number];
+
+interface SwfVectorFontDef {
+  fontId: number;
+  name: string;
+  isFont3: boolean;
+  emScale: number;
+  glyphs: SwfGlyphCmd[][];
+  codeTable: number[];
+  advances: number[];
+}
+
+/**
+ * Decodes a single SWF glyph SHAPE record (DefineFont / DefineFont2 / DefineFont3)
+ * into raw EM-square vector commands (MoveTo, LineTo, QuadTo) with strict bounds guards.
+ */
+function parseGlyphShapeCommands(reader: BitReader, maxOffset: number): SwfGlyphCmd[] {
+  reader.syncBits();
+  if (reader.offset >= maxOffset) return [];
+  const numFillBits = reader.readUBits(4);
+  const numLineBits = reader.readUBits(4);
+  const cmds: SwfGlyphCmd[] = [];
+  let curX = 0;
+  let curY = 0;
+  let guard = 0;
+
+  while (reader.offset < maxOffset && guard++ < 4096) {
+    const typeFlag = reader.readUBits(1);
+    if (typeFlag === 0) {
+      const flags = reader.readUBits(5);
+      if (flags === 0) break; // EndShapeRecord
+      if (flags & 0x01) {
+        const moveBits = reader.readUBits(5);
+        curX = reader.readSBits(moveBits);
+        curY = reader.readSBits(moveBits);
+        cmds.push(['M', curX, curY]);
+      }
+      if (flags & 0x02) reader.readUBits(numFillBits);
+      if (flags & 0x04) reader.readUBits(numFillBits);
+      if (flags & 0x08) reader.readUBits(numLineBits);
+      if (flags & 0x10) break; // StateNewStyles not valid in font glyphs
+    } else {
+      const straightFlag = reader.readUBits(1);
+      const nbits = reader.readUBits(4) + 2;
+      if (straightFlag === 1) {
+        const generalLine = reader.readUBits(1);
+        let dx = 0;
+        let dy = 0;
+        if (generalLine === 1) {
+          dx = reader.readSBits(nbits);
+          dy = reader.readSBits(nbits);
+        } else {
+          const vertFlag = reader.readUBits(1);
+          if (vertFlag === 1) dy = reader.readSBits(nbits);
+          else dx = reader.readSBits(nbits);
+        }
+        curX += dx;
+        curY += dy;
+        cmds.push(['L', curX, curY]);
+      } else {
+        const cx = curX + reader.readSBits(nbits);
+        const cy = curY + reader.readSBits(nbits);
+        const ax = cx + reader.readSBits(nbits);
+        const ay = cy + reader.readSBits(nbits);
+        curX = ax;
+        curY = ay;
+        cmds.push(['Q', cx, cy, ax, ay]);
+      }
+    }
+  }
+  return cmds;
+}
+
+/**
+ * Parses SWF DefineFont (Tag 10), DefineFont2 (Tag 48), and DefineFont3 (Tag 75)
+ * into pure-SVG Bézier glyph outline tables (zero external font files required).
+ */
+function parseDefineFontTag(
+  reader: BitReader,
+  tagType: number,
+  tagEndOffset: number
+): SwfVectorFontDef | null {
+  if (reader.offset + 2 > tagEndOffset) return null;
+  const fontId = reader.readUI16();
+  const isFont3 = tagType === 75;
+  const emScale = isFont3 ? 20480 : 1024;
+
+  if (tagType === 10) {
+    // DefineFont (Tag 10): OffsetTable[0] / 2 gives glyph count
+    const tableStart = reader.offset;
+    if (tableStart + 2 > tagEndOffset) {
+      return { fontId, name: `Font${fontId}`, isFont3: false, emScale, glyphs: [], codeTable: [], advances: [] };
+    }
+    const firstOff = reader.readUI16();
+    const numGlyphs = Math.min(4096, Math.floor(firstOff / 2));
+    const offsets: number[] = [firstOff];
+    for (let i = 1; i < numGlyphs && reader.offset + 2 <= tagEndOffset; i++) {
+      offsets.push(reader.readUI16());
+    }
+    const glyphs: SwfGlyphCmd[][] = [];
+    for (let i = 0; i < offsets.length; i++) {
+      const gStart = tableStart + offsets[i];
+      const gEnd = i + 1 < offsets.length ? Math.min(tagEndOffset, tableStart + offsets[i + 1]) : tagEndOffset;
+      if (gStart >= tagEndOffset || gStart >= gEnd) {
+        glyphs.push([]);
+        continue;
+      }
+      reader.offset = gStart;
+      glyphs.push(parseGlyphShapeCommands(reader, gEnd));
+    }
+    return { fontId, name: `Font${fontId}`, isFont3: false, emScale, glyphs, codeTable: [], advances: [] };
+  }
+
+  // DefineFont2 (Tag 48) & DefineFont3 (Tag 75)
+  if (reader.offset + 3 > tagEndOffset) return null;
+  const flags = reader.readUI8();
+  const hasLayout = (flags & 0x80) !== 0;
+  const wideOffsets = (flags & 0x08) !== 0;
+  const wideCodes = (flags & 0x04) !== 0 || isFont3;
+  reader.readUI8(); // LanguageCode
+  const nameLen = reader.readUI8();
+  let name = '';
+  for (let i = 0; i < nameLen && reader.offset < tagEndOffset; i++) {
+    const ch = reader.readUI8();
+    if (ch !== 0) name += String.fromCharCode(ch);
+  }
+  if (reader.offset + 2 > tagEndOffset) {
+    return { fontId, name: name || `Font${fontId}`, isFont3, emScale, glyphs: [], codeTable: [], advances: [] };
+  }
+  const numGlyphs = Math.min(4096, reader.readUI16());
+  const glyphs: SwfGlyphCmd[][] = [];
+  const codeTable: number[] = [];
+  const advances: number[] = [];
+
+  if (numGlyphs > 0) {
+    const tableStart = reader.offset;
+    const offsets: number[] = [];
+    for (let i = 0; i < numGlyphs; i++) {
+      if (wideOffsets) {
+        if (reader.offset + 4 > tagEndOffset) break;
+        offsets.push(reader.readUI32());
+      } else {
+        if (reader.offset + 2 > tagEndOffset) break;
+        offsets.push(reader.readUI16());
+      }
+    }
+    let codeTableOffset = tagEndOffset - tableStart;
+    if (wideOffsets && reader.offset + 4 <= tagEndOffset) {
+      codeTableOffset = reader.readUI32();
+    } else if (!wideOffsets && reader.offset + 2 <= tagEndOffset) {
+      codeTableOffset = reader.readUI16();
+    }
+
+    const codeTableAbs = Math.min(tagEndOffset, tableStart + codeTableOffset);
+    for (let i = 0; i < offsets.length; i++) {
+      const gStart = tableStart + offsets[i];
+      const nextRel = i + 1 < offsets.length ? offsets[i + 1] : codeTableOffset;
+      const gEnd = Math.min(tagEndOffset, tableStart + nextRel);
+      if (gStart >= tagEndOffset || gStart >= gEnd) {
+        glyphs.push([]);
+        continue;
+      }
+      reader.offset = gStart;
+      glyphs.push(parseGlyphShapeCommands(reader, gEnd));
+    }
+
+    if (codeTableAbs < tagEndOffset) {
+      reader.offset = codeTableAbs;
+      for (let i = 0; i < numGlyphs; i++) {
+        if (wideCodes) {
+          if (reader.offset + 2 > tagEndOffset) break;
+          codeTable.push(reader.readUI16());
+        } else {
+          if (reader.offset + 1 > tagEndOffset) break;
+          codeTable.push(reader.readUI8());
+        }
+      }
+    }
+
+    if (hasLayout && reader.offset + 6 <= tagEndOffset) {
+      reader.readSI16(); // FontAscent
+      reader.readSI16(); // FontDescent
+      reader.readSI16(); // FontLeading
+      for (let i = 0; i < numGlyphs && reader.offset + 2 <= tagEndOffset; i++) {
+        advances.push(reader.readSI16());
+      }
+    }
+  }
+
+  return { fontId, name: name || `Font${fontId}`, isFont3, emScale, glyphs, codeTable, advances };
+}
+
+/**
+ * Parses SWF DefineText (Tag 11) and DefineText2 (Tag 33) static vector text blocks
+ * by transforming embedded DefineFont2/3 Bézier glyphs into pure SVG <path> primitives.
+ */
+function parseDefineTextTag(
+  reader: BitReader,
+  tagType: number,
+  tagEndOffset: number,
+  fonts: Map<number, SwfVectorFontDef>
+): { id: string; charId: number; svg: string; primitives?: SwfShapePrimitive[]; bbox: { x: number; y: number; w: number; h: number } } | null {
+  if (reader.offset + 2 > tagEndOffset) return null;
+  const charId = reader.readUI16();
+  const bounds = reader.readRect();
+  const textMatrix = reader.readMatrix();
+  const isText2 = tagType === 33;
+
+  if (reader.offset + 2 > tagEndOffset) return null;
+  const glyphBits = reader.readUI8();
+  const advanceBits = reader.readUI8();
+
+  let currentFontId = 0;
+  let currentColor = '#ffffff';
+  let currentTextHeight = 16;
+  let cursorX = 0;
+  let cursorY = 0;
+
+  const pathsByColor = new Map<string, string[]>();
+  const extractedChars: string[] = [];
+  let recordGuard = 0;
+
+  const xformPt = (lx: number, ly: number): [number, number] => [
+    textMatrix.scaleX * lx + textMatrix.rotateSkew1 * ly + textMatrix.transX,
+    textMatrix.rotateSkew0 * lx + textMatrix.scaleY * ly + textMatrix.transY,
+  ];
+  const fmtPx = (v: number): string => (Math.round(v * 100) / 100).toString();
+
+  while (reader.offset < tagEndOffset && recordGuard++ < 2048) {
+    reader.syncBits();
+    if (reader.offset >= tagEndOffset) break;
+    const header = reader.readUI8();
+    if (header === 0) break; // EndOfRecordsFlag
+
+    const hasFont = (header & 0x08) !== 0;
+    const hasColor = (header & 0x04) !== 0;
+    const hasYOffset = (header & 0x02) !== 0;
+    const hasXOffset = (header & 0x01) !== 0;
+
+    if (hasFont && reader.offset + 2 <= tagEndOffset) {
+      currentFontId = reader.readUI16();
+    }
+    if (hasColor && reader.offset + (isText2 ? 4 : 3) <= tagEndOffset) {
+      currentColor = reader.readRGBA(isText2);
+    }
+    if (hasXOffset && reader.offset + 2 <= tagEndOffset) {
+      cursorX = reader.readSI16() / 20;
+    }
+    if (hasYOffset && reader.offset + 2 <= tagEndOffset) {
+      cursorY = reader.readSI16() / 20;
+    }
+    if (hasFont && reader.offset + 2 <= tagEndOffset) {
+      const thTwips = reader.readUI16();
+      if (thTwips > 0) currentTextHeight = thTwips / 20;
+    }
+    if (reader.offset >= tagEndOffset) break;
+    const glyphCount = reader.readUI8();
+    const font = fonts.get(currentFontId);
+    const scale = font && font.emScale > 0 ? currentTextHeight / font.emScale : 1 / 1024;
+
+    for (let g = 0; g < glyphCount && reader.offset < tagEndOffset; g++) {
+      const glyphIdx = reader.readUBits(glyphBits);
+      const advPx = reader.readSBits(advanceBits) / 20;
+
+      if (font) {
+        const codePt = font.codeTable[glyphIdx];
+        if (codePt && codePt >= 0x20 && codePt !== 0x7f) {
+          extractedChars.push(String.fromCharCode(codePt));
+        }
+        const cmds = font.glyphs[glyphIdx];
+        if (cmds && cmds.length > 0) {
+          let bucket = pathsByColor.get(currentColor);
+          if (!bucket) {
+            bucket = [];
+            pathsByColor.set(currentColor, bucket);
+          }
+          let dParts = '';
+          for (let ci = 0; ci < cmds.length; ci++) {
+            const cmd = cmds[ci];
+            if (cmd[0] === 'M' || cmd[0] === 'L') {
+              const [wx, wy] = xformPt(cursorX + cmd[1] * scale, cursorY + cmd[2] * scale);
+              dParts += (dParts ? ' ' : '') + `${cmd[0]} ${fmtPx(wx)} ${fmtPx(wy)}`;
+            } else if (cmd[0] === 'Q') {
+              const [wcx, wcy] = xformPt(cursorX + cmd[1] * scale, cursorY + cmd[2] * scale);
+              const [wax, way] = xformPt(cursorX + cmd[3] * scale, cursorY + cmd[4] * scale);
+              dParts += (dParts ? ' ' : '') + `Q ${fmtPx(wcx)} ${fmtPx(wcy)} ${fmtPx(wax)} ${fmtPx(way)}`;
+            }
+          }
+          if (dParts) {
+            bucket.push(`${dParts} Z`);
+          }
+        }
+      }
+      cursorX += advPx;
+    }
+    reader.syncBits();
+  }
+
+  const primitives: SwfShapePrimitive[] = [];
+  const pathEls: string[] = [];
+  pathsByColor.forEach((parts, color) => {
+    const d = parts.join(' ');
+    if (d) {
+      primitives.push([d, color, 'none', 0]);
+      pathEls.push(`<path d="${d}" fill="${color}" fill-rule="evenodd" stroke="none" />`);
+    }
+  });
+
+  const plainText = extractedChars.join('').trim();
+  const ariaAttr = plainText
+    ? ` role="img" aria-label="${plainText.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"`
+    : '';
+
+  if (primitives.length > 0) {
+    return {
+      id: `swf-statictext-${charId}`,
+      charId,
+      svg: `<g id="swf-statictext-${charId}"${ariaAttr}>${pathEls.join('')}</g>`,
+      primitives,
+      bbox: { x: bounds.xMin, y: bounds.yMin, w: bounds.width, h: bounds.height },
+    };
+  }
+
+  // Fallback for device-font DefineText blocks without embedded glyph outlines
+  if (plainText) {
+    const escapedText = plainText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const [tx, ty] = xformPt(bounds.xMin, bounds.yMin + Math.max(currentTextHeight * 0.8, bounds.height * 0.72));
+    return {
+      id: `swf-statictext-${charId}`,
+      charId,
+      svg: `<text id="swf-statictext-${charId}" x="${fmtPx(tx)}" y="${fmtPx(ty)}" fill="${currentColor}" font-size="${Math.max(8, Math.round(currentTextHeight))}" font-family="system-ui, sans-serif">${escapedText}</text>`,
+      bbox: { x: bounds.xMin, y: bounds.yMin, w: bounds.width, h: bounds.height },
+    };
+  }
+
+  return null;
 }
 
 export interface SwfMorphShape {
@@ -2955,8 +3296,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     }
 
     const sig = String.fromCharCode(rawBytes[0], rawBytes[1], rawBytes[2]);
-    if (sig !== 'FWS' && sig !== 'CWS') {
-      return { success: false, error: `Unsupported SWF signature: "${sig}". Only standard FWS or CWS Flash files are supported.`, svgMarkup: '', astSource: '' };
+    if (sig !== 'FWS' && sig !== 'CWS' && sig !== 'ZWS') {
+      return { success: false, error: `Unsupported SWF signature: "${sig}". Only standard FWS, CWS (zlib), or ZWS (LZMA) Flash files are supported.`, svgMarkup: '', astSource: '' };
     }
 
     const version = rawBytes[3];
@@ -2974,6 +3315,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       payload = new Uint8Array(8 + decompressed.length);
       payload.set(rawBytes.subarray(0, 8), 0);
       payload.set(decompressed, 8);
+    } else if (sig === 'ZWS') {
+      payload = decompressZwsSwf(rawBytes);
     } else {
       payload = rawBytes;
     }
@@ -2989,6 +3332,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const sprites = new Map<number, SwfSpriteDefinition>();
     const buttons = new Map<number, SwfButtonDefinition>();
     const editTexts = new Map<number, SwfEditTextDef>();
+    const vectorFonts = new Map<number, SwfVectorFontDef>();
+    let staticTextCount = 0;
     const sounds = new Map<number, SwfSoundDef>();
     const startSounds: SwfStartSoundEvent[] = [];
     const bitmaps = new Map<number, SwfBitmapDef>();
@@ -3297,6 +3642,21 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               svg: textSvg,
               bbox: { x: bounds.xMin, y: bounds.yMin, w: bounds.width, h: bounds.height },
             });
+          }
+        } catch {}
+      } else if (tagType === 10 || tagType === 48 || tagType === 75) {
+        // DefineFont (10), DefineFont2 (48), DefineFont3 (75): embedded vector glyph outlines
+        try {
+          const fontDef = parseDefineFontTag(reader, tagType, nextTagOffset);
+          if (fontDef) vectorFonts.set(fontDef.fontId, fontDef);
+        } catch {}
+      } else if (tagType === 11 || tagType === 33) {
+        // DefineText (11), DefineText2 (33): static vector text rendered via DefineFont2/3 Bézier paths
+        try {
+          const staticTextShape = parseDefineTextTag(reader, tagType, nextTagOffset, vectorFonts);
+          if (staticTextShape) {
+            shapes.push(staticTextShape);
+            staticTextCount++;
           }
         } catch {}
       }
@@ -4946,6 +5306,8 @@ ${keyframesAst}
       backgroundColor,
       shapeCount: shapes.length,
       morphShapeCount: morphShapes.length,
+      fontCount: vectorFonts.size,
+      staticTextCount,
       spriteCount: sprites.size,
       buttonCount: buttons.size,
       actionCount: actionBlocks.length + Array.from(sprites.values()).reduce((a, sp) => a + sp.actions.length, 0) + Array.from(buttons.values()).reduce((a, b) => a + b.actions.length, 0),
