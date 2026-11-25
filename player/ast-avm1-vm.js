@@ -1357,12 +1357,19 @@
         this._lastOpacity = op;
         this.svgEl.setAttribute('opacity', op);
       }
-      const vis = this._visible ? 'visible' : 'hidden';
+      const isHiddenMask = Boolean(this._maskTargetClip);
+      const vis = (this._visible && !isHiddenMask) ? 'visible' : 'hidden';
       if (vis !== this._lastVis) {
         this._lastVis = vis;
         this.svgEl.setAttribute('visibility', vis);
-        this.svgEl.setAttribute('pointer-events', this._visible ? 'auto' : 'none');
-        this.svgEl.setAttribute('display', this._visible ? 'inline' : 'none');
+        this.svgEl.setAttribute('pointer-events', (this._visible && !isHiddenMask) ? 'auto' : 'none');
+        this.svgEl.setAttribute('display', (this._visible && !isHiddenMask) ? 'inline' : 'none');
+      }
+      if (this._maskTargetClip && !this._maskTargetClip._removed) {
+        this._maskTargetClip._syncDynamicMask();
+      }
+      if (this._maskClip && !this._maskClip._removed) {
+        this._syncDynamicMask();
       }
     }
 
@@ -1431,6 +1438,7 @@
             const maskId = `avm1-mask-${++this._vm._maskCounter}`;
             const cp = createSvgEl(this._vm.doc, 'clipPath');
             cp.setAttribute('id', maskId);
+            cp.setAttribute('data-swf-vm-def', '1');
             this._vm._populateClipPath(cp, e.c, e.m || null);
             if (this._vm.defsEl) this._vm.defsEl.appendChild(cp);
             slot = {
@@ -1836,6 +1844,59 @@
 
     getDepth() {
       return this._depth;
+    }
+
+    setMask(maskClip) {
+      if (this._maskClip) {
+        const prev = this._maskClip;
+        this._maskClip = null;
+        if (prev._maskTargetClip === this) {
+          prev._maskTargetClip = null;
+          prev._lastVis = '';
+          prev.commitSvg();
+        }
+      }
+      if (this._maskClipPathEl) {
+        if (this._maskClipPathEl.parentNode) {
+          this._maskClipPathEl.parentNode.removeChild(this._maskClipPathEl);
+        }
+        this._maskClipPathEl = null;
+      }
+      this._maskClipPathId = null;
+      if (this.svgEl && this.svgEl.removeAttribute) {
+        this.svgEl.removeAttribute('clip-path');
+      }
+      if (!maskClip || !maskClip._isMovieClip || maskClip === this || maskClip._removed) {
+        return;
+      }
+      if (maskClip._maskTargetClip && maskClip._maskTargetClip !== this) {
+        maskClip._maskTargetClip.setMask(null);
+      }
+      const maskId = `avm1-dyn-mask-${++this._vm._maskCounter}`;
+      const cp = createSvgEl(this._vm.doc, 'clipPath');
+      cp.setAttribute('id', maskId);
+      cp.setAttribute('data-swf-vm-def', '1');
+      if (this._vm.defsEl) this._vm.defsEl.appendChild(cp);
+      this._maskClip = maskClip;
+      this._maskClipPathId = maskId;
+      this._maskClipPathEl = cp;
+      maskClip._maskTargetClip = this;
+      maskClip._lastVis = '';
+      maskClip.commitSvg();
+      this._syncDynamicMask();
+    }
+
+    _syncDynamicMask() {
+      if (!this._maskClip || !this._maskClipPathEl || !this._maskClipPathId || !this.svgEl) return;
+      const relMat = mulMat(invertMat(this.getWorldMatrix()), this._maskClip.getWorldMatrix());
+      const relStr = `matrix(${fmtNum(relMat[0])} ${fmtNum(relMat[1])} ${fmtNum(relMat[2])} ${fmtNum(relMat[3])} ${fmtNum(relMat[4])} ${fmtNum(relMat[5])})`;
+      if (this._maskClipPathEl.replaceChildren) {
+        this._maskClipPathEl.replaceChildren();
+      } else {
+        while (this._maskClipPathEl.firstChild) this._maskClipPathEl.removeChild(this._maskClipPathEl.firstChild);
+      }
+      this._vm._populateClipPathFromElement(this._maskClipPathEl, this._maskClip.svgEl, relStr, true);
+      this.svgEl.setAttribute('clip-path', `url(#${this._maskClipPathId})`);
     }
 
     hitTest(arg0, arg1, shapeFlag) {
@@ -2682,6 +2743,30 @@
         for (let i = 0; i < kids.length; i++) collect(kids[i], nextChain);
       };
       collect(node, matStr);
+    }
+
+    _populateClipPathFromElement(clipPathEl, sourceEl, rootMatStr, skipRootTransform) {
+      if (!clipPathEl || !sourceEl) return;
+      const collect = (el, chain, isRoot) => {
+        if (!el) return;
+        const tag = (el.nodeName || el.tagName || '').toLowerCase();
+        const ownT = (!isRoot || !skipRootTransform) && el.getAttribute ? el.getAttribute('transform') : '';
+        const nextChain = ownT ? (chain ? `${chain} ${ownT}` : ownT) : chain;
+        if (tag === 'path' || tag === 'rect' || tag === 'circle' || tag === 'ellipse' || tag === 'polygon' || tag === 'polyline') {
+          const clone = el.cloneNode(false);
+          if (clone.removeAttribute) {
+            clone.removeAttribute('id');
+            clone.removeAttribute('fill');
+            clone.removeAttribute('stroke');
+          }
+          if (nextChain && clone.setAttribute) clone.setAttribute('transform', nextChain);
+          clipPathEl.appendChild(clone);
+          return;
+        }
+        const kids = el.childNodes || el.children || [];
+        for (let i = 0; i < kids.length; i++) collect(kids[i], nextChain, false);
+      };
+      collect(sourceEl, rootMatStr || '', true);
     }
 
     _ensureSpriteInitAction(charId, targetClip) {
@@ -4277,6 +4362,7 @@
         case 'moveTo': return (x, y) => clip.moveTo(x, y);
         case 'lineTo': return (x, y) => clip.lineTo(x, y);
         case 'curveTo': return (cx, cy, ax, ay) => clip.curveTo(cx, cy, ax, ay);
+        case 'setMask': return (m) => clip.setMask(m);
         default: return undefined;
       }
     }
@@ -4314,7 +4400,7 @@
             'unloadMovie', 'swapDepths', 'getNextHighestDepth', 'getDepth', 'hitTest',
             'getBounds', 'localToGlobal', 'globalToLocal', 'startDrag', 'stopDrag',
             'getBytesLoaded', 'getBytesTotal', 'clear', 'lineStyle', 'beginFill', 'endFill',
-            'moveTo', 'lineTo', 'curveTo'
+            'moveTo', 'lineTo', 'curveTo', 'setMask'
           ];
           for (let i = 0; i < mcMethods.length; i++) {
             if (mcMethods[i].toLowerCase() === kl) return this._getClipMethod(obj, mcMethods[i]);
