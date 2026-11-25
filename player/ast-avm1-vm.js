@@ -57,6 +57,8 @@
   const CE_RELEASE_OUTSIDE = 0x1000;
   const CE_ROLL_OVER = 0x2000;
   const CE_ROLL_OUT = 0x4000;
+  const CE_DRAG_OUT = 0x8000;
+  const CE_DRAG_OVER = 0x10000;
   const CE_KEY_PRESS = 0x20000;
 
   // Flash ButtonCondAction flags
@@ -257,23 +259,40 @@
     return { bytes, start, end, instrs, offsetToIdx };
   }
 
+  const CODE_TO_FLASH_KEY = {
+    Backspace: 8, Tab: 9, Enter: 13, NumpadEnter: 13,
+    ShiftLeft: 16, ShiftRight: 16, ControlLeft: 17, ControlRight: 17,
+    AltLeft: 18, AltRight: 18, Pause: 19, CapsLock: 20, Escape: 27,
+    Space: 32, PageUp: 33, PageDown: 34, End: 35, Home: 36,
+    ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40,
+    Insert: 45, Delete: 46,
+    Numpad0: 96, Numpad1: 97, Numpad2: 98, Numpad3: 99, Numpad4: 100,
+    Numpad5: 101, Numpad6: 102, Numpad7: 103, Numpad8: 104, Numpad9: 105,
+    NumpadMultiply: 106, NumpadAdd: 107, NumpadSubtract: 109,
+    NumpadDecimal: 110, NumpadDivide: 111,
+    F1: 112, F2: 113, F3: 114, F4: 115, F5: 116, F6: 117,
+    F7: 118, F8: 119, F9: 120, F10: 121, F11: 122, F12: 123,
+    NumLock: 144, ScrollLock: 145,
+    Semicolon: 186, Equal: 187, Comma: 188, Minus: 189, Period: 190,
+    Slash: 191, Backquote: 192, BracketLeft: 219, Backslash: 220,
+    BracketRight: 221, Quote: 222,
+  };
+
   function mapEventKeyToFlashCode(e) {
     if (!e) return 0;
-    if (typeof e.keyCode === 'number' && e.keyCode > 0) return e.keyCode;
     const code = e.code || '';
-    if (code === 'ArrowLeft') return 37;
-    if (code === 'ArrowUp') return 38;
-    if (code === 'ArrowRight') return 39;
-    if (code === 'ArrowDown') return 40;
-    if (code === 'Space') return 32;
-    if (code === 'Enter') return 13;
-    if (code === 'Escape') return 27;
-    if (code === 'ShiftLeft' || code === 'ShiftRight') return 16;
-    if (code === 'ControlLeft' || code === 'ControlRight') return 17;
-    if (code === 'Backspace') return 8;
-    if (code === 'Tab') return 9;
+    if (code && Object.prototype.hasOwnProperty.call(CODE_TO_FLASH_KEY, code)) {
+      return CODE_TO_FLASH_KEY[code];
+    }
     if (code.startsWith('Key') && code.length === 4) return code.charCodeAt(3);
     if (code.startsWith('Digit') && code.length === 6) return code.charCodeAt(5);
+    if (typeof e.keyCode === 'number' && e.keyCode > 0) return e.keyCode;
+    const key = e.key || '';
+    if (key.length === 1) {
+      const upper = key.toUpperCase().charCodeAt(0);
+      if ((upper >= 65 && upper <= 90) || (upper >= 48 && upper <= 57)) return upper;
+      return key.charCodeAt(0);
+    }
     return 0;
   }
 
@@ -678,36 +697,72 @@ set htmlText(v) {
       if (hasDown) this.svgEl.appendChild(this._downGroup);
       this.svgEl.appendChild(this._hitGroup);
 
+      this._isMouseOver = false;
       this._onEnter = () => {
         if (!this.enabled || this._removed) return;
         this._vm._beginEventBudget();
-        this._setState('over');
-        this._fireCondition(BTN_IDLE_TO_OVER_UP);
-        if (typeof this.onRollOver === 'function') this._vm._invokeValue(this.onRollOver, this, []);
+        this._isMouseOver = true;
+        if (this._vm._pressedInteractive === this && this._vm._mouseDown) {
+          this._setState('down');
+          this._fireCondition(BTN_OUT_DOWN_TO_OVER_DOWN);
+          if (typeof this.onDragOver === 'function') this._vm._invokeValue(this.onDragOver, this, []);
+        } else {
+          this._setState('over');
+          this._fireCondition(BTN_IDLE_TO_OVER_UP);
+          if (typeof this.onRollOver === 'function') this._vm._invokeValue(this.onRollOver, this, []);
+        }
       };
       this._onLeave = () => {
         if (!this.enabled || this._removed) return;
         this._vm._beginEventBudget();
-        const wasDown = this._state === 'down';
+        this._isMouseOver = false;
+        const wasPressed = this._vm._pressedInteractive === this && this._vm._mouseDown;
         this._setState('up');
-        this._fireCondition(wasDown ? BTN_OVER_DOWN_TO_OUT_DOWN : BTN_OVER_UP_TO_IDLE);
-        if (typeof this.onRollOut === 'function') this._vm._invokeValue(this.onRollOut, this, []);
+        if (wasPressed) {
+          this._fireCondition(BTN_OVER_DOWN_TO_OUT_DOWN);
+          if (typeof this.onDragOut === 'function') this._vm._invokeValue(this.onDragOut, this, []);
+        } else {
+          this._fireCondition(BTN_OVER_UP_TO_IDLE);
+          if (typeof this.onRollOut === 'function') this._vm._invokeValue(this.onRollOut, this, []);
+        }
       };
       this._onDown = (e) => {
         if (!this.enabled || this._removed) return;
-        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (e && typeof e.clientX === 'number') {
+          const pt = this._vm._clientToStage(e.clientX, e.clientY);
+          this._vm._mouseX = pt.x;
+          this._vm._mouseY = pt.y;
+        }
         this._vm._beginEventBudget();
+        this._isMouseOver = true;
+        this._vm._pressedInteractive = this;
         this._setState('down');
         this._fireCondition(BTN_OVER_UP_TO_OVER_DOWN | BTN_IDLE_TO_OVER_DOWN);
         if (typeof this.onPress === 'function') this._vm._invokeValue(this.onPress, this, []);
       };
       this._onUp = (e) => {
         if (!this.enabled || this._removed) return;
-        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (e && typeof e.clientX === 'number') {
+          const pt = this._vm._clientToStage(e.clientX, e.clientY);
+          this._vm._mouseX = pt.x;
+          this._vm._mouseY = pt.y;
+        }
+        const wasPressed = this._vm._pressedInteractive === this || this._state === 'down';
+        if (this._vm._pressedInteractive === this) this._vm._pressedInteractive = null;
         this._vm._beginEventBudget();
         this._setState('over');
-        this._fireCondition(BTN_OVER_DOWN_TO_OVER_UP);
-        if (typeof this.onRelease === 'function') this._vm._invokeValue(this.onRelease, this, []);
+        if (wasPressed) {
+          this._fireCondition(BTN_OVER_DOWN_TO_OVER_UP);
+          if (typeof this.onRelease === 'function') this._vm._invokeValue(this.onRelease, this, []);
+        }
+      };
+      this._fireReleaseOutside = () => {
+        if (!this.enabled || this._removed) return;
+        this._setState('up');
+        this._fireCondition(BTN_OUT_DOWN_TO_IDLE);
+        if (typeof this.onReleaseOutside === 'function') {
+          this._vm._invokeValue(this.onReleaseOutside, this, []);
+        }
       };
       this._onKeyActivate = (e) => {
         if (!this.enabled || this._removed) return;
@@ -902,7 +957,7 @@ set htmlText(v) {
       this._isMouseOver = false;
       this._isMouseDown = false;
       this._proto = null;
-      if (this._clipActions.some((ca) => (ca.f & (CE_PRESS | CE_RELEASE | CE_RELEASE_OUTSIDE | CE_ROLL_OVER | CE_ROLL_OUT)) !== 0)) {
+      if (this._clipActions.some((ca) => (ca.f & (CE_PRESS | CE_RELEASE | CE_RELEASE_OUTSIDE | CE_ROLL_OVER | CE_ROLL_OUT | CE_DRAG_OUT | CE_DRAG_OVER)) !== 0)) {
         this._ensurePointerListeners();
       }
     }
@@ -913,22 +968,33 @@ set htmlText(v) {
       this.svgEl.style.cursor = this.useHandCursor ? 'pointer' : '';
       this._onPtrDown = (e) => {
         if (!this.enabled || !this._visible || this._removed) return;
+        if (e && typeof e.clientX === 'number') {
+          const pt = this._vm._clientToStage(e.clientX, e.clientY);
+          this._vm._mouseX = pt.x;
+          this._vm._mouseY = pt.y;
+        }
         this._vm._beginEventBudget();
+        this._isMouseOver = true;
         this._isMouseDown = true;
+        this._vm._pressedInteractive = this;
         if (typeof this._vars.onPress === 'function') {
-          if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
           this._vm._invokeValue(this._vars.onPress, this, []);
         }
         this._fireClipEvents(CE_PRESS);
       };
       this._onPtrUp = (e) => {
         if (!this.enabled || !this._visible || this._removed) return;
+        if (e && typeof e.clientX === 'number') {
+          const pt = this._vm._clientToStage(e.clientX, e.clientY);
+          this._vm._mouseX = pt.x;
+          this._vm._mouseY = pt.y;
+        }
         this._vm._beginEventBudget();
-        const wasDown = this._isMouseDown;
+        const wasDown = this._isMouseDown || this._vm._pressedInteractive === this;
         this._isMouseDown = false;
+        if (this._vm._pressedInteractive === this) this._vm._pressedInteractive = null;
         if (wasDown) {
           if (typeof this._vars.onRelease === 'function') {
-            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
             this._vm._invokeValue(this._vars.onRelease, this, []);
           }
           this._fireClipEvents(CE_RELEASE);
@@ -938,19 +1004,41 @@ set htmlText(v) {
         if (!this.enabled || !this._visible || this._removed) return;
         this._vm._beginEventBudget();
         this._isMouseOver = true;
-        if (typeof this._vars.onRollOver === 'function') {
-          this._vm._invokeValue(this._vars.onRollOver, this, []);
+        if (this._vm._pressedInteractive === this && this._vm._mouseDown) {
+          if (typeof this._vars.onDragOver === 'function') {
+            this._vm._invokeValue(this._vars.onDragOver, this, []);
+          }
+          this._fireClipEvents(CE_DRAG_OVER);
+        } else {
+          if (typeof this._vars.onRollOver === 'function') {
+            this._vm._invokeValue(this._vars.onRollOver, this, []);
+          }
+          this._fireClipEvents(CE_ROLL_OVER);
         }
-        this._fireClipEvents(CE_ROLL_OVER);
       };
       this._onPtrLeave = () => {
         if (!this.enabled || this._removed) return;
         this._vm._beginEventBudget();
         this._isMouseOver = false;
-        if (typeof this._vars.onRollOut === 'function') {
-          this._vm._invokeValue(this._vars.onRollOut, this, []);
+        if (this._vm._pressedInteractive === this && this._vm._mouseDown) {
+          if (typeof this._vars.onDragOut === 'function') {
+            this._vm._invokeValue(this._vars.onDragOut, this, []);
+          }
+          this._fireClipEvents(CE_DRAG_OUT);
+        } else {
+          if (typeof this._vars.onRollOut === 'function') {
+            this._vm._invokeValue(this._vars.onRollOut, this, []);
+          }
+          this._fireClipEvents(CE_ROLL_OUT);
         }
-        this._fireClipEvents(CE_ROLL_OUT);
+      };
+      this._fireReleaseOutside = () => {
+        this._isMouseDown = false;
+        if (!this.enabled || this._removed) return;
+        if (typeof this._vars.onReleaseOutside === 'function') {
+          this._vm._invokeValue(this._vars.onReleaseOutside, this, []);
+        }
+        this._fireClipEvents(CE_RELEASE_OUTSIDE);
       };
       this.svgEl.addEventListener('pointerdown', this._onPtrDown);
       this.svgEl.addEventListener('pointerup', this._onPtrUp);
@@ -1611,7 +1699,7 @@ set htmlText(v) {
       return this._depth;
     }
 
-    hitTest(arg0, arg1, _shapeFlag) {
+    hitTest(arg0, arg1, shapeFlag) {
       if (this._removed || !this._visible) return false;
       if (arg0 && arg0._isMovieClip) {
         if (arg0._removed || !arg0._visible) return false;
@@ -1630,7 +1718,35 @@ set htmlText(v) {
       if (!Number.isFinite(px) || !Number.isFinite(py)) return false;
       const bb = this.getWorldBBox();
       if (bb.w === 0 && bb.h === 0) return false;
-      return px >= bb.x && px <= bb.x + bb.w && py >= bb.y && py <= bb.y + bb.h;
+      const inBBox = px >= bb.x && px <= bb.x + bb.w && py >= bb.y && py <= bb.y + bb.h;
+      if (!inBBox) return false;
+      // Shape-accurate W3C SVG vector hit-test when shapeFlag is true in browser DOM
+      if (shapeFlag && this._vm.stageSvg && typeof this._vm.stageSvg.createSVGPoint === 'function' && typeof this.svgEl.querySelectorAll === 'function') {
+        try {
+          const rootCtm = typeof this._vm.stageSvg.getScreenCTM === 'function' ? this._vm.stageSvg.getScreenCTM() : null;
+          if (rootCtm) {
+            const stagePt = this._vm.stageSvg.createSVGPoint();
+            stagePt.x = px;
+            stagePt.y = py;
+            const screenPt = stagePt.matrixTransform(rootCtm);
+            const shapes = this.svgEl.querySelectorAll('path, circle, ellipse, rect, polygon');
+            if (shapes && shapes.length > 0) {
+              for (let i = 0; i < shapes.length; i++) {
+                const s = shapes[i];
+                if (typeof s.isPointInFill !== 'function' || typeof s.getScreenCTM !== 'function') continue;
+                const sCtm = s.getScreenCTM();
+                if (!sCtm) continue;
+                const localPt = screenPt.matrixTransform(sCtm.inverse());
+                if (s.isPointInFill(localPt) || (typeof s.isPointInStroke === 'function' && s.isPointInStroke(localPt))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        } catch (_) {}
+      }
+      return true;
     }
 
     getBounds(targetSpace) {
@@ -1889,11 +2005,15 @@ set htmlText(v) {
       this._mouseX = 0;
       this._mouseY = 0;
       this._mouseDown = false;
+      this._pressedInteractive = null;
+      this._focusedTarget = null;
       this._keysDown = new Set();
+      this._toggledKeys = new Set();
       this._lastKeyCode = 0;
       this._lastKeyAscii = 0;
       this._keyListeners = [];
       this._mouseListeners = [];
+      this._selectionListeners = [];
       this._dragClip = null;
       this._dragOpts = null;
       this._intervals = new Map();
@@ -1942,23 +2062,45 @@ set htmlText(v) {
       const vm = this;
       const g = Object.create(null);
 
-      // Key object
+      // Key object (aligned with Ruffle / Flash AVM1 Key specification)
       const KeyObj = {
         LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
-        SPACE: 32, ENTER: 13, SHIFT: 16, CONTROL: 17,
+        SPACE: 32, ENTER: 13, SHIFT: 16, CONTROL: 17, ALT: 18,
         ESCAPE: 27, BACKSPACE: 8, TAB: 9, CAPSLOCK: 20,
         DELETEKEY: 46, INSERT: 45, HOME: 36, END: 35,
-        PGUP: 33, PGDN: 34,
+        PGUP: 33, PGDN: 34, NUMLOCK: 144, SCROLLLOCK: 145,
         isDown(code) { return vm._keysDown.has(Number(code) | 0); },
         getCode() { return vm._lastKeyCode; },
         getAscii() { return vm._lastKeyAscii; },
-        isToggled() { return false; },
+        isToggled(code) { return vm._toggledKeys.has(Number(code) | 0); },
         addListener(obj) {
           if (obj && vm._keyListeners.indexOf(obj) === -1) vm._keyListeners.push(obj);
         },
         removeListener(obj) {
           const i = vm._keyListeners.indexOf(obj);
           if (i !== -1) vm._keyListeners.splice(i, 1);
+          return i !== -1;
+        },
+      };
+
+      // Selection object (Flash keyboard focus API)
+      const SelectionObj = {
+        getFocus() { return vm._focusedTarget ? (vm._focusedTarget._name || vm._focusedTarget) : null; },
+        setFocus(target) {
+          const prev = vm._focusedTarget;
+          vm._focusedTarget = target || null;
+          for (let i = 0; i < vm._selectionListeners.length; i++) {
+            const l = vm._selectionListeners[i];
+            if (l && typeof l.onSetFocus === 'function') vm._invokeValue(l.onSetFocus, l, [prev, vm._focusedTarget]);
+          }
+          return Boolean(target);
+        },
+        addListener(obj) {
+          if (obj && vm._selectionListeners.indexOf(obj) === -1) vm._selectionListeners.push(obj);
+        },
+        removeListener(obj) {
+          const i = vm._selectionListeners.indexOf(obj);
+          if (i !== -1) vm._selectionListeners.splice(i, 1);
           return i !== -1;
         },
       };
@@ -2127,6 +2269,7 @@ set htmlText(v) {
       g.Math = Math;
       g.Key = KeyObj;
       g.Mouse = MouseObj;
+      g.Selection = SelectionObj;
       g.Stage = StageObj;
       g.System = SystemObj;
       g.ASBroadcaster = ASBroadcasterObj;
@@ -2497,31 +2640,81 @@ set htmlText(v) {
         }
         this.triggerMouseUp();
       };
+      this._onWheel = (e) => {
+        if (!e || this._mouseListeners.length === 0) return;
+        const rawDelta = typeof e.deltaY === 'number' ? e.deltaY : 0;
+        if (rawDelta === 0) return;
+        const flashDelta = rawDelta < 0 ? 3 : -3;
+        this.triggerMouseWheel(flashDelta);
+      };
       this._onKeyDown = (e) => {
         if (e && e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+        this._syncModifierToggles(e);
         const kc = mapEventKeyToFlashCode(e);
         if (!kc) return;
-        if (kc === 32 || (kc >= 37 && kc <= 40)) {
+        if (kc === 32 || (kc >= 37 && kc <= 40) || kc === 9) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
         }
         const ascii = (e.key && e.key.length === 1) ? e.key.charCodeAt(0) : kc;
         this.triggerKeyDown(kc, ascii);
       };
       this._onKeyUp = (e) => {
+        this._syncModifierToggles(e);
         const kc = mapEventKeyToFlashCode(e);
         if (!kc) return;
         this.triggerKeyUp(kc);
+      };
+      this._onWindowBlur = () => {
+        this.releaseAllInputs();
       };
 
       if (target && typeof target.addEventListener === 'function') {
         target.addEventListener('pointermove', this._onPointerMove);
         target.addEventListener('pointerdown', this._onPointerDown);
+        target.addEventListener('wheel', this._onWheel, { passive: true });
       }
       if (win && typeof win.addEventListener === 'function') {
         win.addEventListener('pointerup', this._onPointerUp);
+        win.addEventListener('pointercancel', this._onWindowBlur);
         win.addEventListener('keydown', this._onKeyDown);
         win.addEventListener('keyup', this._onKeyUp);
+        win.addEventListener('blur', this._onWindowBlur);
       }
+    }
+
+    _syncModifierToggles(e) {
+      if (!e || typeof e.getModifierState !== 'function') return;
+      try {
+        if (e.getModifierState('CapsLock')) this._toggledKeys.add(20);
+        else this._toggledKeys.delete(20);
+        if (e.getModifierState('NumLock')) this._toggledKeys.add(144);
+        else this._toggledKeys.delete(144);
+        if (e.getModifierState('ScrollLock')) this._toggledKeys.add(145);
+        else this._toggledKeys.delete(145);
+      } catch (_) {}
+    }
+
+    handleForwardedKeyEvent(kind, payload) {
+      if (!this._mounted || !payload) return;
+      const kc = mapEventKeyToFlashCode(payload);
+      if (!kc) return;
+      if (kind === 'keydown') {
+        const ascii = (payload.key && payload.key.length === 1) ? payload.key.charCodeAt(0) : kc;
+        this.triggerKeyDown(kc, ascii);
+      } else if (kind === 'keyup') {
+        this.triggerKeyUp(kc);
+      }
+    }
+
+    releaseAllInputs() {
+      const held = Array.from(this._keysDown);
+      for (let i = 0; i < held.length; i++) {
+        this.triggerKeyUp(held[i]);
+      }
+      if (this._mouseDown || this._pressedInteractive) {
+        this.triggerMouseUp();
+      }
+      this.stopDragClip();
     }
 
     // Programmatic & DOM input helpers (also called directly by headless tests!)
@@ -2552,11 +2745,29 @@ set htmlText(v) {
     triggerMouseUp() {
       this._mouseDown = false;
       this._beginEventBudget();
+      if (this._pressedInteractive) {
+        const pressed = this._pressedInteractive;
+        this._pressedInteractive = null;
+        if (!pressed._isMouseOver && typeof pressed._fireReleaseOutside === 'function') {
+          pressed._fireReleaseOutside();
+        }
+      }
       this._broadcastClipEvent(this.rootClip, CE_MOUSE_UP, 'onMouseUp');
       for (let i = 0; i < this._mouseListeners.length; i++) {
         if (this._isOverBudget()) break;
         const l = this._mouseListeners[i];
         if (l && typeof l.onMouseUp === 'function') this._invokeValue(l.onMouseUp, l, []);
+      }
+    }
+
+    triggerMouseWheel(delta) {
+      const d = Number(delta) || 0;
+      if (!d) return;
+      this._beginEventBudget();
+      for (let i = 0; i < this._mouseListeners.length; i++) {
+        if (this._isOverBudget()) break;
+        const l = this._mouseListeners[i];
+        if (l && typeof l.onMouseWheel === 'function') this._invokeValue(l.onMouseWheel, l, [d, null]);
       }
     }
 
@@ -2579,6 +2790,7 @@ set htmlText(v) {
     triggerKeyUp(flashKeyCode) {
       const kc = Number(flashKeyCode) | 0;
       this._keysDown.delete(kc);
+      this._lastKeyCode = kc;
       this._beginEventBudget();
       this._broadcastClipEvent(this.rootClip, CE_KEY_UP, 'onKeyUp');
       for (let i = 0; i < this._keyListeners.length; i++) {
@@ -3095,14 +3307,20 @@ set htmlText(v) {
       this._mounted = false;
       this._intervals.clear();
       this._dragClip = null;
+      this._pressedInteractive = null;
       const target = this.stageSvg || this.container;
       const win = typeof window !== 'undefined' ? window : null;
       if (target && typeof target.removeEventListener === 'function') {
         if (this._onPointerMove) target.removeEventListener('pointermove', this._onPointerMove);
         if (this._onPointerDown) target.removeEventListener('pointerdown', this._onPointerDown);
+        if (this._onWheel) target.removeEventListener('wheel', this._onWheel);
       }
       if (win && typeof win.removeEventListener === 'function') {
         if (this._onPointerUp) win.removeEventListener('pointerup', this._onPointerUp);
+        if (this._onWindowBlur) {
+          win.removeEventListener('pointercancel', this._onWindowBlur);
+          win.removeEventListener('blur', this._onWindowBlur);
+        }
         if (this._onKeyDown) win.removeEventListener('keydown', this._onKeyDown);
         if (this._onKeyUp) win.removeEventListener('keyup', this._onKeyUp);
       }
@@ -3424,7 +3642,15 @@ set htmlText(v) {
         if (key.startsWith('_') && this._setClipProp(obj, key, val)) return;
         if (key === 'enabled') { obj.enabled = this._toBool(val); return; }
         if (key === 'useHandCursor') { obj.useHandCursor = this._toBool(val); return; }
-        if (key === 'onPress' || key === 'onRelease' || key === 'onReleaseOutside' || key === 'onRollOver' || key === 'onRollOut') {
+        if (
+          key === 'onPress' ||
+          key === 'onRelease' ||
+          key === 'onReleaseOutside' ||
+          key === 'onRollOver' ||
+          key === 'onRollOut' ||
+          key === 'onDragOver' ||
+          key === 'onDragOut'
+        ) {
           obj._ensurePointerListeners();
         }
         if (this.caseInsensitive) {
