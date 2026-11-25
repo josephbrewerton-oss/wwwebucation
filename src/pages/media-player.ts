@@ -320,6 +320,8 @@ export function renderPlayerPage(): HTMLElement {
     unmountObserver = null;
     window.removeEventListener('pagehide', cleanupPlayerLifecycle);
     window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('keyup', onKeyUp);
+    window.removeEventListener('blur', onWindowBlur);
     window.removeEventListener('popstate', onPopState);
   };
 
@@ -1698,11 +1700,32 @@ export function renderPlayerPage(): HTMLElement {
     } catch (_) {}
   });
 
-  // Keyboard accessibility shortcuts: M to toggle mute, Space to toggle play/pause (active only when stage is open)
+  const isSwfStageInputActive = (): boolean =>
+    Boolean(
+      isStageOpen &&
+        (swfDistillSession.active ||
+          activePreset.startsWith('flash-') ||
+          pendingCustomCartridge?.astSource?.includes('(:swf-vm'))
+    );
+
+  // Keyboard accessibility shortcuts & direct Flash SWF keyboard forwarding (when stage is open)
   const onKeyDown = (e: KeyboardEvent) => {
     if (!isStageOpen) return;
     const activeTag = document.activeElement?.tagName.toLowerCase();
     if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+    if (isSwfStageInputActive() && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') {
+        e.preventDefault();
+      }
+      postToPlayer({
+        type: 'SWF_KEY_EVENT',
+        kind: 'keydown',
+        code: e.code,
+        key: e.key,
+        keyCode: e.keyCode,
+      });
+      return;
+    }
     if (e.key === 'm' || e.key === 'M') {
       e.preventDefault();
       muteBtn?.click();
@@ -1711,7 +1734,24 @@ export function renderPlayerPage(): HTMLElement {
       playBtn?.click();
     }
   };
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (!isSwfStageInputActive()) return;
+    postToPlayer({
+      type: 'SWF_KEY_EVENT',
+      kind: 'keyup',
+      code: e.code,
+      key: e.key,
+      keyCode: e.keyCode,
+    });
+  };
+  const onWindowBlur = () => {
+    if (isSwfStageInputActive()) {
+      postToPlayer({ type: 'SWF_RELEASE_INPUTS' });
+    }
+  };
   window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', onWindowBlur);
 
   window.addEventListener('message', (e) => {
     if (!e.data || typeof e.data !== 'object') return;

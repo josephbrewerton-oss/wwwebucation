@@ -46,6 +46,15 @@ class MockEl {
     this.children.push(child);
     return child;
   }
+  insertBefore(child: MockEl, refNode: MockEl | null) {
+    if (!refNode) return this.appendChild(child);
+    if (child.parentNode) child.parentNode.removeChild(child);
+    const idx = this.children.indexOf(refNode);
+    child.parentNode = this;
+    if (idx === -1) this.children.push(child);
+    else this.children.splice(idx, 0, child);
+    return child;
+  }
   removeChild(child: MockEl) {
     const idx = this.children.indexOf(child);
     if (idx !== -1) this.children.splice(idx, 1);
@@ -58,6 +67,26 @@ class MockEl {
   }
   get firstChild() {
     return this.children[0] || null;
+  }
+  get nextSibling(): MockEl | null {
+    if (!this.parentNode) return null;
+    const idx = this.parentNode.children.indexOf(this);
+    return idx >= 0 && idx + 1 < this.parentNode.children.length ? this.parentNode.children[idx + 1] : null;
+  }
+  get attributes() {
+    return Object.entries(this.attrs).map(([name, value]) => ({ name, value }));
+  }
+  cloneNode(deep = false): MockEl {
+    const copy = new MockEl(this.tagName);
+    copy.attrs = { ...this.attrs };
+    copy.style = { ...this.style };
+    copy.textContent = this.textContent;
+    if (deep) {
+      for (const ch of this.children) {
+        copy.appendChild(ch.cloneNode(true));
+      }
+    }
+    return copy;
   }
   addEventListener() {}
   removeEventListener() {}
