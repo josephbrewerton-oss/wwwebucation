@@ -71,6 +71,10 @@ export interface SwfMetadata {
   entryFrame?: number;
   isActionScript3?: boolean;
   hasAvm1Bytecode?: boolean;
+  abcCount?: number;
+  documentClass?: string;
+  as3Classes?: string[];
+  traitCount?: number;
   executionModel?: 'sim-continuous' | 'sim-modal' | 'static-vector';
   labels: { frame: number; name: string }[];
   stateMachines?: { id: string; initial: string; states: string[]; transitionsCount: number }[];
@@ -2641,10 +2645,239 @@ function applyPlaceToDisplayMap(activeDisplay: Map<number, SwfDisplayEntry>, pla
   }
 }
 
+interface SwfAbcBlock {
+  n: string;
+  f: number;
+  b64: string;
+}
+
+interface SwfAbcTraitSummary {
+  name: string;
+  superName: string;
+  slots: Array<{ name: string; type: string; kind: string }>;
+  methods: Array<{ name: string; returnType: string }>;
+}
+
 /**
- * Disassembles ActionScript 3.0 bytecode in DoABC (Tag 82) tags.
+ * Lightweight, strictly bounds-checked ABC header + class trait summarizer.
+ * Extracts class names, superclasses, and instance slot/method blueprints for
+ * Run-to-Convert distillation and Importer diagnostics without executing code.
  */
-function parseDoABC(reader: BitReader, tagEndOffset: number, currentFrame: number): SwfActionRecord {
+function summarizeAbcTraits(abcBytes: Uint8Array): SwfAbcTraitSummary[] {
+  const summaries: SwfAbcTraitSummary[] = [];
+  if (!abcBytes || abcBytes.length < 8) return summaries;
+  let pos = 0;
+  const len = abcBytes.length;
+
+  const readU8 = (): number => (pos < len ? abcBytes[pos++] : 0);
+  const readU16 = (): number => {
+    if (pos + 2 > len) { pos = len; return 0; }
+    const v = abcBytes[pos] | (abcBytes[pos + 1] << 8);
+    pos += 2;
+    return v;
+  };
+  const readU30 = (): number => {
+    let result = 0;
+    let shift = 0;
+    for (let i = 0; i < 5; i++) {
+      if (pos >= len) return result >>> 0;
+      const b = abcBytes[pos++];
+      result |= (b & 0x7f) << shift;
+      if ((b & 0x80) === 0) break;
+      shift += 7;
+    }
+    return result >>> 0;
+  };
+  const skipBytes = (n: number) => {
+    pos = Math.min(len, pos + Math.max(0, n));
+  };
+  const readUtf8 = (n: number): string => {
+    const safeN = Math.min(Math.max(0, n), len - pos);
+    const slice = abcBytes.subarray(pos, pos + safeN);
+    pos += safeN;
+    try {
+      return new TextDecoder('utf-8', { fatal: false }).decode(slice);
+    } catch {
+      let s = '';
+      for (let i = 0; i < slice.length; i++) s += String.fromCharCode(slice[i]);
+      return s;
+    }
+  };
+
+  try {
+    const minor = readU16();
+    const major = readU16();
+    if (major < 46 || major > 47 || minor > 32) return summaries;
+
+    // 1. Constant pool
+    const intCount = readU30();
+    for (let i = 1; i < intCount && pos < len; i++) readU30();
+    const uintCount = readU30();
+    for (let i = 1; i < uintCount && pos < len; i++) readU30();
+    const doubleCount = readU30();
+    if (doubleCount > 1) skipBytes((doubleCount - 1) * 8);
+
+    const strCount = Math.min(readU30(), 65536);
+    const strings: string[] = [''];
+    for (let i = 1; i < strCount && pos < len; i++) {
+      const sLen = readU30();
+      strings.push(readUtf8(sLen));
+    }
+
+    const nsCount = Math.min(readU30(), 65536);
+    const namespaces: string[] = [''];
+    for (let i = 1; i < nsCount && pos < len; i++) {
+      readU8(); // kind
+      const nameIdx = readU30();
+      namespaces.push(strings[nameIdx] || '');
+    }
+
+    const nsSetCount = Math.min(readU30(), 65536);
+    for (let i = 1; i < nsSetCount && pos < len; i++) {
+      const cnt = readU30();
+      for (let j = 0; j < cnt && pos < len; j++) readU30();
+    }
+
+    const mnCount = Math.min(readU30(), 65536);
+    const multinames: string[] = ['*'];
+    for (let i = 1; i < mnCount && pos < len; i++) {
+      const kind = readU8();
+      if (kind === 0x07 || kind === 0x0d) {
+        // QName / QNameA
+        const nsIdx = readU30();
+        const nameIdx = readU30();
+        const ns = namespaces[nsIdx] || '';
+        const nm = strings[nameIdx] || '';
+        multinames.push(ns ? `${ns}.${nm}` : nm);
+      } else if (kind === 0x0f || kind === 0x10) {
+        // RTQName / RTQNameA
+        const nameIdx = readU30();
+        multinames.push(strings[nameIdx] || '');
+      } else if (kind === 0x11 || kind === 0x12) {
+        multinames.push('*');
+      } else if (kind === 0x09 || kind === 0x0e) {
+        // Multiname / MultinameA
+        const nameIdx = readU30();
+        readU30(); // ns_set
+        multinames.push(strings[nameIdx] || '');
+      } else if (kind === 0x1b || kind === 0x1c) {
+        // MultinameL / MultinameLA
+        readU30(); // ns_set
+        multinames.push('*');
+      } else if (kind === 0x1d) {
+        // TypeName (Vector.<T>)
+        const qn = readU30();
+        const pCount = readU30();
+        for (let p = 0; p < pCount && pos < len; p++) readU30();
+        multinames.push(multinames[qn] || 'Vector');
+      } else {
+        break;
+      }
+    }
+
+    // 2. method_info
+    const methodCount = Math.min(readU30(), 65536);
+    const methodReturnTypes: string[] = [];
+    for (let i = 0; i < methodCount && pos < len; i++) {
+      const paramCount = readU30();
+      const returnTypeIdx = readU30();
+      methodReturnTypes.push(multinames[returnTypeIdx] || '*');
+      for (let p = 0; p < paramCount && pos < len; p++) readU30();
+      readU30(); // name
+      const flags = readU8();
+      if (flags & 0x08) {
+        // HAS_OPTIONAL
+        const optCount = readU30();
+        for (let o = 0; o < optCount && pos < len; o++) {
+          readU30();
+          readU8();
+        }
+      }
+      if (flags & 0x80) {
+        // HAS_PARAM_NAMES
+        for (let p = 0; p < paramCount && pos < len; p++) readU30();
+      }
+    }
+
+    // 3. metadata_info
+    const metaCount = Math.min(readU30(), 65536);
+    for (let i = 0; i < metaCount && pos < len; i++) {
+      readU30(); // name
+      const itemCount = readU30();
+      for (let k = 0; k < itemCount && pos < len; k++) {
+        readU30();
+        readU30();
+      }
+    }
+
+    // 4. instance_info (classes)
+    const classCount = Math.min(readU30(), 1024);
+    for (let i = 0; i < classCount && pos < len; i++) {
+      const nameIdx = readU30();
+      const superIdx = readU30();
+      const flags = readU8();
+      if (flags & 0x08) readU30(); // protectedNs
+      const ifaceCount = readU30();
+      for (let k = 0; k < ifaceCount && pos < len; k++) readU30();
+      readU30(); // iinit
+      const traitCount = Math.min(readU30(), 512);
+      const slots: Array<{ name: string; type: string; kind: string }> = [];
+      const methods: Array<{ name: string; returnType: string }> = [];
+      for (let t = 0; t < traitCount && pos < len; t++) {
+        const tNameIdx = readU30();
+        const tKindByte = readU8();
+        const tKind = tKindByte & 0x0f;
+        const tAttrs = (tKindByte >> 4) & 0x0f;
+        const tName = multinames[tNameIdx] || '';
+        if (tKind === 0 || tKind === 6) {
+          // Slot / Const
+          readU30(); // slot_id
+          const typeIdx = readU30();
+          const vindex = readU30();
+          if (vindex !== 0) readU8(); // vkind
+          if (tName && slots.length < 32) {
+            slots.push({ name: tName, type: multinames[typeIdx] || '*', kind: tKind === 6 ? 'const' : 'var' });
+          }
+        } else if (tKind === 1 || tKind === 2 || tKind === 3) {
+          // Method / Getter / Setter
+          readU30(); // disp_id
+          const mIdx = readU30();
+          if (tName && methods.length < 32) {
+            methods.push({ name: tName, returnType: methodReturnTypes[mIdx] || '*' });
+          }
+        } else if (tKind === 4 || tKind === 5) {
+          // Class / Function
+          readU30();
+          readU30();
+        }
+        if (tAttrs & 0x04) {
+          // ATTR_Metadata
+          const mc = readU30();
+          for (let m = 0; m < mc && pos < len; m++) readU30();
+        }
+      }
+      const clsName = multinames[nameIdx] || `Class_${i}`;
+      const superName = multinames[superIdx] || '';
+      if (summaries.length < 64) {
+        summaries.push({ name: clsName, superName, slots, methods });
+      }
+    }
+  } catch {
+    // Graceful truncation guard — return any classes parsed so far
+  }
+
+  return summaries;
+}
+
+/**
+ * Extracts ActionScript 3.0 bytecode from DoABCDefine (Tag 72) and DoABC2 (Tag 82) tags.
+ */
+function parseDoABC(
+  reader: BitReader,
+  tagType: number,
+  tagEndOffset: number,
+  currentFrame: number
+): { record: SwfActionRecord; block?: SwfAbcBlock; byteLength: number; traits: SwfAbcTraitSummary[] } {
   const record: SwfActionRecord = {
     frame: currentFrame,
     gotoFrames: [],
@@ -2659,11 +2892,31 @@ function parseDoABC(reader: BitReader, tagEndOffset: number, currentFrame: numbe
     poolRequests: [],
   };
 
+  let flags = 0;
+  let name = '';
+  let block: SwfAbcBlock | undefined;
+  let byteLength = 0;
+  let traits: SwfAbcTraitSummary[] = [];
+
   try {
-    reader.readUI32(); // flags
-    reader.readString(); // name
+    // Tag 82 (DoABC2) carries UI32 flags + NUL-terminated name before raw ABC bytes;
+    // Tag 72 (DoABCDefine) starts directly with the raw ABC header (minor/major u16).
+    if (tagType === 82) {
+      flags = reader.readUI32();
+      name = reader.readString();
+    }
 
     const remainingBytes = reader.readBytes(Math.max(0, tagEndOffset - reader.offset));
+    byteLength = remainingBytes.length;
+    if (remainingBytes.length >= 4) {
+      block = {
+        n: name || `abc_${currentFrame}`,
+        f: flags,
+        b64: bytesToBase64(remainingBytes),
+      };
+      traits = summarizeAbcTraits(remainingBytes);
+    }
+
     let str = '';
     const strings: string[] = [];
     for (let i = 0; i < remainingBytes.length; i++) {
@@ -2687,7 +2940,7 @@ function parseDoABC(reader: BitReader, tagEndOffset: number, currentFrame: numbe
     }
   } catch {}
 
-  return record;
+  return { record, block, byteLength, traits };
 }
 
 /**
@@ -2754,6 +3007,10 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     let isAs3Flag = false;
     let hasDoAbcTag = false;
     let documentClass = '';
+    const symbolClassMap: Record<number, string> = {};
+    const abcBlocks: SwfAbcBlock[] = [];
+    const abcTraits: SwfAbcTraitSummary[] = [];
+    let totalAbcBytes = 0;
 
     let currentFrame = 1;
 
@@ -2895,17 +3152,27 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             const symCharId = reader.readUI16();
             const symName = reader.readString();
             if (symName) {
+              symbolClassMap[symCharId] = symName;
               if (symCharId === 0) documentClass = symName;
               else exportsMap[symName] = symCharId;
             }
           }
         } catch {}
       } else if (tagType === 72 || tagType === 82) {
-        // DoABCDefine (72) / DoABC (82): ActionScript 3.0 (AVM2) bytecode
+        // DoABCDefine (72) / DoABC2 (82): ActionScript 3.0 (AVM2) bytecode
         hasDoAbcTag = true;
         try {
-          const act = parseDoABC(reader, nextTagOffset, currentFrame);
-          actionBlocks.push(act);
+          const parsedAbc = parseDoABC(reader, tagType, nextTagOffset, currentFrame);
+          actionBlocks.push(parsedAbc.record);
+          if (parsedAbc.block && totalAbcBytes + parsedAbc.byteLength <= 2 * 1024 * 1024) {
+            abcBlocks.push(parsedAbc.block);
+            totalAbcBytes += parsedAbc.byteLength;
+          }
+          if (parsedAbc.traits.length > 0 && abcTraits.length < 128) {
+            for (const tr of parsedAbc.traits) {
+              if (abcTraits.length < 128) abcTraits.push(tr);
+            }
+          }
         } catch {}
       } else if (tagType === 4 || tagType === 26 || tagType === 70) {
         try {
@@ -4349,6 +4616,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const hasAvm1Content =
       isDynamicSwf ||
       hasAvm1Bytecode ||
+      isActionScript3 ||
+      abcBlocks.length > 0 ||
       sprites.size > 0 ||
       buttons.size > 0 ||
       editTexts.size > 0 ||
@@ -4622,6 +4891,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       if (fillDefsCollector.gradients.length > 0) vmProgram.gr = fillDefsCollector.gradients;
       if (fillDefsCollector.patterns.length > 0) vmProgram.bp = fillDefsCollector.patterns;
       if (documentClass) vmProgram.dc = documentClass;
+      if (Object.keys(symbolClassMap).length > 0) vmProgram.sym = symbolClassMap;
+      if (abcBlocks.length > 0) vmProgram.abc = abcBlocks;
+      if (abcTraits.length > 0) vmProgram.traits = abcTraits;
       const vmB64 = utf8ToBase64(JSON.stringify(vmProgram));
       swfVmAst = `\n  (:swf-vm "${vmB64}")\n`;
     }
@@ -4684,6 +4956,10 @@ ${keyframesAst}
       entryFrame,
       isActionScript3,
       hasAvm1Bytecode,
+      abcCount: abcBlocks.length,
+      documentClass: documentClass || undefined,
+      as3Classes: abcTraits.length > 0 ? abcTraits.map((t) => t.name) : undefined,
+      traitCount: abcTraits.reduce((acc, t) => acc + t.slots.length + t.methods.length, 0),
       executionModel,
       labels,
       stateMachines: smMeta,

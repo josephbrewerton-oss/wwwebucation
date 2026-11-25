@@ -41,7 +41,9 @@ export async function runModularArchitectureInvariants(): Promise<number> {
       'player-ui-studio.js',
       'player-ui-voice.js',
       'player-ui-broadcast.js',
+      'ast-event-bus.js',
       'ast-avm1-vm.js',
+      'ast-avm2-vm.js',
     ]);
 
     assert.ok(playerHtml.includes('player/ast-lazy-loader.js'), 'static/player.html must load player/ast-lazy-loader.js');
@@ -103,8 +105,8 @@ export async function runModularArchitectureInvariants(): Promise<number> {
     llSb.globalThis = llSb;
     vm.runInNewContext(lazyLoaderSrc, llSb, { filename: 'static/player/ast-lazy-loader.js' });
     const ll = llSb.ASTLazyLoader || llSb.window.ASTLazyLoader;
-    assert.ok(ll && typeof ll.ensureStudio === 'function' && typeof ll.ensureBroadcast === 'function' && typeof ll.ensureProfiler === 'function' && typeof ll.ensureAvm1Vm === 'function', 'ast-lazy-loader.js must export ASTLazyLoader bundle helpers');
-    assert.strictEqual(Object.keys(ll.LAZY_MODULES).length, 13, 'ASTLazyLoader.LAZY_MODULES must declare all 13 deferred modules');
+    assert.ok(ll && typeof ll.ensureStudio === 'function' && typeof ll.ensureBroadcast === 'function' && typeof ll.ensureProfiler === 'function' && typeof ll.ensureEventBus === 'function' && typeof ll.ensureAvm1Vm === 'function' && typeof ll.ensureAvm2Vm === 'function', 'ast-lazy-loader.js must export ASTLazyLoader bundle helpers');
+    assert.strictEqual(Object.keys(ll.LAZY_MODULES).length, 15, 'ASTLazyLoader.LAZY_MODULES must declare all 15 deferred modules');
 
     // 27b. Verify all public module exports exist on the loaded runtime sandbox
     const modSandbox: any = {

@@ -9,7 +9,12 @@
  */
 
 import { transpileSwfToAst, type SwfTranspileResult } from '../../utils/swfAstParser';
-import { buildFlashArcadeSampleSwf, buildFlashPacmanSampleSwf, buildFlashPendulumSampleSwf } from '../../utils/swfSampleBuilder';
+import {
+  buildFlashArcadeSampleSwf,
+  buildFlashAs3LabSampleSwf,
+  buildFlashPacmanSampleSwf,
+  buildFlashPendulumSampleSwf,
+} from '../../utils/swfSampleBuilder';
 import {
   distillSwfStatesToNativeCartridge,
   generateEcoCheckpoints,
@@ -542,6 +547,12 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
 
   const samples = [
     {
+      id: 'as3-lab',
+      title: 'AS3 Vector Lab (as3-lab.swf · AVM2)',
+      desc: 'Live binary SWF v10 ActionScript 3 (DoABC2 + SymbolClass) with Event.ENTER_FRAME orbital kinematics, Graphics Drawing API vector trails, Arrow/Space steering, bubbling MouseEvent pulse button, Timer, ColorTransform, and PCM Web Audio.',
+      mockBytes: () => buildFlashAs3LabSampleSwf(),
+    },
+    {
       id: 'pacman',
       title: 'Pac-Man Arcade (pacman.swf)',
       desc: 'Live binary SWF v8 Pac-Man with chomping sprite, Arrow/WASD steering, GlowFilter walls/ghosts, PCM waka/power Web Audio, Color.setRGB frightened ghosts, and editable player input.',
@@ -611,7 +622,10 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     titleEl.style.cssText = 'font-size:0.9rem; color:#f8fafc;';
     titleEl.textContent = `Ready: ${swfFileName || 'imported-swf'}.swf`;
 
-    const modeLabel = meta.isActionScript3
+    const hasLiveAbc = Boolean(meta.isActionScript3 && (meta.abcCount || 0) > 0);
+    const modeLabel = hasLiveAbc
+      ? 'AS3 / AVM2 Live Micro-VM'
+      : meta.isActionScript3
       ? 'AS3 Static Vector Timeline'
       : meta.executionModel === 'sim-modal'
       ? 'AVM1 Interactive Sim'
@@ -631,6 +645,10 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       modeLabel,
       `Current payload ${payloadKb}`,
     ];
+    if (hasLiveAbc) {
+      const clsCount = meta.as3Classes ? meta.as3Classes.length : 0;
+      summaryParts.push(`${meta.abcCount} ABC block${meta.abcCount === 1 ? '' : 's'} · ${clsCount} class${clsCount === 1 ? '' : 'es'} · ${meta.traitCount || 0} traits`);
+    }
     if (meta.strippedPreloaderFrames && meta.strippedPreloaderFrames > 0) {
       summaryParts.push(`Skipped ${meta.strippedPreloaderFrames} preloader frame(s) → F${meta.entryFrame || meta.strippedPreloaderFrames + 1}`);
     }
@@ -640,12 +658,20 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     headerRow.appendChild(metaSummary);
     resBox.appendChild(headerRow);
 
-    if (meta.isActionScript3) {
+    if (hasLiveAbc) {
+      const as3Note = document.createElement('div');
+      as3Note.style.cssText =
+        'padding:8px 10px; border-radius:6px; background:rgba(14, 165, 233, 0.12); border:1px solid rgba(56, 189, 248, 0.45); color:#7dd3fc; font-size:0.74rem; line-height:1.4;';
+      const docPart = meta.documentClass ? `Document Class "${meta.documentClass}"` : 'AVM2 DoABC bytecode';
+      as3Note.textContent =
+        `ActionScript 3 (AVM2) Ready: ${docPart} executes live on the lazy-loaded pure-SVG AVM2 Micro-VM (EventDispatcher bubbling, Graphics Drawing API, Timer, Web Audio, and Universal Gesture Bus) and supports Hybrid Run-to-Convert.`;
+      resBox.appendChild(as3Note);
+    } else if (meta.isActionScript3) {
       const as3Note = document.createElement('div');
       as3Note.style.cssText =
         'padding:8px 10px; border-radius:6px; background:rgba(217, 119, 6, 0.14); border:1px solid rgba(217, 119, 6, 0.45); color:#fcd34d; font-size:0.74rem; line-height:1.4;';
       as3Note.textContent =
-        'AS3 Static Vector Only: ActionScript 3.0 (AVM2) scripts are not executed, but vector frames still render and can be promoted into native Slide cartridges.';
+        'AS3 Vector Timeline: No DoABC script blocks were found in this file, so vector frames render cleanly and can be promoted into native Slide cartridges.';
       resBox.appendChild(as3Note);
     }
 
@@ -654,7 +680,9 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     const modeDescriptions: Record<SwfLaunchMode, { cta: string; desc: string }> = {
       run: {
         cta: 'Run Live on Stage',
-        desc: 'Play immediately on the pure-SVG AVM1 micro-VM with original Flash interaction.',
+        desc: hasLiveAbc
+          ? 'Play immediately on the lazy-loaded pure-SVG AVM2 (ActionScript 3) micro-VM with original Flash interaction.'
+          : 'Play immediately on the pure-SVG AVM1 micro-VM with original Flash interaction.',
       },
       'run-to-convert': {
         cta: 'Launch Run-to-Convert Studio',

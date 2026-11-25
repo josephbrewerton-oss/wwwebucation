@@ -880,20 +880,69 @@
         this.translateInStageLabels();
       }
 
-      // Lazy-mount pure-SVG AVM1 Micro-VM when the scene carries an embedded (:swf-vm "...") program
+      // Register native AST scene skills/vars into shared trait registry when loaded
+      const evtBus = global.ASTEventBus || (typeof window !== 'undefined' ? window.ASTEventBus : null);
+      if (evtBus) {
+        if (!this.events && evtBus.ASTEventDispatcher) this.events = new evtBus.ASTEventDispatcher(this);
+        if (!this.traits && evtBus.ASTTraitRegistry) this.traits = new evtBus.ASTTraitRegistry();
+        if (this.traits && scene) {
+          this.traits.clear('ast-skill');
+          const skillList = Array.isArray(scene.skills) ? scene.skills : [];
+          for (let si = 0; si < skillList.length; si++) {
+            const sk = skillList[si];
+            if (sk && sk.id) {
+              this.traits.register({
+                name: String(sk.id),
+                superName: 'ASTSkill',
+                source: 'ast-skill',
+                slots: Object.keys(scene.vars || {}).map((vn) => ({ name: vn, type: typeof scene.vars[vn], kind: 'var' })),
+                methods: [],
+                events: [],
+              });
+            }
+          }
+        }
+      }
+
+      // Lazy-mount pure-SVG AVM1 or AVM2 Micro-VM when the scene carries an embedded (:swf-vm "...") program
       if (swfVm && container) {
         const stageSvgEl = this.getStageSvg();
         const docRef = typeof document !== 'undefined' ? document : null;
-        const bootAvm1 = (RuntimeCtor) => {
+        let swfProgramObj = null;
+        let isAs3Executable = false;
+        try {
+          if (typeof swfVm === 'string') {
+            const binStr = typeof atob === 'function' ? atob(swfVm) : '';
+            if (binStr) {
+              const bytes = new Uint8Array(binStr.length);
+              for (let bi = 0; bi < binStr.length; bi++) bytes[bi] = binStr.charCodeAt(bi);
+              const jsonStr = typeof TextDecoder !== 'undefined'
+                ? new TextDecoder('utf-8', { fatal: false }).decode(bytes)
+                : binStr;
+              swfProgramObj = JSON.parse(jsonStr);
+            }
+          } else if (typeof swfVm === 'object') {
+            swfProgramObj = swfVm;
+          }
+          isAs3Executable = Boolean(
+            swfProgramObj &&
+            swfProgramObj.as3 === 1 &&
+            Array.isArray(swfProgramObj.abc) &&
+            swfProgramObj.abc.length > 0
+          );
+        } catch (_) {}
+
+        const bootSwfVm = (RuntimeCtor) => {
           if (this._mountGeneration !== mountGen || this._mountedContainer !== container) return;
           this._avm1VmPending = false;
           if (!RuntimeCtor) return;
           if (this._avm1Vm) {
             try { this._avm1Vm.destroy(); } catch (_) {}
             this._avm1Vm = null;
+            this._swfVm = null;
           }
           try {
-            const vm = new RuntimeCtor(swfVm, {
+            const vm = new RuntimeCtor(swfProgramObj || swfVm, {
               engine: this,
               doc: docRef,
               stageSvg: stageSvgEl,
@@ -904,29 +953,36 @@
             }
             vm.mount(container, stageSvgEl);
             this._avm1Vm = vm;
+            this._swfVm = vm;
             this.emit('avm1mounted', {
               id: scene.id,
               swfVer: vm.swfVer,
               frameCount: vm.rootClip ? vm.rootClip._totalframes : 1,
               entryFrame: (vm.program && vm.program.ef) || 1,
-              isAs3: Boolean(vm.program && vm.program.as3)
+              isAs3: Boolean(vm.program && vm.program.as3),
+              runtime: isAs3Executable ? 'avm2' : 'avm1'
             });
           } catch (avmErr) {
-            console.warn('[AST Engine] AVM1 Micro-VM boot fallback to declarative AST:', avmErr);
+            console.warn(`[AST Engine] ${isAs3Executable ? 'AVM2' : 'AVM1'} Micro-VM boot fallback to declarative AST:`, avmErr);
           }
         };
-        const existingCtor = global.ASTAVM1Runtime || (typeof window !== 'undefined' ? window.ASTAVM1Runtime : null);
+
+        const existingCtor = isAs3Executable
+          ? (global.ASTAVM2Runtime || (typeof window !== 'undefined' ? window.ASTAVM2Runtime : null))
+          : (global.ASTAVM1Runtime || (typeof window !== 'undefined' ? window.ASTAVM1Runtime : null));
+
         if (existingCtor) {
-          bootAvm1(existingCtor);
+          bootSwfVm(existingCtor);
         } else {
           const lazy = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : null);
-          if (lazy && typeof lazy.ensureAvm1Vm === 'function') {
+          const loaderFn = isAs3Executable ? (lazy && lazy.ensureAvm2Vm) : (lazy && lazy.ensureAvm1Vm);
+          if (typeof loaderFn === 'function') {
             this._avm1VmPending = true;
-            lazy.ensureAvm1Vm().then(bootAvm1).catch((loadErr) => {
+            loaderFn().then(bootSwfVm).catch((loadErr) => {
               if (this._mountGeneration === mountGen) {
                 this._avm1VmPending = false;
               }
-              console.warn('[AST Engine] Failed lazy-loading ast-avm1-vm.js:', loadErr);
+              console.warn(`[AST Engine] Failed lazy-loading ${isAs3Executable ? 'ast-avm2-vm.js' : 'ast-avm1-vm.js'}:`, loadErr);
             });
           }
         }
