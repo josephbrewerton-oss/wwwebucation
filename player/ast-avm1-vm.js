@@ -504,6 +504,11 @@
       this._scriptModifiedTransform = false;
       this._variable = def.v || '';
       this._text = def.t || '';
+      this._editable = Boolean(def.ed);
+      this._password = Boolean(def.pw);
+      this._multiline = Boolean(def.ml);
+      this._maxChars = def.mx || 0;
+      this._focused = false;
       this._lastRenderedText = null;
       this._lastTransform = '';
       this._lastOpacity = '';
@@ -515,9 +520,37 @@
 
       const align = def.al || 0;
       const anchor = align === 1 ? 'end' : (align === 2 ? 'middle' : 'start');
-      const tx = align === 1 ? (def.x + def.w) : (align === 2 ? (def.x + def.w / 2) : def.x);
+      const tx = align === 1 ? (def.x + def.w) : (align === 2 ? (def.x + def.w / 2) : def.x + (this._editable ? 4 : 0));
       const fs = def.fs || 14;
       const ty = def.y + Math.min(def.h || fs, Math.max(fs, (def.h || fs) * 0.72));
+      this._baseTx = tx;
+      this._baseTy = ty;
+      this._fontSize = fs;
+
+      if (def.bd || this._editable) {
+        this.bgRect = createSvgEl(vm.doc, 'rect');
+        this.bgRect.setAttribute('x', fmtNum(def.x));
+        this.bgRect.setAttribute('y', fmtNum(def.y));
+        this.bgRect.setAttribute('width', fmtNum(Math.max(24, def.w || 120)));
+        this.bgRect.setAttribute('height', fmtNum(Math.max(fs + 6, def.h || (fs + 8))));
+        this.bgRect.setAttribute('rx', '3');
+        this.bgRect.setAttribute('fill', def.bd ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.001)');
+        this.bgRect.setAttribute('stroke', def.bd ? '#94a3b8' : 'none');
+        this.bgRect.setAttribute('stroke-width', def.bd ? '1' : '0');
+        if (this._editable) {
+          this.bgRect.setAttribute('pointer-events', 'all');
+          this.bgRect.style.cursor = 'text';
+          this._onFocusClick = (e) => {
+            if (!this._visible || !this._editable) return;
+            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+            if (this._vm._global && this._vm._global.Selection) {
+              this._vm._global.Selection.setFocus(this);
+            }
+          };
+          this.bgRect.addEventListener('pointerdown', this._onFocusClick);
+        }
+        this.svgEl.appendChild(this.bgRect);
+      }
 
       this.textEl = createSvgEl(vm.doc, 'text');
       this.textEl.setAttribute('x', fmtNum(tx));
@@ -529,31 +562,109 @@
       this.textEl.setAttribute('font-weight', '600');
       this.textEl.setAttribute('pointer-events', 'none');
       if (this._variable) this.textEl.setAttribute('data-swf-var', this._variable);
-      this.textEl.textContent = this._text;
-      this._lastRenderedText = this._text;
       this.svgEl.appendChild(this.textEl);
+
+      if (this._editable) {
+        this.caretEl = createSvgEl(vm.doc, 'line');
+        this.caretEl.setAttribute('stroke', def.col || '#38bdf8');
+        this.caretEl.setAttribute('stroke-width', '1.5');
+        this.caretEl.setAttribute('display', 'none');
+        this.caretEl.setAttribute('pointer-events', 'none');
+        this.svgEl.appendChild(this.caretEl);
+      }
+
+      this._renderTextDisplay();
     }
 
-    get text() { return this._text; }
-    set text(v) {
-      const s = v == null ? '' : String(v);
-      this._text = s;
-      if (this._lastRenderedText !== s) {
-        this._lastRenderedText = s;
-        this.textEl.textContent = s;
+    _renderTextDisplay() {
+      const shown = this._password ? '•'.repeat(this._text.length) : this._text;
+      if (this._lastRenderedText !== shown) {
+        this._lastRenderedText = shown;
+        this.textEl.textContent = shown;
+      }
+      if (this.caretEl) {
+        if (this._focused) {
+          const approxWidth = shown.length * (this._fontSize * 0.58);
+          const cx = this._baseTx + approxWidth + 2;
+          this.caretEl.setAttribute('x1', fmtNum(cx));
+          this.caretEl.setAttribute('x2', fmtNum(cx));
+          this.caretEl.setAttribute('y1', fmtNum(this._baseTy - this._fontSize * 0.85));
+          this.caretEl.setAttribute('y2', fmtNum(this._baseTy + 2));
+          this.caretEl.setAttribute('display', 'inline');
+        } else {
+          this.caretEl.setAttribute('display', 'none');
+        }
+      }
+      if (this.bgRect && this._editable) {
+        this.bgRect.setAttribute('stroke', this._focused ? '#38bdf8' : (this.def.bd ? '#94a3b8' : 'none'));
+        this.bgRect.setAttribute('stroke-width', this._focused ? '1.5' : (this.def.bd ? '1' : '0'));
       }
     }
 
+    _setFocused(focused) {
+      this._focused = Boolean(focused);
+      this._renderTextDisplay();
+    }
+
+    handleKeyInput(kc, keyStr) {
+      if (!this._editable || !this._visible) return false;
+      let next = this._text;
+      if (kc === 8) {
+        next = next.slice(0, -1);
+      } else if (kc === 27) {
+        if (this._vm._global && this._vm._global.Selection) {
+          this._vm._global.Selection.setFocus(null);
+        }
+        return true;
+      } else if (kc === 13) {
+        if (this._multiline) next += '\n';
+      } else if (typeof keyStr === 'string' && keyStr.length === 1) {
+        if (this._maxChars > 0 && next.length >= this._maxChars) return true;
+        next += keyStr;
+      } else {
+        return false;
+      }
+      if (next !== this._text) {
+        this.text = next;
+        if (this._variable && this._parent && this._parent._vars) {
+          this._parent._vars[this._variable] = next;
+        }
+        if (typeof this.onChanged === 'function') {
+          this._vm._invokeValue(this.onChanged, this, [this]);
+        }
+      }
+      return true;
+    }
+
+    get type() { return this._editable ? 'input' : 'dynamic'; }
+    set type(v) { this._editable = String(v || '').toLowerCase() === 'input'; }
+
+    get password() { return this._password; }
+    set password(v) { this._password = Boolean(v); this._renderTextDisplay(); }
+
+    get maxChars() { return this._maxChars || null; }
+    set maxChars(v) { this._maxChars = Math.max(0, Number(v) | 0); }
+
+    get text() { return this._text; }
+    set text(v) {
+      let s = v == null ? '' : String(v);
+      if (this._maxChars > 0 && s.length > this._maxChars) {
+        s = s.slice(0, this._maxChars);
+      }
+      this._text = s;
+      this._renderTextDisplay();
+    }
+
     get htmlText() { return this._text; }
-set htmlText(v) {
-  let plain = String(v == null ? '' : v);
-  let prev;
-  do {
-    prev = plain;
-    plain = plain.replace(/<[^>]*>/g, '');
-  } while (plain !== prev);
-  this.text = plain.replace(/[<>]/g, '');
-}
+    set htmlText(v) {
+      let plain = String(v == null ? '' : v);
+      let prev;
+      do {
+        prev = plain;
+        plain = plain.replace(/<[^>]*>/g, '');
+      } while (plain !== prev);
+      this.text = plain.replace(/[<>]/g, '');
+    }
 
     get variable() { return this._variable; }
     set variable(v) { this._variable = String(v || ''); }
@@ -562,14 +673,13 @@ set htmlText(v) {
     get _height() { return this.def.h || 20; }
 
     syncVariableFromScope() {
-      if (!this._variable || !this._parent) return;
+      if (!this._variable || !this._parent || this._focused) return;
       const val = this._vm._resolveVariablePath(this._variable, this._parent);
       if (val !== undefined) {
         const s = String(val);
-        if (this._lastRenderedText !== s) {
+        if (this._text !== s) {
           this._text = s;
-          this._lastRenderedText = s;
-          this.textEl.textContent = s;
+          this._renderTextDisplay();
         }
       }
     }
@@ -609,6 +719,15 @@ set htmlText(v) {
         this._lastVis = vis;
         this.svgEl.setAttribute('visibility', vis);
         this.svgEl.setAttribute('display', this._visible ? 'inline' : 'none');
+      }
+    }
+
+    destroy() {
+      if (this._vm._focusedTarget === this) {
+        this._vm._focusedTarget = null;
+      }
+      if (this.bgRect && this._onFocusClick) {
+        this.bgRect.removeEventListener('pointerdown', this._onFocusClick);
       }
     }
   }
@@ -1351,6 +1470,9 @@ set htmlText(v) {
           slot = this._createSlot(depth, e.c, e.m || null, e.a !== undefined ? e.a : 1, e.n || '', resolvedCa, false, maskId);
           if (slot) {
             childrenMutated = true;
+            if (e.cx || e.fl) {
+              this._vm._applyVisualFx(slot.svgEl, e.cx || null, e.fl || null);
+            }
             if (slot.obj && slot.obj._isMovieClip) {
               newlySpawnedClips.push(slot.obj);
             }
@@ -1374,6 +1496,10 @@ set htmlText(v) {
               slot._lastOpacity = nextAlpha;
               slot.svgEl.setAttribute('opacity', nextAlpha);
             }
+          }
+          // Apply RGB ColorTransform & Flash 8+ SVG filters (unless script Color override is active)
+          if (slot.svgEl && !(slot.obj && slot.obj._scriptColorTransform)) {
+            this._vm._applyVisualFx(slot.svgEl, e.cx || null, e.fl || null);
           }
           // Update mask wrapper if mask assignment changed
           if (slot.maskId !== maskId) {
@@ -1497,6 +1623,19 @@ set htmlText(v) {
     }
 
     runFrameActions(frameNum) {
+      const sounds = this._def.sf || [];
+      for (let i = 0; i < sounds.length; i++) {
+        if (sounds[i].f === frameNum) {
+          if (sounds[i].stop) {
+            this._vm._stopSwfSound(sounds[i].id);
+          } else {
+            this._vm._playSwfSound(sounds[i].id, {
+              loops: sounds[i].loops || 1,
+              noMultiple: Boolean(sounds[i].noMult),
+            });
+          }
+        }
+      }
       const acts = this._def.ac || [];
       for (let i = 0; i < acts.length; i++) {
         if (acts[i].f === frameNum) {
@@ -2030,6 +2169,13 @@ set htmlText(v) {
       this._skipBgScriptsThisTick = false;
       this._warnedThrottle = false;
 
+      this._fxFilterCache = new Map();
+      this._fxFilterCounter = 0;
+      this._soundBufferCache = new Map();
+      this._activeSoundNodes = new Set();
+      this._soundLog = [];
+      this._audioCtx = null;
+
       // Built-in Flash globals
       this._global = this._createFlashGlobals();
 
@@ -2042,6 +2188,7 @@ set htmlText(v) {
           l: this.program.l || [],
           fr: this.program.fr || [[]],
           ac: this.program.ac || [],
+          sf: this.program.sf || [],
         },
         null,
         0,
@@ -2083,12 +2230,18 @@ set htmlText(v) {
         },
       };
 
-      // Selection object (Flash keyboard focus API)
+      // Selection object (Flash keyboard focus API with editable SVG TextField caret sync)
       const SelectionObj = {
         getFocus() { return vm._focusedTarget ? (vm._focusedTarget._name || vm._focusedTarget) : null; },
         setFocus(target) {
           const prev = vm._focusedTarget;
+          if (prev && prev !== target && typeof prev._setFocused === 'function') {
+            prev._setFocused(false);
+          }
           vm._focusedTarget = target || null;
+          if (vm._focusedTarget && typeof vm._focusedTarget._setFocused === 'function') {
+            vm._focusedTarget._setFocused(true);
+          }
           for (let i = 0; i < vm._selectionListeners.length; i++) {
             const l = vm._selectionListeners[i];
             if (l && typeof l.onSetFocus === 'function') vm._invokeValue(l.onSetFocus, l, [prev, vm._focusedTarget]);
@@ -2136,28 +2289,97 @@ set htmlText(v) {
         removeListener() {},
       };
 
-      // Flash Color class
+      // Flash Color class -> drives live SVG <feColorMatrix> ColorTransform on target MovieClip
       function FlashColor(target) {
         this._target = target;
         this._rgb = 0;
+        this._transform = { ra: 100, rb: 0, ga: 100, gb: 0, ba: 100, bb: 0, aa: 100, ab: 0 };
       }
-      FlashColor.prototype.setRGB = function (rgb) { this._rgb = Number(rgb) || 0; };
+      FlashColor.prototype.setRGB = function (rgb) {
+        const val = (Number(rgb) || 0) & 0xffffff;
+        this._rgb = val;
+        const r = (val >>> 16) & 0xff;
+        const g = (val >>> 8) & 0xff;
+        const b = val & 0xff;
+        this.setTransform({ ra: 0, rb: r, ga: 0, gb: g, ba: 0, bb: b, aa: 100, ab: 0 });
+      };
       FlashColor.prototype.getRGB = function () { return this._rgb; };
-      FlashColor.prototype.setTransform = function () {};
-      FlashColor.prototype.getTransform = function () { return { ra: 100, rb: 0, ga: 100, gb: 0, ba: 100, bb: 0, aa: 100, ab: 0 }; };
+      FlashColor.prototype.setTransform = function (t) {
+        if (!t || typeof t !== 'object') return;
+        const next = {
+          ra: t.ra !== undefined ? Number(t.ra) : this._transform.ra,
+          rb: t.rb !== undefined ? Number(t.rb) : this._transform.rb,
+          ga: t.ga !== undefined ? Number(t.ga) : this._transform.ga,
+          gb: t.gb !== undefined ? Number(t.gb) : this._transform.gb,
+          ba: t.ba !== undefined ? Number(t.ba) : this._transform.ba,
+          bb: t.bb !== undefined ? Number(t.bb) : this._transform.bb,
+          aa: t.aa !== undefined ? Number(t.aa) : this._transform.aa,
+          ab: t.ab !== undefined ? Number(t.ab) : this._transform.ab,
+        };
+        this._transform = next;
+        const tgt = this._target;
+        if (tgt && tgt.svgEl) {
+          const cx = [
+            Math.round((next.ra / 100) * 256),
+            Math.round((next.ga / 100) * 256),
+            Math.round((next.ba / 100) * 256),
+            Math.round((next.aa / 100) * 256),
+            Math.round(next.rb),
+            Math.round(next.gb),
+            Math.round(next.bb),
+            Math.round(next.ab),
+          ];
+          tgt._scriptColorTransform = cx;
+          vm._applyVisualFx(tgt.svgEl, cx, tgt._activeFilters || null);
+        }
+      };
+      FlashColor.prototype.getTransform = function () { return { ...this._transform }; };
 
-      // Flash Sound stub (safe 0-dependency Web Audio / no-op)
+      // Flash Sound class -> zero-dependency Web Audio API (PCM / SWF IMA ADPCM / MP3)
       function FlashSound(target) {
         this._target = target;
+        this._id = null;
+        this._soundId = null;
         this._volume = 100;
         this._pan = 0;
       }
-      FlashSound.prototype.attachSound = function (id) { this._id = id; };
-      FlashSound.prototype.start = function () {};
-      FlashSound.prototype.stop = function () {};
-      FlashSound.prototype.setVolume = function (v) { this._volume = Number(v) || 0; };
+      FlashSound.prototype.attachSound = function (linkageId) {
+        this._id = String(linkageId || '');
+        const resolved = vm._lookupExport(this._id);
+        this._soundId = resolved !== undefined ? resolved : (Number(this._id) || null);
+      };
+      FlashSound.prototype.start = function (secondOffset, loops) {
+        if (this._soundId == null) return;
+        const self = this;
+        vm._playSwfSound(this._soundId, {
+          offsetSec: Math.max(0, Number(secondOffset) || 0),
+          loops: Math.max(1, Number(loops) || 1),
+          volume: this._volume,
+          pan: this._pan,
+          onComplete: () => {
+            if (typeof self.onSoundComplete === 'function') {
+              vm._invokeValue(self.onSoundComplete, self, []);
+            }
+          },
+        });
+      };
+      FlashSound.prototype.stop = function (linkageId) {
+        if (linkageId) {
+          const resolved = vm._lookupExport(String(linkageId));
+          if (resolved !== undefined) vm._stopSwfSound(resolved);
+        } else if (this._soundId != null) {
+          vm._stopSwfSound(this._soundId);
+        } else {
+          vm.stopAllSounds();
+        }
+      };
+      FlashSound.prototype.setVolume = function (v) {
+        this._volume = Math.max(0, Math.min(100, Number(v) || 0));
+      };
       FlashSound.prototype.getVolume = function () { return this._volume; };
-      FlashSound.prototype.setPan = function (p) { this._pan = Number(p) || 0; };
+      FlashSound.prototype.setPan = function (p) {
+        this._pan = Math.max(-100, Math.min(100, Number(p) || 0));
+      };
       FlashSound.prototype.getPan = function () { return this._pan; };
 
       // Flash SharedObject in-memory stub
@@ -2506,7 +2728,9 @@ set htmlText(v) {
         try {
           const existingGrads = this.container.querySelectorAll('defs linearGradient, defs radialGradient, defs pattern, defs filter');
           for (let i = 0; i < existingGrads.length; i++) {
-            preservedDefs.push(existingGrads[i].cloneNode(true));
+            const gEl = existingGrads[i];
+            if (typeof gEl.getAttribute === 'function' && gEl.getAttribute('data-swf-vm-def') === '1') continue;
+            preservedDefs.push(gEl.cloneNode(true));
           }
         } catch (_) {}
       }
@@ -2526,6 +2750,7 @@ set htmlText(v) {
         defs.appendChild(preservedDefs[i]);
       }
       this.defsEl = defs;
+      this._installProgramDefs(defs);
 
       const bg = createSvgEl(this.doc, 'rect');
       bg.setAttribute('id', 'bg');
@@ -2652,7 +2877,10 @@ set htmlText(v) {
         this._syncModifierToggles(e);
         const kc = mapEventKeyToFlashCode(e);
         if (!kc) return;
-        if (kc === 32 || (kc >= 37 && kc <= 40) || kc === 9) {
+        if (this._focusedTarget && this._focusedTarget._isTextField && this._focusedTarget._editable) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          this._focusedTarget.handleKeyInput(kc, e.key || '');
+        } else if (kc === 32 || (kc >= 37 && kc <= 40) || kc === 9) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
         }
         const ascii = (e.key && e.key.length === 1) ? e.key.charCodeAt(0) : kc;
@@ -2682,6 +2910,416 @@ set htmlText(v) {
       }
     }
 
+    _installProgramDefs(defs) {
+      if (!defs) return;
+      // 1. SWF Linear & Radial Gradients (Flash canonical gradient square: -819.2..+819.2 px)
+      const grads = this.program.gr || [];
+      for (let i = 0; i < grads.length; i++) {
+        const g = grads[i];
+        if (!g || !g.id || !Array.isArray(g.st)) continue;
+        const el = createSvgEl(this.doc, g.t === 'r' ? 'radialGradient' : 'linearGradient');
+        el.setAttribute('id', g.id);
+        el.setAttribute('data-swf-vm-def', '1');
+        el.setAttribute('gradientUnits', 'userSpaceOnUse');
+        if (g.t === 'r') {
+          el.setAttribute('cx', '0');
+          el.setAttribute('cy', '0');
+          el.setAttribute('r', '819.2');
+          if (g.fp) el.setAttribute('fx', fmtNum(g.fp * 819.2));
+        } else {
+          el.setAttribute('x1', '-819.2');
+          el.setAttribute('y1', '0');
+          el.setAttribute('x2', '819.2');
+          el.setAttribute('y2', '0');
+        }
+        if (Array.isArray(g.m) && g.m.length === 6) {
+          el.setAttribute('gradientTransform', `matrix(${g.m.map(fmtNum).join(' ')})`);
+        }
+        for (let s = 0; s < g.st.length; s++) {
+          const stop = createSvgEl(this.doc, 'stop');
+          stop.setAttribute('offset', `${fmtNum((g.st[s][0] || 0) * 100)}%`);
+          stop.setAttribute('stop-color', String(g.st[s][1] || '#ffffff'));
+          el.appendChild(stop);
+        }
+        defs.appendChild(el);
+      }
+
+      // 2. SWF Bitmap Fill Patterns (DefineBitsJPEG2/3 & DefineBitsLossless/2 -> pure SVG <pattern><image>)
+      const patterns = this.program.bp || [];
+      const bitmaps = this.program.bm || {};
+      const safeDataUriRe = /^data:image\/(?:png|jpeg|gif);base64,[A-Za-z0-9+/=]+$/;
+      for (let i = 0; i < patterns.length; i++) {
+        const pat = patterns[i];
+        const bmp = pat && bitmaps[pat.b];
+        if (!bmp || !bmp.u || !safeDataUriRe.test(bmp.u)) continue;
+        const w = bmp.w || 64;
+        const h = bmp.h || 64;
+        const pel = createSvgEl(this.doc, 'pattern');
+        pel.setAttribute('id', pat.id);
+        pel.setAttribute('data-swf-vm-def', '1');
+        pel.setAttribute('patternUnits', 'userSpaceOnUse');
+        pel.setAttribute('width', String(w));
+        pel.setAttribute('height', String(h));
+        if (Array.isArray(pat.m) && pat.m.length === 6) {
+          pel.setAttribute('patternTransform', `matrix(${pat.m.map(fmtNum).join(' ')})`);
+        }
+        const img = createSvgEl(this.doc, 'image');
+        img.setAttribute('href', bmp.u);
+        img.setAttribute('width', String(w));
+        img.setAttribute('height', String(h));
+        img.setAttribute('preserveAspectRatio', 'none');
+        pel.appendChild(img);
+        defs.appendChild(pel);
+      }
+    }
+
+    _getOrCreateFxFilter(cx, filters) {
+      if (!this.defsEl) return null;
+      const hasCx = Array.isArray(cx) && cx.length >= 8;
+      const hasFl = Array.isArray(filters) && filters.length > 0;
+      if (!hasCx && !hasFl) return null;
+      const key = `${hasCx ? cx.join(',') : ''}|${hasFl ? JSON.stringify(filters) : ''}`;
+      if (this._fxFilterCache.has(key)) return this._fxFilterCache.get(key);
+      if (this._fxFilterCache.size >= 128) return null;
+
+      const fid = `avm1-fx-${++this._fxFilterCounter}`;
+      const flEl = createSvgEl(this.doc, 'filter');
+      flEl.setAttribute('id', fid);
+      flEl.setAttribute('data-swf-vm-def', '1');
+      flEl.setAttribute('x', '-30%');
+      flEl.setAttribute('y', '-30%');
+      flEl.setAttribute('width', '160%');
+      flEl.setAttribute('height', '160%');
+
+      let prevRes = 'SourceGraphic';
+      let stepIdx = 0;
+
+      if (hasCx) {
+        const rm = cx[0] / 256;
+        const gm = cx[1] / 256;
+        const bm = cx[2] / 256;
+        const am = cx[3] / 256;
+        const ra = cx[4] / 255;
+        const ga = cx[5] / 255;
+        const ba = cx[6] / 255;
+        const aa = cx[7] / 255;
+        const cm = createSvgEl(this.doc, 'feColorMatrix');
+        cm.setAttribute('in', prevRes);
+        cm.setAttribute('type', 'matrix');
+        cm.setAttribute(
+          'values',
+          `${fmtNum(rm)} 0 0 0 ${fmtNum(ra)} 0 ${fmtNum(gm)} 0 0 ${fmtNum(ga)} 0 0 ${fmtNum(bm)} 0 ${fmtNum(ba)} 0 0 0 ${fmtNum(am)} ${fmtNum(aa)}`
+        );
+        prevRes = `fx_${++stepIdx}`;
+        cm.setAttribute('result', prevRes);
+        flEl.appendChild(cm);
+      }
+
+      if (hasFl) {
+        for (let i = 0; i < filters.length; i++) {
+          const f = filters[i];
+          if (!f) continue;
+          if (f.t === 'bl') {
+            const blur = createSvgEl(this.doc, 'feGaussianBlur');
+            blur.setAttribute('in', prevRes);
+            blur.setAttribute('stdDeviation', `${fmtNum((f.bx || 0) / 2.2)} ${fmtNum((f.by || 0) / 2.2)}`);
+            prevRes = `fx_${++stepIdx}`;
+            blur.setAttribute('result', prevRes);
+            flEl.appendChild(blur);
+          } else if (f.t === 'ds') {
+            const rad = ((f.ang || 45) * Math.PI) / 180;
+            const dist = f.d || 4;
+            const ds = createSvgEl(this.doc, 'feDropShadow');
+            ds.setAttribute('in', prevRes);
+            ds.setAttribute('dx', fmtNum(Math.cos(rad) * dist));
+            ds.setAttribute('dy', fmtNum(Math.sin(rad) * dist));
+            ds.setAttribute('stdDeviation', `${fmtNum((f.bx || 4) / 2.4)} ${fmtNum((f.by || 4) / 2.4)}`);
+            ds.setAttribute('flood-color', f.c || 'rgba(0,0,0,0.6)');
+            prevRes = `fx_${++stepIdx}`;
+            ds.setAttribute('result', prevRes);
+            flEl.appendChild(ds);
+          } else if (f.t === 'gl') {
+            const blur = createSvgEl(this.doc, 'feGaussianBlur');
+            blur.setAttribute('in', 'SourceAlpha');
+            blur.setAttribute('stdDeviation', `${fmtNum((f.bx || 6) / 2.2)} ${fmtNum((f.by || 6) / 2.2)}`);
+            const bRes = `fx_${++stepIdx}`;
+            blur.setAttribute('result', bRes);
+            flEl.appendChild(blur);
+
+            const flood = createSvgEl(this.doc, 'feFlood');
+            flood.setAttribute('flood-color', f.c || '#38bdf8');
+            const fRes = `fx_${++stepIdx}`;
+            flood.setAttribute('result', fRes);
+            flEl.appendChild(flood);
+
+            const comp = createSvgEl(this.doc, 'feComposite');
+            comp.setAttribute('in', fRes);
+            comp.setAttribute('in2', bRes);
+            comp.setAttribute('operator', 'in');
+            const gRes = `fx_${++stepIdx}`;
+            comp.setAttribute('result', gRes);
+            flEl.appendChild(comp);
+
+            const merge = createSvgEl(this.doc, 'feMerge');
+            const n1 = createSvgEl(this.doc, 'feMergeNode');
+            n1.setAttribute('in', gRes);
+            const n2 = createSvgEl(this.doc, 'feMergeNode');
+            n2.setAttribute('in', prevRes);
+            merge.appendChild(n1);
+            merge.appendChild(n2);
+            prevRes = `fx_${++stepIdx}`;
+            merge.setAttribute('result', prevRes);
+            flEl.appendChild(merge);
+          } else if (f.t === 'cm' && Array.isArray(f.m) && f.m.length === 20) {
+            const vals = f.m.slice();
+            vals[4] /= 255; vals[9] /= 255; vals[14] /= 255; vals[19] /= 255;
+            const cm = createSvgEl(this.doc, 'feColorMatrix');
+            cm.setAttribute('in', prevRes);
+            cm.setAttribute('type', 'matrix');
+            cm.setAttribute('values', vals.map(fmtNum).join(' '));
+            prevRes = `fx_${++stepIdx}`;
+            cm.setAttribute('result', prevRes);
+            flEl.appendChild(cm);
+          }
+        }
+      }
+
+      this.defsEl.appendChild(flEl);
+      this._fxFilterCache.set(key, fid);
+      return fid;
+    }
+
+    _applyVisualFx(el, cx, filters) {
+      if (!el || typeof el.setAttribute !== 'function') return;
+      const fid = this._getOrCreateFxFilter(cx, filters);
+      const nextVal = fid ? `url(#${fid})` : '';
+      if (el._lastFilterVal !== nextVal) {
+        el._lastFilterVal = nextVal;
+        if (nextVal) el.setAttribute('filter', nextVal);
+        else if (typeof el.removeAttribute === 'function') el.removeAttribute('filter');
+      }
+    }
+
+    // =========================================================================
+    // Zero-Dependency Web Audio SWF Sound Engine (PCM / SWF IMA ADPCM / MP3)
+    // =========================================================================
+
+    _ensureAudioCtx() {
+      if (this._audioCtx) return this._audioCtx;
+      if (this.engine && this.engine.audioSynth && this.engine.audioSynth.ctx) {
+        this._audioCtx = this.engine.audioSynth.ctx;
+        return this._audioCtx;
+      }
+      const AC = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+      if (AC) {
+        try {
+          this._audioCtx = new AC();
+        } catch (_) {}
+      }
+      return this._audioCtx;
+    }
+
+    _decodeSwfAdpcm(bytes, isStereo) {
+      // Standard SWF IMA ADPCM decoder (2/3/4/5-bit code sizes per SWF specification)
+      const STEP_TABLE = [
+        7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31,
+        34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 130, 143,
+        157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658,
+        724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024,
+        3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
+        15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
+      ];
+      const INDEX_TABLES = {
+        2: [-1, 2],
+        3: [-1, -1, 2, 4],
+        4: [-1, -1, -1, -1, 2, 4, 6, 8],
+        5: [-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6, 8, 10, 13, 16],
+      };
+      let bitPos = 0;
+      const totalBits = bytes.length * 8;
+      const readBits = (n) => {
+        let v = 0;
+        for (let i = 0; i < n; i++) {
+          const bp = bitPos++;
+          v = (v << 1) | ((bytes[bp >> 3] >> (7 - (bp & 7))) & 1);
+        }
+        return v;
+      };
+      const readSBits = (n) => {
+        const u = readBits(n);
+        const sign = 1 << (n - 1);
+        return (u & sign) ? (u - (sign << 1)) : u;
+      };
+      if (totalBits < 24) return [new Float32Array(0)];
+      const codeSize = readBits(2) + 2;
+      const idxTable = INDEX_TABLES[codeSize] || INDEX_TABLES[4];
+      const signMask = 1 << (codeSize - 1);
+      const magMask = signMask - 1;
+      const channels = isStereo ? 2 : 1;
+      const out = channels === 2 ? [[], []] : [[]];
+
+      while (bitPos + channels * 22 <= totalBits) {
+        const pred = [];
+        const stepIdx = [];
+        for (let c = 0; c < channels; c++) {
+          const s = readSBits(16);
+          const idx = Math.max(0, Math.min(88, readBits(6)));
+          pred.push(s);
+          stepIdx.push(idx);
+          out[c].push(s / 32768);
+        }
+        for (let sample = 0; sample < 4095 && bitPos + channels * codeSize <= totalBits; sample++) {
+          for (let c = 0; c < channels; c++) {
+            const delta = readBits(codeSize);
+            const step = STEP_TABLE[stepIdx[c]];
+            let diff = step >> (codeSize - 1);
+            for (let b = 0; b < codeSize - 1; b++) {
+              if (delta & (1 << b)) diff += step >> (codeSize - 2 - b);
+            }
+            let nextVal = (delta & signMask) ? (pred[c] - diff) : (pred[c] + diff);
+            nextVal = Math.max(-32768, Math.min(32767, nextVal));
+            pred[c] = nextVal;
+            stepIdx[c] = Math.max(0, Math.min(88, stepIdx[c] + idxTable[delta & magMask]));
+            out[c].push(nextVal / 32768);
+          }
+        }
+      }
+      return out.map((arr) => Float32Array.from(arr));
+    }
+
+    _decodeSwfPcm(bytes, is16Bit, isStereo, isLittleEndian) {
+      const channels = isStereo ? 2 : 1;
+      const bytesPerSample = is16Bit ? 2 : 1;
+      const frameCount = Math.floor(bytes.length / (channels * bytesPerSample));
+      const out = [];
+      for (let c = 0; c < channels; c++) out.push(new Float32Array(frameCount));
+      let pos = 0;
+      for (let i = 0; i < frameCount; i++) {
+        for (let c = 0; c < channels; c++) {
+          if (is16Bit) {
+            const raw = isLittleEndian
+              ? (bytes[pos] | (bytes[pos + 1] << 8))
+              : ((bytes[pos] << 8) | bytes[pos + 1]);
+            const signed = raw & 0x8000 ? raw - 0x10000 : raw;
+            out[c][i] = signed / 32768;
+            pos += 2;
+          } else {
+            out[c][i] = (bytes[pos++] - 128) / 128;
+          }
+        }
+      }
+      return out;
+    }
+
+    _playSwfSound(soundId, opts = {}) {
+      const def = this.program.sn && this.program.sn[soundId];
+      if (!def || !def.b64) return false;
+      const loops = Math.max(1, Number(opts.loops) || 1);
+      const volume = opts.volume !== undefined ? Math.max(0, Math.min(100, Number(opts.volume))) : 100;
+      const pan = opts.pan !== undefined ? Math.max(-100, Math.min(100, Number(opts.pan))) : 0;
+
+      if (opts.noMultiple) {
+        for (const rec of this._activeSoundNodes) {
+          if (rec.soundId === soundId) return false;
+        }
+      }
+      this._soundLog.push({ op: 'start', id: soundId, fmt: def.fmt, rate: def.rate, loops, volume, pan });
+      if (this._soundLog.length > 100) this._soundLog.shift();
+
+      if (this.engine && this.engine.isMuted) return true;
+      const ctx = this._ensureAudioCtx();
+      if (!ctx) return true;
+      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+        try { ctx.resume().catch(() => {}); } catch (_) {}
+      }
+
+      const startBuffer = (audioBuf) => {
+        if (!audioBuf || !this._mounted) return;
+        try {
+          const src = ctx.createBufferSource();
+          src.buffer = audioBuf;
+          if (loops > 1) src.loop = true;
+          const gain = ctx.createGain();
+          gain.gain.value = (volume / 100) * 0.85;
+          let dest = ctx.destination;
+          if (typeof ctx.createStereoPanner === 'function' && Math.abs(pan) > 1) {
+            const panner = ctx.createStereoPanner();
+            panner.pan.value = pan / 100;
+            panner.connect(ctx.destination);
+            dest = panner;
+          }
+          src.connect(gain);
+          gain.connect(dest);
+          const rec = { soundId, src };
+          this._activeSoundNodes.add(rec);
+          src.onended = () => {
+            this._activeSoundNodes.delete(rec);
+            if (typeof opts.onComplete === 'function') opts.onComplete();
+          };
+          const offset = Math.max(0, Number(opts.offsetSec) || 0);
+          if (loops > 1 && loops < 100) {
+            src.start(0, offset, Math.max(0.05, audioBuf.duration * loops - offset));
+          } else {
+            src.start(0, offset);
+          }
+        } catch (_) {}
+      };
+
+      const cached = this._soundBufferCache.get(soundId);
+      if (cached) {
+        startBuffer(cached);
+        return true;
+      }
+
+      const bytes = decodeBase64ToBytes(def.b64);
+      if (def.fmt === 2 && typeof ctx.decodeAudioData === 'function') {
+        // MP3: skip 2-byte SWF seekSamples prefix
+        const mp3Slice = bytes.length > 2 ? bytes.slice(2) : bytes.slice();
+        ctx.decodeAudioData(mp3Slice.buffer)
+          .then((buf) => {
+            this._soundBufferCache.set(soundId, buf);
+            startBuffer(buf);
+          })
+          .catch(() => {});
+        return true;
+      }
+
+      // PCM (fmt 0 / 3) or SWF IMA ADPCM (fmt 1) -> synchronous Float32 AudioBuffer
+      try {
+        const chData = def.fmt === 1
+          ? this._decodeSwfAdpcm(bytes, Boolean(def.st))
+          : this._decodeSwfPcm(bytes, Boolean(def.s16), Boolean(def.st), def.fmt !== 0);
+        const len = chData[0] ? chData[0].length : 0;
+        if (len > 0 && typeof ctx.createBuffer === 'function') {
+          const buf = ctx.createBuffer(chData.length, len, def.rate || 22050);
+          for (let c = 0; c < chData.length; c++) {
+            buf.copyToChannel(chData[c], c);
+          }
+          this._soundBufferCache.set(soundId, buf);
+          startBuffer(buf);
+        }
+      } catch (_) {}
+      return true;
+    }
+
+    _stopSwfSound(soundId) {
+      this._soundLog.push({ op: 'stop', id: soundId });
+      for (const rec of Array.from(this._activeSoundNodes)) {
+        if (rec.soundId === soundId) {
+          this._activeSoundNodes.delete(rec);
+          try { rec.src.stop(); } catch (_) {}
+        }
+      }
+    }
+
+    stopAllSounds() {
+      this._soundLog.push({ op: 'stopAll' });
+      for (const rec of Array.from(this._activeSoundNodes)) {
+        this._activeSoundNodes.delete(rec);
+        try { rec.src.stop(); } catch (_) {}
+      }
+    }
+
     _syncModifierToggles(e) {
       if (!e || typeof e.getModifierState !== 'function') return;
       try {
@@ -2699,6 +3337,9 @@ set htmlText(v) {
       const kc = mapEventKeyToFlashCode(payload);
       if (!kc) return;
       if (kind === 'keydown') {
+        if (this._focusedTarget && this._focusedTarget._isTextField && this._focusedTarget._editable) {
+          this._focusedTarget.handleKeyInput(kc, payload.key || '');
+        }
         const ascii = (payload.key && payload.key.length === 1) ? payload.key.charCodeAt(0) : kc;
         this.triggerKeyDown(kc, ascii);
       } else if (kind === 'keyup') {
@@ -2985,6 +3626,7 @@ set htmlText(v) {
       this._scriptThrottled = false;
       this._skipBgScriptsThisTick = false;
       this._warnedThrottle = false;
+      this._soundLog.length = 0;
       this.rootClip = new AVM1MovieClip(
         this,
         0,
@@ -2993,6 +3635,7 @@ set htmlText(v) {
           l: this.program.l || [],
           fr: this.program.fr || [[]],
           ac: this.program.ac || [],
+          sf: this.program.sf || [],
         },
         null,
         0,
@@ -3305,9 +3948,12 @@ set htmlText(v) {
 
     destroy(keepCaches = false) {
       this._mounted = false;
+      this.stopAllSounds();
       this._intervals.clear();
       this._dragClip = null;
       this._pressedInteractive = null;
+      this._focusedTarget = null;
+      if (this._fxFilterCache) this._fxFilterCache.clear();
       const target = this.stageSvg || this.container;
       const win = typeof window !== 'undefined' ? window : null;
       if (target && typeof target.removeEventListener === 'function') {
@@ -3938,7 +4584,9 @@ set htmlText(v) {
             if (curTarget && curTarget._isMovieClip) curTarget.stop();
             break;
           case 0x08: // ActionToggleQuality
+            break;
           case 0x09: // ActionStopSounds
+            this.stopAllSounds();
             break;
           case 0x81: { // ActionGotoFrame (0-based UI16); fuse trailing 0x06 ActionPlay into gotoAndPlay
             const frame0 = readUI16(bytes, ins.pStart);
