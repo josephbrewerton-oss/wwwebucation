@@ -2841,8 +2841,90 @@
     _bindStageInputs() {
       const target = this.stageSvg || this.container;
       const win = typeof window !== 'undefined' ? window : null;
+      const gestureBus = (this.engine && this.engine.gestures && typeof this.engine.gestures.registerMediaInputSink === 'function')
+        ? this.engine.gestures
+        : (win && win.__astGestures && typeof win.__astGestures.registerMediaInputSink === 'function' ? win.__astGestures : null);
 
       this._lastPointerMoveMs = 0;
+
+      // Clean up any previous sink registration before rebinding
+      if (this._boundGestureBus && this._inputSinkId && typeof this._boundGestureBus.unregisterMediaInputSink === 'function') {
+        this._boundGestureBus.unregisterMediaInputSink(this._inputSinkId);
+        this._boundGestureBus = null;
+      }
+
+      // Preferred decoupled path: subscribe as an independent sink on the universal gesture route bus.
+      // Zero duplicate window/stage listeners — site-gestures.js + player-gestures.ast own DOM & whiteboard gating.
+      if (gestureBus) {
+        this._inputSinkId = this._inputSinkId || `avm1-media-sink-${++this._instCounter}`;
+        this._boundGestureBus = gestureBus;
+        this._standaloneListenersBound = false;
+        const self = this;
+        gestureBus.registerMediaInputSink(this._inputSinkId, {
+          exclusiveKeyboard: true,
+          exclusivePointer: true,
+          'pointer-move'(payload) {
+            if (!self._mounted) return;
+            const pt = (payload && payload.svgPt)
+              ? payload.svgPt
+              : (payload && payload.originalEvent ? self._clientToStage(payload.originalEvent.clientX, payload.originalEvent.clientY) : null);
+            if (pt) self.setMousePosition(pt.x, pt.y);
+          },
+          'pointer-down'(payload) {
+            if (!self._mounted) return;
+            const pt = (payload && payload.svgPt)
+              ? payload.svgPt
+              : (payload && payload.originalEvent ? self._clientToStage(payload.originalEvent.clientX, payload.originalEvent.clientY) : null);
+            if (pt) self.setMousePosition(pt.x, pt.y);
+            self.triggerMouseDown();
+            return { exclusive: true };
+          },
+          'pointer-up'(payload) {
+            if (!self._mounted) return;
+            const pt = (payload && payload.svgPt)
+              ? payload.svgPt
+              : (payload && payload.originalEvent && typeof payload.originalEvent.clientX === 'number'
+                ? self._clientToStage(payload.originalEvent.clientX, payload.originalEvent.clientY)
+                : null);
+            if (pt) self.setMousePosition(pt.x, pt.y);
+            self.triggerMouseUp();
+          },
+          'wheel'(payload) {
+            if (!self._mounted || self._mouseListeners.length === 0) return;
+            const rawDelta = payload && typeof payload.deltaY === 'number' ? payload.deltaY : 0;
+            if (rawDelta === 0) return;
+            self.triggerMouseWheel(rawDelta < 0 ? 3 : -3);
+          },
+          'key-down'(payload) {
+            if (!self._mounted || !payload) return;
+            if (payload.originalEvent) self._syncModifierToggles(payload.originalEvent);
+            const kc = mapEventKeyToFlashCode(payload);
+            if (!kc) return;
+            let consumed = false;
+            if (self._focusedTarget && self._focusedTarget._isTextField && self._focusedTarget._editable) {
+              self._focusedTarget.handleKeyInput(kc, payload.key || '');
+              consumed = true;
+            }
+            const ascii = (payload.key && payload.key.length === 1) ? payload.key.charCodeAt(0) : kc;
+            self.triggerKeyDown(kc, ascii);
+            return { consumed, exclusive: true };
+          },
+          'key-up'(payload) {
+            if (!self._mounted || !payload) return;
+            if (payload.originalEvent) self._syncModifierToggles(payload.originalEvent);
+            const kc = mapEventKeyToFlashCode(payload);
+            if (!kc) return;
+            self.triggerKeyUp(kc);
+          },
+          'release-all'() {
+            self.releaseAllInputs();
+          },
+        });
+        return;
+      }
+
+      // Standalone / headless fallback when ASTAVM1Runtime is mounted without site-gestures.js
+      this._standaloneListenersBound = true;
       this._onPointerMove = (e) => {
         const now = _nowMs();
         if (now - this._lastPointerMoveMs < 15) return;
@@ -3954,21 +4036,28 @@
       this._pressedInteractive = null;
       this._focusedTarget = null;
       if (this._fxFilterCache) this._fxFilterCache.clear();
+      if (this._boundGestureBus && this._inputSinkId && typeof this._boundGestureBus.unregisterMediaInputSink === 'function') {
+        this._boundGestureBus.unregisterMediaInputSink(this._inputSinkId);
+        this._boundGestureBus = null;
+      }
       const target = this.stageSvg || this.container;
       const win = typeof window !== 'undefined' ? window : null;
-      if (target && typeof target.removeEventListener === 'function') {
-        if (this._onPointerMove) target.removeEventListener('pointermove', this._onPointerMove);
-        if (this._onPointerDown) target.removeEventListener('pointerdown', this._onPointerDown);
-        if (this._onWheel) target.removeEventListener('wheel', this._onWheel);
-      }
-      if (win && typeof win.removeEventListener === 'function') {
-        if (this._onPointerUp) win.removeEventListener('pointerup', this._onPointerUp);
-        if (this._onWindowBlur) {
-          win.removeEventListener('pointercancel', this._onWindowBlur);
-          win.removeEventListener('blur', this._onWindowBlur);
+      if (this._standaloneListenersBound) {
+        if (target && typeof target.removeEventListener === 'function') {
+          if (this._onPointerMove) target.removeEventListener('pointermove', this._onPointerMove);
+          if (this._onPointerDown) target.removeEventListener('pointerdown', this._onPointerDown);
+          if (this._onWheel) target.removeEventListener('wheel', this._onWheel);
         }
-        if (this._onKeyDown) win.removeEventListener('keydown', this._onKeyDown);
-        if (this._onKeyUp) win.removeEventListener('keyup', this._onKeyUp);
+        if (win && typeof win.removeEventListener === 'function') {
+          if (this._onPointerUp) win.removeEventListener('pointerup', this._onPointerUp);
+          if (this._onWindowBlur) {
+            win.removeEventListener('pointercancel', this._onWindowBlur);
+            win.removeEventListener('blur', this._onWindowBlur);
+          }
+          if (this._onKeyDown) win.removeEventListener('keydown', this._onKeyDown);
+          if (this._onKeyUp) win.removeEventListener('keyup', this._onKeyUp);
+        }
+        this._standaloneListenersBound = false;
       }
       if (this.rootClip) this.rootClip.destroy();
       this._liveButtons.clear();

@@ -214,9 +214,12 @@
     const scene = this.engine && this.engine.scene;
     if (!scene || !this.engine.vars) return;
 
-    // When the pure-SVG AVM1 Micro-VM owns an SWF stage, yield keyboard input directly to ASTAVM1Runtime
-    if ((this.engine._avm1Vm && this.engine._avm1Vm._mounted) || this.engine._avm1VmPending) {
-      return;
+    // Priority 1.5: Universal Media Input Route (100% media-agnostic; driven by (:media-routes ...) in player-gestures.ast)
+    if (typeof this.routeMediaInputEvent === 'function') {
+      const mediaRes = this.routeMediaInputEvent('keydown', e);
+      if (mediaRes && (mediaRes.consumed || mediaRes.exclusive)) {
+        return;
+      }
     }
 
     // Priority 2: Cartridge Explicit (:key ...) Rules
@@ -332,6 +335,10 @@
       }
     }
 
+    if (typeof this.routeMediaInputEvent === 'function') {
+      this.routeMediaInputEvent('keyup', e);
+    }
+
     if (this._heldKeys.size === 0 && this._heldPointerEntries.size === 0) {
       this._stopHoldLoop();
     }
@@ -341,6 +348,9 @@
     _clearActiveHoverVars.call(this, false);
     _clearActivePressVars.call(this, false);
     this._releaseAllHeldInputs(true);
+    if (typeof this.routeMediaInputEvent === 'function') {
+      this.routeMediaInputEvent('blur', null);
+    }
   }
 
   function _clearActivePressVars(apply = true) {
@@ -586,9 +596,12 @@
       }
     }
 
-    // When the pure-SVG AVM1 Micro-VM owns an SWF stage, yield non-whiteboard pointer input directly to AVM1Button / MovieClip listeners
-    if (this.engine && ((this.engine._avm1Vm && this.engine._avm1Vm._mounted) || this.engine._avm1VmPending)) {
-      return;
+    // A2. Universal Media Input Route (non-whiteboard stage pointer routed generically to active media sink)
+    if (typeof this.routeMediaInputEvent === 'function') {
+      const mediaRes = this.routeMediaInputEvent('pointerdown', e, svgPt);
+      if (mediaRes && (mediaRes.consumed || mediaRes.exclusive)) {
+        return;
+      }
     }
 
     const scene = this.engine && this.engine.scene;
@@ -889,6 +902,10 @@
       }
     }
 
+    if (!this.isDrawing && !this.isDragging && typeof this.routeMediaInputEvent === 'function') {
+      this.routeMediaInputEvent('pointermove', latestEv, svgPt);
+    }
+
     if (this.engine && typeof this.engine.updateCursorRay === 'function' && !this.isDrawing && !this.isDragging) {
       const now = performance.now();
       if (!this._lastRayCastTime || (now - this._lastRayCastTime > 120)) {
@@ -939,6 +956,11 @@
       this.dragMode = null;
       this._wasPlayingBeforeDrag = false;
     }
+
+    if (typeof this.routeMediaInputEvent === 'function') {
+      const upPt = e && typeof e.clientX === 'number' ? this.screenToSvg(e.clientX, e.clientY) : null;
+      this.routeMediaInputEvent('pointerup', e, upPt);
+    }
   }
 
   function handlePointerCancel(e) {
@@ -948,7 +970,17 @@
       else this._pendingTouchAudio.clear();
     }
     this._releaseAllHeldInputs(true);
+    if (typeof this.routeMediaInputEvent === 'function') {
+      this.routeMediaInputEvent('pointercancel', e);
+    }
     this.handlePointerUp(e);
+  }
+
+  function handleWheel(e) {
+    if (this.isPenActive && this._isControlEnabled('whiteboard')) return;
+    if (typeof this.routeMediaInputEvent === 'function') {
+      this.routeMediaInputEvent('wheel', e);
+    }
   }
 
   function handleTrackballDrag(e) {
@@ -1238,6 +1270,7 @@
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
+    handleWheel,
     handleTrackballDrag,
     handleGenericDrag,
     handleRotateDrag,
