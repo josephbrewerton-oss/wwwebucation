@@ -26,7 +26,9 @@
     studio: { file: 'player-ui-studio.js', check: () => Boolean(global.ASTPlayerUIStudio) },
     voice: { file: 'player-ui-voice.js', check: () => Boolean(global.ASTPlayerUIVoice) },
     broadcast: { file: 'player-ui-broadcast.js', check: () => Boolean(global.ASTPlayerUIBroadcast) },
+    eventBus: { file: 'ast-event-bus.js', check: () => Boolean(global.ASTEventBus) },
     avm1Vm: { file: 'ast-avm1-vm.js', check: () => Boolean(global.ASTAVM1Runtime) },
+    avm2Vm: { file: 'ast-avm2-vm.js', check: () => Boolean(global.ASTAVM2Runtime) },
   });
 
   const SCRIPT_BASE_URL = (() => {
@@ -141,9 +143,19 @@
     return global.ASTPhetBridge || null;
   }
 
+  async function ensureEventBus() {
+    await loadKeys(['eventBus']);
+    return global.ASTEventBus || null;
+  }
+
   async function ensureAvm1Vm() {
     await loadKeys(['avm1Vm']);
     return global.ASTAVM1Runtime || null;
+  }
+
+  async function ensureAvm2Vm() {
+    await loadKeys(['eventBus', 'avm2Vm']);
+    return global.ASTAVM2Runtime || null;
   }
 
   const ASTLazyLoader = {
@@ -159,7 +171,9 @@
     ensureProfiler,
     ensureCompiler,
     ensurePhetBridge,
+    ensureEventBus,
     ensureAvm1Vm,
+    ensureAvm2Vm,
   };
 
   global.ASTLazyLoader = ASTLazyLoader;
