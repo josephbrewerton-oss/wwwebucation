@@ -225,6 +225,10 @@
     return String(c === 0 ? 0 : c);
   }
 
+  const EMPTY_ARR = Object.freeze([]);
+  const IDENTITY_MAT = Object.freeze([1, 0, 0, 1, 0, 0]);
+  const _invMatScratch = new Float64Array(6);
+
   // Matrix math: [a, b, c, d, tx, ty]
   function mulMat(m1, m2) {
     return [
@@ -235,6 +239,17 @@
       m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
       m1[1] * m2[4] + m1[3] * m2[5] + m1[5],
     ];
+  }
+
+  function mulMatInto(out, m1, m2) {
+    const a0 = m1[0] * m2[0] + m1[2] * m2[1];
+    const a1 = m1[1] * m2[0] + m1[3] * m2[1];
+    const a2 = m1[0] * m2[2] + m1[2] * m2[3];
+    const a3 = m1[1] * m2[2] + m1[3] * m2[3];
+    const a4 = m1[0] * m2[4] + m1[2] * m2[5] + m1[4];
+    const a5 = m1[1] * m2[4] + m1[3] * m2[5] + m1[5];
+    out[0] = a0; out[1] = a1; out[2] = a2; out[3] = a3; out[4] = a4; out[5] = a5;
+    return out;
   }
 
   function invertMat(m) {
@@ -249,6 +264,23 @@
       (m[2] * m[5] - m[3] * m[4]) * inv,
       (m[1] * m[4] - m[0] * m[5]) * inv,
     ];
+  }
+
+  function invertMatInto(out, m) {
+    const m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3], m4 = m[4], m5 = m[5];
+    const det = m0 * m3 - m1 * m2;
+    if (Math.abs(det) < 1e-9) {
+      out[0] = 1; out[1] = 0; out[2] = 0; out[3] = 1; out[4] = -m4; out[5] = -m5;
+      return out;
+    }
+    const inv = 1 / det;
+    out[0] = m3 * inv;
+    out[1] = -m1 * inv;
+    out[2] = -m2 * inv;
+    out[3] = m0 * inv;
+    out[4] = (m2 * m5 - m3 * m4) * inv;
+    out[5] = (m1 * m4 - m0 * m5) * inv;
+    return out;
   }
 
   function applyMatPt(m, x, y) {
@@ -275,13 +307,43 @@
     };
   }
 
-  function composeMat(x, y, xscale, yscale, rotation) {
-    const rad = (rotation || 0) * (Math.PI / 180);
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
+  function composeMatInto(out, x, y, xscale, yscale, rotation) {
+    const rot = rotation || 0;
     const sx = (xscale === undefined ? 100 : xscale) / 100;
     const sy = (yscale === undefined ? 100 : yscale) / 100;
-    return [cos * sx, sin * sx, -sin * sy, cos * sy, x || 0, y || 0];
+    if (rot === 0) {
+      out[0] = sx;
+      out[1] = 0;
+      out[2] = 0;
+      out[3] = sy;
+      out[4] = x || 0;
+      out[5] = y || 0;
+      return out;
+    }
+    const rad = rot * (Math.PI / 180);
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    out[0] = cos * sx;
+    out[1] = sin * sx;
+    out[2] = -sin * sy;
+    out[3] = cos * sy;
+    out[4] = x || 0;
+    out[5] = y || 0;
+    return out;
+  }
+
+  function composeMat(x, y, xscale, yscale, rotation) {
+    const out = [1, 0, 0, 1, 0, 0];
+    return composeMatInto(out, x, y, xscale, yscale, rotation);
+  }
+
+  function _resolveJump(offsetToIdx, instrs, total, targetByteOff) {
+    const direct = offsetToIdx.get(targetByteOff);
+    if (direct !== undefined) return direct;
+    for (let k = 0; k < total; k++) {
+      if (instrs[k].off >= targetByteOff) return k;
+    }
+    return total;
   }
 
   function decodeBytecodeSlice(bytes, start, end) {
@@ -1223,6 +1285,20 @@
       this._clipActions = clipActions || [];
       this._vars = Object.create(null);
       this._childrenByDepth = new Map(); // depth -> { charId, obj, svgWrap, clipDepth, maskId }
+      this._childrenSnapshot = EMPTY_ARR;
+      this._childrenDirty = false;
+      this._localMatBuf = new Float64Array(6);
+      this._worldMatBuf = new Float64Array(6);
+      this._localBBoxBuf = { x: 0, y: 0, w: 0, h: 0 };
+      this._worldBBoxBuf = { x: 0, y: 0, w: 0, h: 0 };
+      this._lmValid = false;
+      this._lmX = NaN;
+      this._lmY = NaN;
+      this._lmXS = NaN;
+      this._lmYS = NaN;
+      this._lmR = NaN;
+      this._cm0 = NaN; this._cm1 = NaN; this._cm2 = NaN;
+      this._cm3 = NaN; this._cm4 = NaN; this._cm5 = NaN;
       this._removed = false;
       this._droptarget = '';
       vm._liveClipCount = (vm._liveClipCount || 0) + 1;
@@ -1381,83 +1457,133 @@
       this.svgEl.addEventListener('pointerleave', this._onPtrLeave);
     }
 
+    _getChildrenSnapshot() {
+      if (!this._childrenDirty) return this._childrenSnapshot;
+      this._childrenDirty = false;
+      if (this._childrenByDepth.size === 0) {
+        this._childrenSnapshot = EMPTY_ARR;
+      } else {
+        this._childrenSnapshot = Array.from(this._childrenByDepth.values());
+      }
+      return this._childrenSnapshot;
+    }
+
     getLocalMatrix() {
       if (this._scriptModifiedTransform) {
-        return composeMat(this._x, this._y, this._xscale, this._yscale, this._rotation);
+        if (
+          !this._lmValid ||
+          this._lmX !== this._x ||
+          this._lmY !== this._y ||
+          this._lmXS !== this._xscale ||
+          this._lmYS !== this._yscale ||
+          this._lmR !== this._rotation
+        ) {
+          this._lmX = this._x;
+          this._lmY = this._y;
+          this._lmXS = this._xscale;
+          this._lmYS = this._yscale;
+          this._lmR = this._rotation;
+          this._lmValid = true;
+          composeMatInto(this._localMatBuf, this._x, this._y, this._xscale, this._yscale, this._rotation);
+        }
+        return this._localMatBuf;
       }
-      return this._rawMatrix || [1, 0, 0, 1, 0, 0];
+      return this._rawMatrix || IDENTITY_MAT;
     }
 
     getWorldMatrix() {
       const local = this.getLocalMatrix();
       if (!this._parent) return local;
-      return mulMat(this._parent.getWorldMatrix(), local);
+      return mulMatInto(this._worldMatBuf, this._parent.getWorldMatrix(), local);
     }
 
     getLocalBBox(depth = 0) {
-      if (depth > 24) return { x: 0, y: 0, w: 0, h: 0 };
+      const out = this._localBBoxBuf;
+      if (depth > 24) {
+        out.x = 0; out.y = 0; out.w = 0; out.h = 0;
+        return out;
+      }
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      const includeRect = (x, y, w, h, m) => {
-        if (w <= 0 && h <= 0) return;
-        const pts = [
-          applyMatPt(m, x, y),
-          applyMatPt(m, x + w, y),
-          applyMatPt(m, x, y + h),
-          applyMatPt(m, x + w, y + h),
-        ];
-        for (let i = 0; i < 4; i++) {
-          if (pts[i].x < minX) minX = pts[i].x;
-          if (pts[i].y < minY) minY = pts[i].y;
-          if (pts[i].x > maxX) maxX = pts[i].x;
-          if (pts[i].y > maxY) maxY = pts[i].y;
-        }
-      };
-
-      this._childrenByDepth.forEach((slot) => {
-        if (slot.clipDepth) return;
+      const kids = this._getChildrenSnapshot();
+      for (let i = 0; i < kids.length; i++) {
+        const slot = kids[i];
+        if (slot.clipDepth) continue;
         const obj = slot.obj;
+        let rx, ry, rw, rh, m;
         if (obj && obj._isMovieClip) {
-          if (!obj._visible) return;
+          if (!obj._visible) continue;
           const bb = obj.getLocalBBox(depth + 1);
-          if (bb.w > 0 || bb.h > 0) {
-            includeRect(bb.x, bb.y, bb.w, bb.h, obj.getLocalMatrix());
-          }
+          if (bb.w <= 0 && bb.h <= 0) continue;
+          rx = bb.x; ry = bb.y; rw = bb.w; rh = bb.h;
+          m = obj.getLocalMatrix();
         } else if (obj && obj._isTextField) {
-          includeRect(obj.def.x, obj.def.y, obj.def.w, obj.def.h, obj._rawMatrix || [1, 0, 0, 1, 0, 0]);
+          rx = obj.def.x; ry = obj.def.y; rw = obj.def.w; rh = obj.def.h;
+          if (rw <= 0 && rh <= 0) continue;
+          m = obj._rawMatrix || IDENTITY_MAT;
         } else if (slot.bbox) {
-          includeRect(slot.bbox[0], slot.bbox[1], slot.bbox[2], slot.bbox[3], slot.matrix || [1, 0, 0, 1, 0, 0]);
+          rx = slot.bbox[0]; ry = slot.bbox[1]; rw = slot.bbox[2]; rh = slot.bbox[3];
+          if (rw <= 0 && rh <= 0) continue;
+          m = slot.matrix || IDENTITY_MAT;
+        } else {
+          continue;
         }
-      });
-
-      if (this._drawBBox) {
-        includeRect(this._drawBBox.x, this._drawBBox.y, this._drawBBox.w, this._drawBBox.h, [1, 0, 0, 1, 0, 0]);
+        const m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3], m4 = m[4], m5 = m[5];
+        const rx2 = rx + rw, ry2 = ry + rh;
+        const x1 = m0 * rx + m2 * ry + m4, y1 = m1 * rx + m3 * ry + m5;
+        const x2 = m0 * rx2 + m2 * ry + m4, y2 = m1 * rx2 + m3 * ry + m5;
+        const x3 = m0 * rx + m2 * ry2 + m4, y3 = m1 * rx + m3 * ry2 + m5;
+        const x4 = m0 * rx2 + m2 * ry2 + m4, y4 = m1 * rx2 + m3 * ry2 + m5;
+        if (x1 < minX) minX = x1; if (x1 > maxX) maxX = x1;
+        if (x2 < minX) minX = x2; if (x2 > maxX) maxX = x2;
+        if (x3 < minX) minX = x3; if (x3 > maxX) maxX = x3;
+        if (x4 < minX) minX = x4; if (x4 > maxX) maxX = x4;
+        if (y1 < minY) minY = y1; if (y1 > maxY) maxY = y1;
+        if (y2 < minY) minY = y2; if (y2 > maxY) maxY = y2;
+        if (y3 < minY) minY = y3; if (y3 > maxY) maxY = y3;
+        if (y4 < minY) minY = y4; if (y4 > maxY) maxY = y4;
       }
 
-      if (!Number.isFinite(minX)) return { x: 0, y: 0, w: 0, h: 0 };
-      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+      if (this._drawBBox) {
+        const db = this._drawBBox;
+        if (db.w > 0 || db.h > 0) {
+          const x1 = db.x, y1 = db.y, x2 = db.x + db.w, y2 = db.y + db.h;
+          if (x1 < minX) minX = x1; if (x2 > maxX) maxX = x2;
+          if (y1 < minY) minY = y1; if (y2 > maxY) maxY = y2;
+        }
+      }
+
+      if (!Number.isFinite(minX)) {
+        out.x = 0; out.y = 0; out.w = 0; out.h = 0;
+        return out;
+      }
+      out.x = minX; out.y = minY; out.w = maxX - minX; out.h = maxY - minY;
+      return out;
     }
 
     getWorldBBox() {
       const bb = this.getLocalBBox();
-      if (bb.w <= 0 && bb.h <= 0) {
-        const p = applyMatPt(this.getWorldMatrix(), 0, 0);
-        return { x: p.x, y: p.y, w: 0, h: 0 };
-      }
+      const bx = bb.x, by = bb.y, bw = bb.w, bh = bb.h;
       const wm = this.getWorldMatrix();
-      const pts = [
-        applyMatPt(wm, bb.x, bb.y),
-        applyMatPt(wm, bb.x + bb.w, bb.y),
-        applyMatPt(wm, bb.x, bb.y + bb.h),
-        applyMatPt(wm, bb.x + bb.w, bb.y + bb.h),
-      ];
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      for (let i = 0; i < 4; i++) {
-        if (pts[i].x < minX) minX = pts[i].x;
-        if (pts[i].y < minY) minY = pts[i].y;
-        if (pts[i].x > maxX) maxX = pts[i].x;
-        if (pts[i].y > maxY) maxY = pts[i].y;
+      const out = this._worldBBoxBuf;
+      if (bw <= 0 && bh <= 0) {
+        out.x = wm[4]; out.y = wm[5]; out.w = 0; out.h = 0;
+        return out;
       }
-      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+      const m0 = wm[0], m1 = wm[1], m2 = wm[2], m3 = wm[3], m4 = wm[4], m5 = wm[5];
+      const bx2 = bx + bw, by2 = by + bh;
+      const x1 = m0 * bx + m2 * by + m4, y1 = m1 * bx + m3 * by + m5;
+      const x2 = m0 * bx2 + m2 * by + m4, y2 = m1 * bx2 + m3 * by + m5;
+      const x3 = m0 * bx + m2 * by2 + m4, y3 = m1 * bx + m3 * by2 + m5;
+      const x4 = m0 * bx2 + m2 * by2 + m4, y4 = m1 * bx2 + m3 * by2 + m5;
+      let minX = x1, maxX = x1, minY = y1, maxY = y1;
+      if (x2 < minX) minX = x2; if (x2 > maxX) maxX = x2;
+      if (x3 < minX) minX = x3; if (x3 > maxX) maxX = x3;
+      if (x4 < minX) minX = x4; if (x4 > maxX) maxX = x4;
+      if (y2 < minY) minY = y2; if (y2 > maxY) maxY = y2;
+      if (y3 < minY) minY = y3; if (y3 > maxY) maxY = y3;
+      if (y4 < minY) minY = y4; if (y4 > maxY) maxY = y4;
+      out.x = minX; out.y = minY; out.w = maxX - minX; out.h = maxY - minY;
+      return out;
     }
 
     getTargetPath() {
@@ -1564,15 +1690,26 @@
     commitSvg() {
       const dbgT0 = this._vm && this._vm._dbgActiveThisTick ? _nowMs() : 0;
       const mat = this.getLocalMatrix();
-      const tStr = `matrix(${fmtNum(mat[0])} ${fmtNum(mat[1])} ${fmtNum(mat[2])} ${fmtNum(mat[3])} ${fmtNum(mat[4])} ${fmtNum(mat[5])})`;
-      if (tStr !== this._lastTransform) {
-        this._lastTransform = tStr;
-        this.svgEl.setAttribute('transform', tStr);
+      if (
+        mat[0] !== this._cm0 || mat[1] !== this._cm1 || mat[2] !== this._cm2 ||
+        mat[3] !== this._cm3 || mat[4] !== this._cm4 || mat[5] !== this._cm5
+      ) {
+        this._cm0 = mat[0]; this._cm1 = mat[1]; this._cm2 = mat[2];
+        this._cm3 = mat[3]; this._cm4 = mat[4]; this._cm5 = mat[5];
+        const tStr = `matrix(${fmtNum(mat[0])} ${fmtNum(mat[1])} ${fmtNum(mat[2])} ${fmtNum(mat[3])} ${fmtNum(mat[4])} ${fmtNum(mat[5])})`;
+        if (tStr !== this._lastTransform) {
+          this._lastTransform = tStr;
+          this.svgEl.setAttribute('transform', tStr);
+        }
       }
-      const op = fmtNum(Math.max(0, Math.min(1, this._alpha / 100)));
-      if (op !== this._lastOpacity) {
-        this._lastOpacity = op;
-        this.svgEl.setAttribute('opacity', op);
+      const alphaClamped = this._alpha <= 0 ? 0 : (this._alpha >= 100 ? 1 : this._alpha / 100);
+      if (alphaClamped !== this._lastAlphaNum) {
+        this._lastAlphaNum = alphaClamped;
+        const op = fmtNum(alphaClamped);
+        if (op !== this._lastOpacity) {
+          this._lastOpacity = op;
+          this.svgEl.setAttribute('opacity', op);
+        }
       }
       const isHiddenMask = Boolean(this._maskTargetClip);
       const vis = (this._visible && !isHiddenMask) ? 'visible' : 'hidden';
@@ -1624,14 +1761,18 @@
       this._lastReconciledEntries = entries;
       const dbgT0 = this._vm && this._vm._dbgActiveThisTick ? _nowMs() : 0;
       const frozenDepths = this._staticFrozenDepths;
-      const wantedByDepth = new Map();
+      const rPool = this._vm._reconcilePool;
+      const rf = rPool && rPool.length > 0
+        ? rPool.pop()
+        : { wantedByDepth: new Map(), toRemove: [], activeMasks: [], newlySpawnedClips: [] };
+      const { wantedByDepth, toRemove, activeMasks, newlySpawnedClips } = rf;
+      try {
       for (let i = 0; i < entries.length; i++) {
         if (frozenDepths && frozenDepths.has(entries[i].d)) continue;
         wantedByDepth.set(entries[i].d, entries[i]);
       }
 
       // 1. Remove timeline children no longer present on this frame (or replaced by a different charId)
-      const toRemove = [];
       this._childrenByDepth.forEach((slot, depth) => {
         if (slot.isDynamic) return; // Keep attachMovie / duplicateMovieClip / createEmptyMovieClip instances!
         const nextEntry = wantedByDepth.get(depth);
@@ -1644,10 +1785,6 @@
       }
 
       let childrenMutated = toRemove.length > 0;
-
-      // 2. Active masks for this frame (clipDepth)
-      const activeMasks = [];
-      const newlySpawnedClips = [];
 
       // 3. Create or update entries in ascending depth order (skipping frozen static layer depths)
       for (let i = 0; i < entries.length; i++) {
@@ -1675,6 +1812,7 @@
               matrix: e.m || null,
             };
             this._childrenByDepth.set(depth, slot);
+            this._childrenDirty = true;
           } else if (!matEquals(e.m || null, slot.matrix)) {
             slot.matrix = e.m || null;
             if (slot.maskEl) {
@@ -1763,6 +1901,13 @@
           mc.runFrameActions(1);
         }
       }
+      } finally {
+        wantedByDepth.clear();
+        toRemove.length = 0;
+        activeMasks.length = 0;
+        newlySpawnedClips.length = 0;
+        if (rPool && rPool.length < 32) rPool.push(rf);
+      }
     }
 
     _createSlot(depth, charId, matrix, alpha, instName, clipActions, isDynamic, maskId) {
@@ -1823,6 +1968,7 @@
         _lastOpacity: initOpStr,
       };
       this._childrenByDepth.set(depth, slot);
+      this._childrenDirty = true;
       this._vm._treeVersion++;
       const hostEl = this._dynamicLayerEl || this.svgEl;
       hostEl.appendChild(svgOuter);
@@ -1833,6 +1979,7 @@
       const slot = this._childrenByDepth.get(depth);
       if (!slot) return;
       this._childrenByDepth.delete(depth);
+      this._childrenDirty = true;
       this._vm._treeVersion++;
       if (slot.maskEl && slot.maskEl.parentNode) {
         slot.maskEl.parentNode.removeChild(slot.maskEl);
@@ -1848,9 +1995,14 @@
 
     _reorderSvgChildren() {
       const hostEl = this._dynamicLayerEl || this.svgEl;
-      const sorted = Array.from(this._childrenByDepth.values())
-        .filter((s) => !s.clipDepth && s.svgOuter)
-        .sort((a, b) => a.depth - b.depth);
+      const sorted = this._vm._reorderScratch || [];
+      sorted.length = 0;
+      const kids = this._getChildrenSnapshot();
+      for (let i = 0; i < kids.length; i++) {
+        const s = kids[i];
+        if (!s.clipDepth && s.svgOuter) sorted.push(s);
+      }
+      if (sorted.length > 1) sorted.sort((a, b) => a.depth - b.depth);
       let prev = null;
       for (let i = sorted.length - 1; i >= 0; i--) {
         const el = sorted[i].svgOuter;
@@ -1859,6 +2011,7 @@
         }
         prev = el;
       }
+      sorted.length = 0;
     }
 
     runFrameActions(frameNum) {
@@ -1907,14 +2060,14 @@
         this._fireClipEvents(CE_ENTER_FRAME);
         if (this._removed) return;
         if (!this._vm._isOverBudget() && typeof this._vars.onEnterFrame === 'function') {
-          this._vm._invokeValue(this._vars.onEnterFrame, this, []);
+          this._vm._invokeValue(this._vars.onEnterFrame, this, EMPTY_ARR);
           if (this._removed) return;
         }
       }
 
-      // 3. Step live child MovieClips and sync DefineEditText fields
+      // 3. Step live child MovieClips and sync DefineEditText fields (zero-GC cached snapshot)
       if (this._childrenByDepth.size > 0) {
-        const snapshot = Array.from(this._childrenByDepth.values());
+        const snapshot = this._getChildrenSnapshot();
         for (let i = 0; i < snapshot.length; i++) {
           if (this._vm._isOverBudget()) break;
           const obj = snapshot[i].obj;
@@ -2029,6 +2182,8 @@
         maskId: null,
       };
       this._childrenByDepth.set(d, slot);
+      this._childrenDirty = true;
+      this._vm._treeVersion++;
       this.svgEl.appendChild(mc.svgEl);
       this._reorderSvgChildren();
       return mc;
@@ -2062,6 +2217,7 @@
       this._depth = targetDepth;
       mySlot.isDynamic = true;
       parent._childrenByDepth.set(targetDepth, mySlot);
+      parent._childrenDirty = true;
       parent._reorderSvgChildren();
     }
 
@@ -2182,32 +2338,39 @@
 
     getBounds(targetSpace) {
       const bb = this.getWorldBBox();
+      const x1 = bb.x, y1 = bb.y, x2 = bb.x + bb.w, y2 = bb.y + bb.h;
       if (!targetSpace || !targetSpace._isMovieClip || targetSpace === this._vm.rootClip) {
-        return { xMin: bb.x, xMax: bb.x + bb.w, yMin: bb.y, yMax: bb.y + bb.h };
+        return { xMin: x1, xMax: x2, yMin: y1, yMax: y2 };
       }
-      const inv = invertMat(targetSpace.getWorldMatrix());
-      const p1 = applyMatPt(inv, bb.x, bb.y);
-      const p2 = applyMatPt(inv, bb.x + bb.w, bb.y + bb.h);
+      const inv = invertMatInto(_invMatScratch, targetSpace.getWorldMatrix());
+      const px1 = inv[0] * x1 + inv[2] * y1 + inv[4];
+      const py1 = inv[1] * x1 + inv[3] * y1 + inv[5];
+      const px2 = inv[0] * x2 + inv[2] * y2 + inv[4];
+      const py2 = inv[1] * x2 + inv[3] * y2 + inv[5];
       return {
-        xMin: Math.min(p1.x, p2.x),
-        xMax: Math.max(p1.x, p2.x),
-        yMin: Math.min(p1.y, p2.y),
-        yMax: Math.max(p1.y, p2.y),
+        xMin: px1 < px2 ? px1 : px2,
+        xMax: px1 > px2 ? px1 : px2,
+        yMin: py1 < py2 ? py1 : py2,
+        yMax: py1 > py2 ? py1 : py2,
       };
     }
 
     localToGlobal(pt) {
       if (!pt || typeof pt !== 'object') return;
-      const g = applyMatPt(this.getWorldMatrix(), Number(pt.x) || 0, Number(pt.y) || 0);
-      pt.x = g.x;
-      pt.y = g.y;
+      const m = this.getWorldMatrix();
+      const x = Number(pt.x) || 0;
+      const y = Number(pt.y) || 0;
+      pt.x = m[0] * x + m[2] * y + m[4];
+      pt.y = m[1] * x + m[3] * y + m[5];
     }
 
     globalToLocal(pt) {
       if (!pt || typeof pt !== 'object') return;
-      const l = applyMatPt(invertMat(this.getWorldMatrix()), Number(pt.x) || 0, Number(pt.y) || 0);
-      pt.x = l.x;
-      pt.y = l.y;
+      const inv = invertMatInto(_invMatScratch, this.getWorldMatrix());
+      const x = Number(pt.x) || 0;
+      const y = Number(pt.y) || 0;
+      pt.x = inv[0] * x + inv[2] * y + inv[4];
+      pt.y = inv[1] * x + inv[3] * y + inv[5];
     }
 
     // --- Flash Drawing API -> Pure W3C SVG <path> ---
@@ -2373,7 +2536,7 @@
       this._vm._liveClipCount = Math.max(0, (this._vm._liveClipCount || 1) - 1);
       this._fireClipEvents(CE_UNLOAD);
       if (typeof this._vars.onUnload === 'function') {
-        try { this._vm._invokeValue(this._vars.onUnload, this, []); } catch (_) {}
+        try { this._vm._invokeValue(this._vars.onUnload, this, EMPTY_ARR); } catch (_) {}
       }
       if (this._pointerBound) {
         this.svgEl.removeEventListener('pointerdown', this._onPtrDown);
@@ -2382,10 +2545,12 @@
         this.svgEl.removeEventListener('pointerleave', this._onPtrLeave);
       }
       if (this._vm._dragClip === this) this._vm._dragClip = null;
-      const depths = Array.from(this._childrenByDepth.keys());
-      for (let i = 0; i < depths.length; i++) {
-        this._removeSlotAtDepth(depths[i]);
+      const kids = this._getChildrenSnapshot();
+      for (let i = 0; i < kids.length; i++) {
+        this._removeSlotAtDepth(kids[i].depth);
       }
+      this._childrenSnapshot = EMPTY_ARR;
+      this._childrenDirty = false;
     }
   }
 
@@ -2423,6 +2588,13 @@
       this._astKeyByKey = new Map();
       this._staticLayerEl = null;
       this._dynamicLayerEl = null;
+
+      // Zero-GC execution & display-list scratch pools
+      this._execFramePool = [];
+      this._regsPool = [];
+      this._reconcilePool = [];
+      this._argsPool = [];
+      this._reorderScratch = [];
 
       // Zero-overhead diagnostic collector state (active ONLY when window.__SWF_DEBUG__ === true)
       this._dbgActiveThisTick = false;
@@ -4185,10 +4357,10 @@
       clip._fireClipEvents(flagMask, keyCode);
       if (clip._removed || this._isOverBudget()) return;
       if (handlerProp && typeof clip._vars[handlerProp] === 'function') {
-        this._invokeValue(clip._vars[handlerProp], clip, []);
+        this._invokeValue(clip._vars[handlerProp], clip, EMPTY_ARR);
       }
       if (clip._childrenByDepth.size === 0) return;
-      const kids = Array.from(clip._childrenByDepth.values());
+      const kids = clip._getChildrenSnapshot();
       for (let i = 0; i < kids.length; i++) {
         if (this._isOverBudget()) break;
         if (kids[i].obj && kids[i].obj._isMovieClip) {
@@ -4204,10 +4376,9 @@
         return;
       }
       const opts = this._dragOpts || {};
-      const parentInv = mc._parent ? invertMat(mc._parent.getWorldMatrix()) : [1, 0, 0, 1, 0, 0];
-      const localPt = applyMatPt(parentInv, this._mouseX, this._mouseY);
-      let nx = localPt.x + (opts.offsetX || 0);
-      let ny = localPt.y + (opts.offsetY || 0);
+      const parentInv = mc._parent ? invertMatInto(_invMatScratch, mc._parent.getWorldMatrix()) : IDENTITY_MAT;
+      let nx = parentInv[0] * this._mouseX + parentInv[2] * this._mouseY + parentInv[4] + (opts.offsetX || 0);
+      let ny = parentInv[1] * this._mouseX + parentInv[3] * this._mouseY + parentInv[5] + (opts.offsetY || 0);
       if (opts.constrain) {
         nx = Math.max(opts.left, Math.min(opts.right, nx));
         ny = Math.max(opts.top, Math.min(opts.bottom, ny));
@@ -4891,6 +5062,11 @@
         this._shapeTemplateCache.clear();
         this._decodedCache.clear();
         this._traces.length = 0;
+        this._execFramePool.length = 0;
+        this._regsPool.length = 0;
+        this._reconcilePool.length = 0;
+        this._argsPool.length = 0;
+        this._reorderScratch.length = 0;
       }
     }
 
@@ -5046,13 +5222,13 @@
         case '_level0': return this.rootClip;
         case '_xmouse': {
           if (!clip._isMovieClip) return this._mouseX;
-          const local = applyMatPt(invertMat(clip.getWorldMatrix()), this._mouseX, this._mouseY);
-          return local.x;
+          const inv = invertMatInto(_invMatScratch, clip.getWorldMatrix());
+          return inv[0] * this._mouseX + inv[2] * this._mouseY + inv[4];
         }
         case '_ymouse': {
           if (!clip._isMovieClip) return this._mouseY;
-          const local = applyMatPt(invertMat(clip.getWorldMatrix()), this._mouseX, this._mouseY);
-          return local.y;
+          const inv = invertMatInto(_invMatScratch, clip.getWorldMatrix());
+          return inv[1] * this._mouseX + inv[3] * this._mouseY + inv[5];
         }
         case '_droptarget': return clip._isMovieClip ? (clip._droptarget || '') : '';
         case '_url': return 'file:///swf';
@@ -5450,14 +5626,33 @@
       }
     }
 
+    _acquireRegs(minLen) {
+      const pool = this._regsPool;
+      let regs = pool.length > 0 ? pool.pop() : new Array(minLen);
+      if (regs.length < minLen) regs.length = minLen;
+      return regs;
+    }
+
+    _releaseRegs(regs) {
+      if (!regs) return;
+      for (let i = 0; i < regs.length; i++) regs[i] = undefined;
+      if (regs.length <= 32 && this._regsPool.length < 64) {
+        this._regsPool.push(regs);
+      }
+    }
+
     _callAvm1Function(fn, thisObj, args) {
       const targetClip = (thisObj && thisObj._isMovieClip) ? thisObj : (fn._defClip || this.rootClip);
       const localScope = Object.create(null);
-      const regs = new Array(Math.max(4, fn._regCount || 4));
+      const regLen = Math.max(4, fn._regCount || 4);
+      const regs = this._acquireRegs(regLen);
 
-      // Arguments object
-      const argsObj = args.slice();
-      argsObj.callee = fn;
+      const needArgsObj = !fn._isFn2 || fn._preloadArguments || !fn._suppressArguments;
+      let argsObj = null;
+      if (needArgsObj) {
+        argsObj = args.length > 0 ? args.slice() : [];
+        argsObj.callee = fn;
+      }
 
       if (fn._isFn2) {
         let r = 1;
@@ -5470,29 +5665,43 @@
         if (fn._preloadParent) regs[r++] = targetClip ? targetClip._parent : undefined;
         if (fn._preloadGlobal) regs[r++] = this._global;
 
-        for (let i = 0; i < fn._params.length; i++) {
-          const p = fn._params[i];
+        const params = fn._params;
+        for (let i = 0; i < params.length; i++) {
+          const p = params[i];
           const val = i < args.length ? args[i] : undefined;
           if (p.reg > 0) regs[p.reg] = val;
           else if (p.name) localScope[p.name] = val;
         }
       } else {
         localScope.arguments = argsObj;
-        for (let i = 0; i < fn._params.length; i++) {
-          const pName = fn._params[i];
+        const params = fn._params;
+        for (let i = 0; i < params.length; i++) {
+          const pName = params[i];
           if (pName) localScope[pName] = i < args.length ? args[i] : undefined;
         }
       }
 
-      const nextScopes = (fn._closureScopes || []).concat([localScope]);
-      return this._runDecoded(
-        fn._bodyDecoded,
-        targetClip,
-        thisObj || targetClip,
-        nextScopes,
-        regs,
-        fn._constPool || []
-      );
+      const cScopes = fn._closureScopes;
+      let nextScopes;
+      if (!cScopes || cScopes.length === 0) {
+        nextScopes = [localScope];
+      } else {
+        nextScopes = new Array(cScopes.length + 1);
+        for (let i = 0; i < cScopes.length; i++) nextScopes[i] = cScopes[i];
+        nextScopes[cScopes.length] = localScope;
+      }
+      try {
+        return this._runDecoded(
+          fn._bodyDecoded,
+          targetClip,
+          thisObj || targetClip,
+          nextScopes,
+          regs,
+          fn._constPool || EMPTY_ARR
+        );
+      } finally {
+        this._releaseRegs(regs);
+      }
     }
 
     // =========================================================================
@@ -5507,29 +5716,29 @@
         decoded = decodeBytecodeSlice(bytes, 0, bytes.length);
         this._decodedCache.set(b64, decoded);
       }
-      return this._runDecoded(decoded, targetClip || this.rootClip, targetClip || this.rootClip, [], new Array(4), []);
+      const regs = this._acquireRegs(4);
+      const tgt = targetClip || this.rootClip;
+      try {
+        return this._runDecoded(decoded, tgt, tgt, EMPTY_ARR, regs, EMPTY_ARR);
+      } finally {
+        this._releaseRegs(regs);
+      }
     }
 
     _runDecoded(decoded, initialTarget, thisObj, scopes, regs, initialConstPool) {
       const { bytes, instrs, offsetToIdx } = decoded;
-      const stack = [];
-      let constPool = initialConstPool ? initialConstPool.slice() : [];
+      const fPool = this._execFramePool;
+      const frame = fPool.length > 0 ? fPool.pop() : { stack: [], withStack: [], withEndOffsets: [] };
+      const stack = frame.stack;
+      const withStack = frame.withStack;
+      const withEndOffsets = frame.withEndOffsets;
+      let constPool = initialConstPool || EMPTY_ARR;
       let curTarget = initialTarget || this.rootClip;
-      const withStack = [];
-      const withEndOffsets = [];
       let pc = 0;
       let ops = 0;
       const total = instrs.length;
 
-      const resolveJump = (targetByteOff) => {
-        const direct = offsetToIdx.get(targetByteOff);
-        if (direct !== undefined) return direct;
-        for (let k = 0; k < total; k++) {
-          if (instrs[k].off >= targetByteOff) return k;
-        }
-        return total;
-      };
-
+      try {
       while (pc < total) {
         if (++ops > MAX_OPS_PER_EXEC || --this._tickOpsRemaining <= 0) {
           this._budgetExceededThisTick = true;
@@ -5996,14 +6205,14 @@
           // --- Branching & Scoping ---
           case 0x99: { // ActionJump (unconditional SI16 relative offset)
             const off = readSI16(bytes, ins.pStart);
-            pc = resolveJump(ins.end + off);
+            pc = _resolveJump(offsetToIdx, instrs, total, ins.end + off);
             break;
           }
           case 0x9D: { // ActionIf (conditional SI16 relative offset: jump if truthy!)
             const off = readSI16(bytes, ins.pStart);
             const cond = stack.pop();
             if (this._toBool(cond)) {
-              pc = resolveJump(ins.end + off);
+              pc = _resolveJump(offsetToIdx, instrs, total, ins.end + off);
             }
             break;
           }
@@ -6014,7 +6223,7 @@
               withStack.push(obj);
               withEndOffsets.push(ins.end + size);
             } else {
-              pc = resolveJump(ins.end + size);
+              pc = _resolveJump(offsetToIdx, instrs, total, ins.end + size);
             }
             break;
           }
@@ -6045,7 +6254,7 @@
                 this._runDecoded(tm.finDecoded, curTarget, thisObj, scopes, regs, constPool);
               }
             }
-            pc = resolveJump(tm.afterAll);
+            pc = _resolveJump(offsetToIdx, instrs, total, tm.afterAll);
             break;
           }
           case 0x2A: { // ActionThrow
@@ -6088,8 +6297,8 @@
             fnObj._isFn2 = false;
             fnObj._params = fm.params;
             fnObj._bodyDecoded = fm.bodyDecoded;
-            fnObj._constPool = constPool.slice();
-            fnObj._closureScopes = scopes.slice();
+            fnObj._constPool = constPool;
+            fnObj._closureScopes = scopes.length > 0 ? scopes.slice() : EMPTY_ARR;
             fnObj._defClip = curTarget;
 
             if (fm.fnName) {
@@ -6097,7 +6306,7 @@
             } else {
               stack.push(fnObj);
             }
-            pc = resolveJump(fm.bodyEnd);
+            pc = _resolveJump(offsetToIdx, instrs, total, fm.bodyEnd);
             break;
           }
           case 0x8E: { // ActionDefineFunction2
@@ -6151,8 +6360,8 @@
             fnObj._preloadGlobal = (fm.flags2 & 0x01) !== 0;
             fnObj._params = fm.params;
             fnObj._bodyDecoded = fm.bodyDecoded;
-            fnObj._constPool = constPool.slice();
-            fnObj._closureScopes = scopes.slice();
+            fnObj._constPool = constPool;
+            fnObj._closureScopes = scopes.length > 0 ? scopes.slice() : EMPTY_ARR;
             fnObj._defClip = curTarget;
 
             if (fm.fnName) {
@@ -6160,7 +6369,7 @@
             } else {
               stack.push(fnObj);
             }
-            pc = resolveJump(fm.bodyEnd);
+            pc = _resolveJump(offsetToIdx, instrs, total, fm.bodyEnd);
             break;
           }
           case 0x3E: { // ActionReturn
@@ -6169,22 +6378,33 @@
           case 0x3D: { // ActionCallFunction
             const fnName = this._toStr(stack.pop());
             const numArgs = Math.max(0, Math.floor(this._toNum(stack.pop())));
-            const args = new Array(numArgs);
-            for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            let args = EMPTY_ARR;
+            if (numArgs > 0) {
+              args = this._argsPool.length > 0 ? this._argsPool.pop() : [];
+              args.length = numArgs;
+              for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            }
             let res;
-            if (fnName === 'eval') {
-              const rawEval = args[0];
-              if (rawEval === undefined || rawEval === null || String(rawEval).trim() === '') {
-                res = undefined;
-              } else {
-                res = this._resolveTargetPath(rawEval, curTarget);
-                if (res === undefined) {
-                  res = this._resolveVariablePath(String(rawEval), curTarget);
+            try {
+              if (fnName === 'eval') {
+                const rawEval = args[0];
+                if (rawEval === undefined || rawEval === null || String(rawEval).trim() === '') {
+                  res = undefined;
+                } else {
+                  res = this._resolveTargetPath(rawEval, curTarget);
+                  if (res === undefined) {
+                    res = this._resolveVariablePath(String(rawEval), curTarget);
+                  }
                 }
+              } else {
+                const fn = this._getVariable(fnName, curTarget, scopes, withStack, thisObj);
+                res = this._invokeValue(fn, curTarget, args);
               }
-            } else {
-              const fn = this._getVariable(fnName, curTarget, scopes, withStack, thisObj);
-              res = this._invokeValue(fn, curTarget, args);
+            } finally {
+              if (args !== EMPTY_ARR) {
+                args.length = 0;
+                if (this._argsPool.length < 64) this._argsPool.push(args);
+              }
             }
             stack.push(res);
             break;
@@ -6193,14 +6413,25 @@
             const methodName = stack.pop();
             const obj = stack.pop();
             const numArgs = Math.max(0, Math.floor(this._toNum(stack.pop())));
-            const args = new Array(numArgs);
-            for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            let args = EMPTY_ARR;
+            if (numArgs > 0) {
+              args = this._argsPool.length > 0 ? this._argsPool.pop() : [];
+              args.length = numArgs;
+              for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            }
             let res;
-            if (methodName === undefined || methodName === null || methodName === '') {
-              res = this._invokeValue(obj, curTarget, args);
-            } else {
-              const fn = this._getMember(obj, String(methodName));
-              res = this._invokeValue(fn, obj, args);
+            try {
+              if (methodName === undefined || methodName === null || methodName === '') {
+                res = this._invokeValue(obj, curTarget, args);
+              } else {
+                const fn = this._getMember(obj, String(methodName));
+                res = this._invokeValue(fn, obj, args);
+              }
+            } finally {
+              if (args !== EMPTY_ARR) {
+                args.length = 0;
+                if (this._argsPool.length < 64) this._argsPool.push(args);
+              }
             }
             stack.push(res);
             break;
@@ -6208,20 +6439,31 @@
           case 0x40: { // ActionNewObject
             const ctorName = this._toStr(stack.pop());
             const numArgs = Math.max(0, Math.floor(this._toNum(stack.pop())));
-            const args = new Array(numArgs);
-            for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            let args = EMPTY_ARR;
+            if (numArgs > 0) {
+              args = this._argsPool.length > 0 ? this._argsPool.pop() : [];
+              args.length = numArgs;
+              for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            }
             const ctor = this._getVariable(ctorName, curTarget, scopes, withStack, thisObj);
             let instance;
-            if (typeof ctor === 'function') {
-              if (ctor._isAvm1Fn) {
-                instance = Object.create(ctor.prototype || Object.prototype);
-                const r = this._invokeValue(ctor, instance, args);
-                if (r && typeof r === 'object') instance = r;
+            try {
+              if (typeof ctor === 'function') {
+                if (ctor._isAvm1Fn) {
+                  instance = Object.create(ctor.prototype || Object.prototype);
+                  const r = this._invokeValue(ctor, instance, args);
+                  if (r && typeof r === 'object') instance = r;
+                } else {
+                  try { instance = new ctor(...args); } catch (_) { instance = {}; }
+                }
               } else {
-                try { instance = new ctor(...args); } catch (_) { instance = {}; }
+                instance = {};
               }
-            } else {
-              instance = {};
+            } finally {
+              if (args !== EMPTY_ARR) {
+                args.length = 0;
+                if (this._argsPool.length < 64) this._argsPool.push(args);
+              }
             }
             stack.push(instance);
             break;
@@ -6230,22 +6472,33 @@
             const methodName = stack.pop();
             const obj = stack.pop();
             const numArgs = Math.max(0, Math.floor(this._toNum(stack.pop())));
-            const args = new Array(numArgs);
-            for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            let args = EMPTY_ARR;
+            if (numArgs > 0) {
+              args = this._argsPool.length > 0 ? this._argsPool.pop() : [];
+              args.length = numArgs;
+              for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
+            }
             const ctor = (methodName === undefined || methodName === null || methodName === '')
               ? obj
               : this._getMember(obj, String(methodName));
             let instance;
-            if (typeof ctor === 'function') {
-              if (ctor._isAvm1Fn) {
-                instance = Object.create(ctor.prototype || Object.prototype);
-                const r = this._invokeValue(ctor, instance, args);
-                if (r && typeof r === 'object') instance = r;
+            try {
+              if (typeof ctor === 'function') {
+                if (ctor._isAvm1Fn) {
+                  instance = Object.create(ctor.prototype || Object.prototype);
+                  const r = this._invokeValue(ctor, instance, args);
+                  if (r && typeof r === 'object') instance = r;
+                } else {
+                  try { instance = new ctor(...args); } catch (_) { instance = {}; }
+                }
               } else {
-                try { instance = new ctor(...args); } catch (_) { instance = {}; }
+                instance = {};
               }
-            } else {
-              instance = {};
+            } finally {
+              if (args !== EMPTY_ARR) {
+                args.length = 0;
+                if (this._argsPool.length < 64) this._argsPool.push(args);
+              }
             }
             stack.push(instance);
             break;
@@ -6261,6 +6514,12 @@
       }
 
       return undefined;
+      } finally {
+        stack.length = 0;
+        withStack.length = 0;
+        withEndOffsets.length = 0;
+        if (fPool.length < 64) fPool.push(frame);
+      }
     }
   }
 
