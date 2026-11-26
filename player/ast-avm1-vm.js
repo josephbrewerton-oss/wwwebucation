@@ -4620,19 +4620,71 @@
       if (!this._isOverBudget() && pendingBootChildren.length > 0) {
         this.rootClip._finishNewlySpawnedClips(pendingBootChildren);
       }
-      // If the transpiler detected leading network/dead-end preloader frames (program.ef > 1)
-      // and Frame 1 scripts left _root stuck before entryFrame, advance cleanly into the main body.
+      // If the transpiler detected leading network/dead-end preloader frames (program.ef > 1),
+      // first allow any live Frame-1 preloader script (e.g. onEnterFrame, child onClipEvent(enterFrame),
+      // or multi-frame byte-check loop) to self-complete natively because all bytes are already loaded
+      // offline. This preserves authentic Flash semantics (cleanup via `delete this.onEnterFrame` and
+      // the preloader's exact target play/stop state via `nextFrame()` / `gotoAndStop()` / `play()`).
+      // Only fall back to an explicit jump to entryFrame when Frame 1 is genuinely stalled.
       const entryFrame = Number(this.program.ef) || 1;
       if (entryFrame > 1 && entryFrame <= this.rootClip._totalframes && !this._isOverBudget()) {
+        if (this.rootClip._currentframe < entryFrame && this._hasActivePreloaderDriver(this.rootClip, 0)) {
+          const maxPreloaderSteps = Math.min(entryFrame + 4, 8);
+          for (let step = 0; step < maxPreloaderSteps; step++) {
+            if (this._isOverBudget() || this.rootClip._currentframe >= entryFrame) break;
+            this.rootClip.stepFrame();
+          }
+        }
         const stuckBeforeEntry = this.rootClip._currentframe < entryFrame && !this.rootClip._playing;
         const preloaderStripped = Boolean(this.program.ps) && this.rootClip._currentframe < entryFrame;
         if (stuckBeforeEntry || preloaderStripped) {
+          this._clearRootPreloaderEnterFrame();
           this.rootClip.gotoAndPlay(entryFrame);
         }
       }
       this.rootClip.commitSvg();
       this._syncTelemetry(true);
       return true;
+    }
+
+    _hasActivePreloaderDriver(clip, depth) {
+      if (!clip || clip._removed || depth > 8) return false;
+      if (clip._playing && clip._totalframes > 1) return true;
+      if (typeof clip._getEventHandler === 'function' && typeof clip._getEventHandler('onEnterFrame') === 'function') {
+        return true;
+      }
+      const cas = clip._clipActions;
+      if (Array.isArray(cas)) {
+        for (let i = 0; i < cas.length; i++) {
+          if (cas[i] && (cas[i].f & CE_ENTER_FRAME) !== 0) return true;
+        }
+      }
+      if (clip._childrenByDepth && clip._childrenByDepth.size > 0) {
+        const kids = clip._getChildrenSnapshot();
+        for (let i = 0; i < kids.length; i++) {
+          const child = kids[i] && kids[i].obj;
+          if (child && child._isMovieClip && this._hasActivePreloaderDriver(child, depth + 1)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    _clearRootPreloaderEnterFrame() {
+      const root = this.rootClip;
+      if (!root || !root._vars) return;
+      if (typeof root._vars.onEnterFrame === 'function') {
+        delete root._vars.onEnterFrame;
+      }
+      if (this.caseInsensitive) {
+        const keys = Object.keys(root._vars);
+        for (let i = 0; i < keys.length; i++) {
+          if (keys[i].toLowerCase() === 'onenterframe' && typeof root._vars[keys[i]] === 'function') {
+            delete root._vars[keys[i]];
+          }
+        }
+      }
     }
 
     _clientToStage(clientX, clientY) {
