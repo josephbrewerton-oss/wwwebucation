@@ -189,6 +189,112 @@ export async function importCustomSignsFromAst(astText: string): Promise<number>
   return importedCount;
 }
 
+const MAX_IMPORT_SIGNS = 250;
+const MAX_FRAMES_PER_SIGN = 600;
+
+/**
+ * Parses a standard MediaPipe Holistic JSON string (single sequence, `{ sequences: [...] }` bundle,
+ * or array of sequences) and compresses each clip down to <= 6 compact native `BslSign` keyframes
+ * (~400 bytes/sign) for low-storage developing-world devices.
+ *
+ * Lazy-loads `bslMediaPipeMapper` on demand so zero bytes are added to initial page boot.
+ */
+export async function parseMediaPipeJsonToBslSigns(jsonText: string): Promise<BslSign[]> {
+  let raw: any;
+  try {
+    raw = JSON.parse(jsonText);
+  } catch {
+    throw new Error('Invalid JSON file. Expected a MediaPipe Holistic sign sequence or bundle.');
+  }
+
+  let seqList: any[] = [];
+  if (Array.isArray(raw)) {
+    seqList = raw;
+  } else if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw.sequences)) {
+      seqList = raw.sequences;
+    } else if (Array.isArray(raw.frames)) {
+      seqList = [raw];
+    }
+  }
+
+  if (seqList.length === 0) {
+    throw new Error('No MediaPipe Holistic sign sequences found in file.');
+  }
+
+  const { mediaPipeSequenceToBslSign } = await import('../utils/bslMediaPipeMapper');
+  const results: BslSign[] = [];
+
+  for (const item of seqList.slice(0, MAX_IMPORT_SIGNS)) {
+    if (!item || typeof item !== 'object' || !Array.isArray(item.frames) || item.frames.length === 0) {
+      continue;
+    }
+    const rawWord = String(item.word || item.gloss || item.id || '')
+      .trim()
+      .replace(/[^a-zA-Z0-9\s_-]/g, '')
+      .slice(0, 32);
+    if (!rawWord) continue;
+
+    const safeFrames = item.frames
+      .slice(0, MAX_FRAMES_PER_SIGN)
+      .filter((f: any) => f && typeof f === 'object' && (Array.isArray(f.rightHandLandmarks) || Array.isArray(f.poseLandmarks)));
+    if (safeFrames.length === 0) continue;
+
+    const sign = mediaPipeSequenceToBslSign(
+      {
+        schema: 'mediapipe-holistic/1.0',
+        id: String(item.id || `mp-${rawWord.toLowerCase().replace(/\s+/g, '-')}`),
+        gloss: String(item.gloss || rawWord).toUpperCase(),
+        word: rawWord.toUpperCase(),
+        fps: Number.isFinite(Number(item.fps)) ? Number(item.fps) : 25,
+        frameCount: safeFrames.length,
+        coordinateConvention: 'receiver-front-normalized',
+        frames: safeFrames,
+      },
+      {
+        word: rawWord,
+        gloss: String(item.gloss || rawWord).toUpperCase(),
+        maxKeyframes: 6,
+        useShoulderNormalization: true,
+      }
+    );
+
+    if (sign.keyframes.length > 0) {
+      results.push(sign);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Imports standard MediaPipe Holistic JSON sign sequences, compresses them into compact
+ * native BSL keyframes (~400 B/sign), persists them in IndexedDB, and hot-registers them.
+ */
+export async function importCustomSignsFromMediaPipeJson(
+  jsonText: string
+): Promise<{ imported: number; words: string[] }> {
+  const signs = await parseMediaPipeJsonToBslSigns(jsonText);
+  const words: string[] = [];
+  for (const sign of signs) {
+    await saveCustomBslSign(sign);
+    words.push(sign.word);
+  }
+  return { imported: words.length, words };
+}
+
+/**
+ * Removes all user-imported custom signs from IndexedDB.
+ */
+export async function clearAllCustomBslSigns(): Promise<number> {
+  const existing = await loadCustomBslSigns();
+  const words = Object.keys(existing);
+  for (const w of words) {
+    await deleteCustomBslSign(w);
+  }
+  return words.length;
+}
+
 /**
  * Subscribes to custom signs store changes.
  */
@@ -197,3 +303,4 @@ export function subscribeCustomSigns(callback: () => void): () => void {
   window.addEventListener(UPDATE_EVENT, callback);
   return () => window.removeEventListener(UPDATE_EVENT, callback);
 }
+

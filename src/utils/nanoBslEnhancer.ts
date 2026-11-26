@@ -244,6 +244,26 @@ const inFlightRequests = new Map<string, Promise<EnhancedBslGrammarAnalysis | nu
 
 let cachedAllBslGlosses: string[] | null = null;
 let cachedMakatonWords: string[] | null = null;
+let cachedLexiconKeyCount = -1;
+
+function syncLexiconCacheFreshness(): void {
+  const currentCount = Object.keys(BSL_CURRICULUM_LEXICON).length;
+  if (currentCount !== cachedLexiconKeyCount) {
+    cachedAllBslGlosses = null;
+    cachedMakatonWords = null;
+    analysisCache.clear();
+    cachedLexiconKeyCount = currentCount;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('stj_custom_signs_updated', () => {
+    cachedAllBslGlosses = null;
+    cachedMakatonWords = null;
+    cachedLexiconKeyCount = -1;
+    analysisCache.clear();
+  });
+}
 
 function getCacheKey(text: string, mode: BslGrammarMode): string {
   return `${mode}::${text.trim().toLowerCase().replace(/\s+/g, ' ')}`;
@@ -261,12 +281,16 @@ function setCacheEntry(key: string, value: EnhancedBslGrammarAnalysis): void {
 
 export function clearNanoBslCache(): void {
   analysisCache.clear();
+  cachedAllBslGlosses = null;
+  cachedMakatonWords = null;
+  cachedLexiconKeyCount = -1;
 }
 
 export function getCachedNanoBslAnalysis(
   text: string,
   mode: BslGrammarMode
 ): EnhancedBslGrammarAnalysis | null {
+  syncLexiconCacheFreshness();
   const key = getCacheKey(text, mode);
   const hit = analysisCache.get(key) || null;
   if (hit) {
@@ -315,6 +339,7 @@ export function shouldEnhanceBslWithNano(
 }
 
 function getRelevantLexiconHints(text: string, mode: BslGrammarMode): string[] {
+  syncLexiconCacheFreshness();
   if (mode === 'makaton') {
     if (!cachedMakatonWords) {
       cachedMakatonWords = Array.from(

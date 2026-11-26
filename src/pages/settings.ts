@@ -339,6 +339,33 @@ export function renderSettingsPage(): HTMLElement {
       `;
     }
 
+    sectionsHtml += `
+      <section aria-labelledby="sign-pack-heading" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        <h2 id="sign-pack-heading" style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 0.4rem 0; display:flex; align-items:center; gap:8px;">
+          <span>🤟</span> Offline Sign Pack Import &amp; Export
+        </h2>
+        <p style="font-size:0.84rem; color:#475569; margin:0 0 1rem 0; line-height:1.5;">
+          Import local community/regional signs from tiny <strong>.ast</strong> packs (~400 bytes/sign) or standard <strong>MediaPipe Holistic .json</strong> pose files. Incoming MediaPipe clips are compressed locally on-device into compact keyframes with zero cloud upload and zero extra mobile data.
+        </p>
+        <input type="file" id="settings-sign-file-input" accept=".ast,.json,application/json,text/plain" style="display:none;" />
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+          <button type="button" id="settings-btn-import-signs" style="padding:8px 14px; border-radius:8px; border:1.5px solid #0369a1; background:#f0f9ff; color:#0369a1; font-weight:700; font-size:0.84rem; cursor:pointer;">
+            📥 Import Signs (.ast / MediaPipe .json)
+          </button>
+          <button type="button" id="settings-btn-export-ast-signs" style="padding:8px 14px; border-radius:8px; border:1.5px solid #0f766e; background:#f0fdfa; color:#0f766e; font-weight:700; font-size:0.84rem; cursor:pointer;">
+            💾 Export Tiny .ast Pack
+          </button>
+          <button type="button" id="settings-btn-export-mp-signs" style="padding:8px 14px; border-radius:8px; border:1.5px solid #475569; background:#f8fafc; color:#334155; font-weight:700; font-size:0.84rem; cursor:pointer;">
+            📐 Export MediaPipe JSON
+          </button>
+          <button type="button" id="settings-btn-clear-signs" style="padding:8px 12px; border-radius:8px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; font-weight:700; font-size:0.82rem; cursor:pointer;">
+            Clear Imported
+          </button>
+        </div>
+        <p id="settings-sign-pack-status" role="status" aria-live="polite" style="font-size:0.78rem; color:#334155; margin:0.75rem 0 0 0; min-height:1.1em;"></p>
+      </section>
+    `;
+
     container.innerHTML = `
       <div style="margin-bottom: 2rem;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
@@ -396,6 +423,128 @@ export function renderSettingsPage(): HTMLElement {
         releaseStatusMsg = '✓ Session cleared';
       }
       render();
+    });
+
+    // Bind Offline Sign Pack Import & Export (100% lazy-loaded on click for zero initial bundle cost)
+    const signFileInput = container.querySelector<HTMLInputElement>('#settings-sign-file-input');
+    const signStatusEl = container.querySelector<HTMLParagraphElement>('#settings-sign-pack-status');
+    const setSignStatus = (msg: string, isError = false) => {
+      if (!signStatusEl) return;
+      signStatusEl.style.color = isError ? '#b91c1c' : '#065f46';
+      signStatusEl.textContent = msg;
+    };
+
+    const triggerBlobDownload = (content: string, filename: string, mime: string) => {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    container.querySelector('#settings-btn-import-signs')?.addEventListener('click', () => {
+      signFileInput?.click();
+    });
+
+    signFileInput?.addEventListener('change', async () => {
+      const file = signFileInput.files?.[0];
+      signFileInput.value = '';
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        setSignStatus('File too large (5 MB limit). Please split into smaller sign packs.', true);
+        return;
+      }
+      try {
+        setSignStatus('Compressing & importing signs locally...');
+        const text = await file.text();
+        const store = await import('../services/customSignStore');
+        const trimmed = text.trim();
+        const isJson = file.name.toLowerCase().endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[');
+        if (isJson) {
+          const { imported, words } = await store.importCustomSignsFromMediaPipeJson(text);
+          if (imported === 0) {
+            setSignStatus('No valid MediaPipe Holistic sign frames found in file.', true);
+          } else {
+            const preview = words.slice(0, 6).join(', ') + (words.length > 6 ? '…' : '');
+            setSignStatus(`✓ Imported & compressed ${imported} sign(s) into local offline vault: ${preview}`);
+          }
+        } else {
+          const count = await store.importCustomSignsFromAst(text);
+          if (count === 0) {
+            setSignStatus('No valid BSL signs found in .ast file.', true);
+          } else {
+            setSignStatus(`✓ Imported ${count} sign(s) from compact .ast pack into local offline vault.`);
+          }
+        }
+      } catch (err: any) {
+        setSignStatus(err?.message || 'Could not import sign file.', true);
+      }
+    });
+
+    container.querySelector('#settings-btn-export-ast-signs')?.addEventListener('click', async () => {
+      try {
+        const store = await import('../services/customSignStore');
+        const custom = await store.loadCustomBslSigns();
+        const count = Object.keys(custom).length;
+        if (count === 0) {
+          setSignStatus('No custom imported signs saved yet. Import a sign pack first to export it.', true);
+          return;
+        }
+        const ast = await store.exportCustomSignsAst();
+        triggerBlobDownload(ast, 'custom-bsl-signs.ast', 'text/plain;charset=utf-8');
+        setSignStatus(`✓ Exported ${count} custom sign(s) as compact .ast (${(ast.length / 1024).toFixed(1)} KB).`);
+      } catch {
+        setSignStatus('Failed to export .ast sign pack.', true);
+      }
+    });
+
+    container.querySelector('#settings-btn-export-mp-signs')?.addEventListener('click', async () => {
+      try {
+        setSignStatus('Generating standard 25 fps MediaPipe Holistic JSON...');
+        const [store, lexicon, mapper] = await Promise.all([
+          import('../services/customSignStore'),
+          import('../utils/bslLexicon'),
+          import('../utils/bslMediaPipeMapper'),
+        ]);
+        const custom = Object.values(await store.loadCustomBslSigns());
+        const sourceSigns = custom.length > 0 ? custom : Object.values(lexicon.BSL_CURRICULUM_LEXICON).slice(0, 10);
+        const sequences = sourceSigns.map((s) => mapper.bslSignToMediaPipeSequence(s, { fps: 25 }));
+        const payload = JSON.stringify(
+          {
+            schema: 'mediapipe-holistic-bundle/1.0',
+            fps: 25,
+            signCount: sequences.length,
+            sequences,
+          },
+          null,
+          2
+        );
+        const label = custom.length > 0 ? 'custom' : 'sample-10';
+        triggerBlobDownload(payload, `bsl-mediapipe-${label}.json`, 'application/json;charset=utf-8');
+        setSignStatus(
+          `✓ Exported ${sequences.length} ${custom.length > 0 ? 'custom' : 'sample core'} sign(s) in standard MediaPipe Holistic JSON.`
+        );
+      } catch {
+        setSignStatus('Failed to export MediaPipe JSON.', true);
+      }
+    });
+
+    container.querySelector('#settings-btn-clear-signs')?.addEventListener('click', async () => {
+      try {
+        const store = await import('../services/customSignStore');
+        const removed = await store.clearAllCustomBslSigns();
+        setSignStatus(
+          removed > 0
+            ? `✓ Cleared ${removed} locally imported sign(s) from device storage.`
+            : 'No locally imported signs to clear.'
+        );
+      } catch {
+        setSignStatus('Could not clear local sign storage.', true);
+      }
     });
 
     // Bind Event Listeners dynamically from AST definitions

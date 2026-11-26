@@ -28,6 +28,15 @@ import {
   isNanoBslEnhancementReady,
   shouldEnhanceBslWithNano,
 } from '../src/utils/nanoBslEnhancer';
+import {
+  bslPoseToMediaPipeFrame,
+  bslSignToMediaPipeSequence,
+  mediaPipeFrameToBslKeyframe,
+  mediaPipeSequenceToBslSign,
+  mediaPipePointToWorld,
+  worldPointToMediaPipe,
+  MP_POSE,
+} from '../src/utils/bslMediaPipeMapper';
 
 console.log('🧪 Starting BSL In-Vision Interpreter Verification Harness...\n');
 
@@ -950,6 +959,121 @@ assert(
     verifiedNanoMak.tokens.every((t) => !t.isFingerspelled && t.makatonStage !== undefined)
   ),
   'Makaton Nano enhancer strictly enforces verified Stage 1-8 core signs with zero fingerspelling'
+);
+
+// ---------------------------------------------------------
+// Test 20: Bidirectional MediaPipe Holistic Pose Standardization Mapper
+// ---------------------------------------------------------
+console.log('\n20. Testing Bidirectional MediaPipe Holistic Pose Standardization Mapper:');
+
+// 20a. Exact affine world <-> MediaPipe round-trip
+const samplePt: Point3D = { x: 28, y: -32, z: 24 };
+const rtPt = mediaPipePointToWorld(worldPointToMediaPipe(samplePt));
+const rtErr = Math.hypot(rtPt.x - samplePt.x, rtPt.y - samplePt.y, rtPt.z - samplePt.z);
+assert(rtErr < 0.05, `World <-> MediaPipe affine transform is invertible (err=${rtErr.toFixed(4)})`);
+
+// 20b. Exhaustive 229-sign export check (33 Pose + 21 Left + 21 Right finite landmarks)
+const allSignsForMp = Object.values(BSL_CURRICULUM_LEXICON);
+let allMpValid = true;
+for (const sign of allSignsForMp) {
+  const seq = bslSignToMediaPipeSequence(sign, { fps: 25 });
+  if (seq.frames.length === 0) {
+    allMpValid = false;
+    break;
+  }
+  const f0 = seq.frames[0];
+  const validArr = (arr: any[], expected: number) =>
+    Array.isArray(arr) &&
+    arr.length === expected &&
+    arr.every((lm) => Number.isFinite(lm.x) && Number.isFinite(lm.y) && Number.isFinite(lm.z));
+  if (!validArr(f0.poseLandmarks, 33) || !validArr(f0.leftHandLandmarks, 21) || !validArr(f0.rightHandLandmarks, 21)) {
+    allMpValid = false;
+    break;
+  }
+}
+assert(allMpValid, `All ${allSignsForMp.length} BSL lexicon signs export cleanly to standard 33+21+21 MediaPipe Holistic frames`);
+
+// 20c. Canonical palm orientation & handshape round-trip recovery
+const palmCases: Array<'in' | 'out' | 'up' | 'down' | 'side'> = ['in', 'out', 'up', 'down', 'side'];
+let palmMatches = 0;
+for (const expectedPalm of palmCases) {
+  const testPose = {
+    letter: 'T',
+    label: `Palm ${expectedPalm}`,
+    rule: 'Test',
+    isVowel: false,
+    targetWrist: { x: 24, y: 12, z: 16 },
+    targetKnuckle: { x: 24, y: -14, z: 16 }, // arm pointing straight up (-Y), orthogonal to in/out/side
+    targetTip: { x: 24, y: -38, z: 16 },
+    shape: 'flat-closed' as const,
+    palm: expectedPalm,
+  };
+  // For 'up'/'down', arm points forward (+Z) so 'up'/'down' normal is orthogonal to arm
+  if (expectedPalm === 'up' || expectedPalm === 'down') {
+    testPose.targetKnuckle = { x: 24, y: 12, z: 42 };
+    testPose.targetTip = { x: 24, y: 12, z: 66 };
+  }
+  const mpFrame = bslPoseToMediaPipeFrame(testPose, 0, 0.5);
+  const importedKf = mediaPipeFrameToBslKeyframe(mpFrame, { useShoulderNormalization: false });
+  if (importedKf.palm === expectedPalm) palmMatches++;
+}
+assert(palmMatches === palmCases.length, `Palm orientation round-trip recovered ${palmMatches}/${palmCases.length} canonical orientations`);
+
+const shapeCases: Array<'point' | 'v' | 'spread' | 'flat-closed' | 'pinch' | 'fist'> = [
+  'point',
+  'v',
+  'spread',
+  'flat-closed',
+  'pinch',
+  'fist',
+];
+let shapeMatches = 0;
+for (const expectedShape of shapeCases) {
+  const mpFrame = bslPoseToMediaPipeFrame(
+    {
+      letter: 'S',
+      label: `Shape ${expectedShape}`,
+      rule: 'Test',
+      isVowel: false,
+      targetWrist: { x: 26, y: 16, z: 18 },
+      targetKnuckle: { x: 26, y: -10, z: 20 },
+      targetTip: { x: 26, y: -36, z: 22 },
+      shape: expectedShape,
+      palm: 'out',
+    },
+    0,
+    0.5
+  );
+  const importedKf = mediaPipeFrameToBslKeyframe(mpFrame, { useShoulderNormalization: false });
+  if (importedKf.shape === expectedShape) shapeMatches++;
+}
+assert(shapeMatches >= 5, `Handshape round-trip recovered ${shapeMatches}/${shapeCases.length} canonical BSL handshapes`);
+
+// 20d. External webcam-framed MediaPipe sequence -> normalized native BslSign import
+const helloSign = lookupBslSign('HELLO')!;
+const helloMp = bslSignToMediaPipeSequence(helloSign, { fps: 25 });
+// Simulate an external camera where signer is zoomed out 0.7x and shifted right by +0.12
+const shiftedSeq = {
+  ...helloMp,
+  frames: helloMp.frames.map((f) => ({
+    ...f,
+    poseLandmarks: f.poseLandmarks.map((lm) => ({ ...lm, x: 0.12 + lm.x * 0.7, y: 0.08 + lm.y * 0.7, z: lm.z * 0.7 })),
+    leftHandLandmarks: f.leftHandLandmarks.map((lm) => ({ ...lm, x: 0.12 + lm.x * 0.7, y: 0.08 + lm.y * 0.7, z: lm.z * 0.7 })),
+    rightHandLandmarks: f.rightHandLandmarks.map((lm) => ({ ...lm, x: 0.12 + lm.x * 0.7, y: 0.08 + lm.y * 0.7, z: lm.z * 0.7 })),
+  })),
+};
+const reimportedHello = mediaPipeSequenceToBslSign(shiftedSeq, { id: 'mp-hello-test', word: 'HELLO', maxKeyframes: 4 });
+const origWrist0 = helloSign.keyframes[0].targetWrist;
+const impWrist0 = reimportedHello.keyframes[0].targetWrist;
+const normShiftErr = Math.hypot(origWrist0.x - impWrist0.x, origWrist0.y - impWrist0.y, origWrist0.z - impWrist0.z);
+assert(
+  reimportedHello.keyframes.length === 4 && normShiftErr < 1.5,
+  `Shoulder-normalized MediaPipe import cancels external camera zoom/offset cleanly (wrist err=${normShiftErr.toFixed(2)})`
+);
+assert(
+  helloMp.frames[0].poseLandmarks[MP_POSE.RIGHT_SHOULDER].visibility === 1.0 &&
+    helloMp.frames[0].poseLandmarks[32].visibility === 0.0,
+  'MediaPipe Pose export marks visible upper-body joints (1.0) and hidden lower-body joints (0.0)'
 );
 
 console.log(`\n==================================================`);

@@ -344,6 +344,396 @@ export function buildHeadLayerSvg(params: HeadLayerParams): string {
     `;
 }
 
+interface Projected2D {
+  x: number;
+  y: number;
+  scale: number;
+  depth: number;
+}
+
+function f1(n: number): string {
+  return (Number.isFinite(n) ? n : 0).toFixed(1);
+}
+
+function clampScale(s: number): number {
+  return Math.max(0.68, Math.min(1.38, Number.isFinite(s) ? s : 1));
+}
+
+function add3D(a: Point3D, b: Point3D): Point3D {
+  return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
+}
+
+function sub3D(a: Point3D, b: Point3D): Point3D {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+}
+
+function buildCapsuleSvg(
+  ax: number,
+  ay: number,
+  rA: number,
+  bx: number,
+  by: number,
+  rB: number,
+  fill: string,
+  stroke: string,
+  strokeWidth = 0.95
+): string {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len = Math.hypot(dx, dy);
+  if (len <= Math.abs(rA - rB) + 0.65) {
+    const cx = len < 0.01 ? bx : (ax + bx) * 0.5;
+    const cy = len < 0.01 ? by : (ay + by) * 0.5;
+    const r = Math.max(rA, rB);
+    return `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+  }
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy;
+  const ny = ux;
+  const aLx = ax + nx * rA;
+  const aLy = ay + ny * rA;
+  const aRx = ax - nx * rA;
+  const aRy = ay - ny * rA;
+  const bLx = bx + nx * rB;
+  const bLy = by + ny * rB;
+  const bRx = bx - nx * rB;
+  const bRy = by - ny * rB;
+  const d = `M ${f1(aLx)} ${f1(aLy)} L ${f1(bLx)} ${f1(bLy)} A ${f1(rB)} ${f1(rB)} 0 0 0 ${f1(bRx)} ${f1(bRy)} L ${f1(aRx)} ${f1(aRy)} A ${f1(rA)} ${f1(rA)} 0 0 0 ${f1(aLx)} ${f1(aLy)} Z`;
+  return `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" />`;
+}
+
+function buildForearmSvg(pElbow: Projected2D, pWrist: Projected2D, scale: number): string {
+  const rElbow = 6.1 * scale;
+  const rWrist = 4.4 * scale;
+  const dx = pWrist.x - pElbow.x;
+  const dy = pWrist.y - pElbow.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const cuffX = pElbow.x + (dx / len) * (3.2 * scale);
+  const cuffY = pElbow.y + (dy / len) * (3.2 * scale);
+  return `
+    ${buildCapsuleSvg(pElbow.x, pElbow.y, rElbow, pWrist.x, pWrist.y, rWrist, 'url(#bsl-skin-base)', '#c27a4b', 1.05)}
+    <line x1="${f1(cuffX + nx * rElbow * 0.92)}" y1="${f1(cuffY + ny * rElbow * 0.92)}" x2="${f1(cuffX - nx * rElbow * 0.92)}" y2="${f1(cuffY - ny * rElbow * 0.92)}" stroke="#1e293b" stroke-width="${f1(2.2 * scale)}" stroke-linecap="round" opacity="0.65" />
+  `;
+}
+
+function buildArticulatedFingerSvg(
+  pBase: Projected2D,
+  pMid: Projected2D,
+  pTip: Projected2D,
+  rBase: number,
+  rMid: number,
+  rTip: number,
+  fillGrad: string,
+  strokeCol: string,
+  isPalmFacing: boolean,
+  isCurled: boolean
+): string {
+  const fill = `url(#${fillGrad})`;
+  const prox = buildCapsuleSvg(pBase.x, pBase.y, rBase, pMid.x, pMid.y, rMid, fill, strokeCol, 0.85);
+  const dist = buildCapsuleSvg(pMid.x, pMid.y, rMid, pTip.x, pTip.y, rTip, fill, strokeCol, 0.85);
+
+  // Seamless joint fill blend + subtle anatomical knuckle/flexion crease
+  const dx = pTip.x - pBase.x;
+  const dy = pTip.y - pBase.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const creaseHalf = rMid * 0.62;
+  const crease = `<line x1="${f1(pMid.x - nx * creaseHalf)}" y1="${f1(pMid.y - ny * creaseHalf)}" x2="${f1(pMid.x + nx * creaseHalf)}" y2="${f1(pMid.y + ny * creaseHalf)}" stroke="${strokeCol}" stroke-width="0.65" stroke-linecap="round" opacity="${isPalmFacing ? '0.45' : '0.32'}" />`;
+
+  // Fingertip pad highlight (palm view) or subtle oval nail highlight (dorsal view)
+  let tipDetail = '';
+  if (!isCurled) {
+    const ux = dx / len;
+    const uy = dy / len;
+    if (!isPalmFacing && len > 4) {
+      const nailX = pTip.x - ux * (rTip * 0.25);
+      const nailY = pTip.y - uy * (rTip * 0.25);
+      const angle = (Math.atan2(uy, ux) * 180) / Math.PI;
+      tipDetail = `<ellipse cx="${f1(nailX)}" cy="${f1(nailY)}" rx="${f1(rTip * 0.68)}" ry="${f1(rTip * 0.48)}" transform="rotate(${f1(angle)} ${f1(nailX)} ${f1(nailY)})" fill="#fff7ed" fill-opacity="0.62" stroke="${strokeCol}" stroke-opacity="0.32" stroke-width="0.45" />`;
+    } else if (isPalmFacing) {
+      tipDetail = `<circle cx="${f1(pTip.x)}" cy="${f1(pTip.y)}" r="${f1(rTip * 0.52)}" fill="#fff7ed" fill-opacity="0.34" />`;
+    }
+  }
+
+  return `${prox}${dist}<circle cx="${f1(pMid.x)}" cy="${f1(pMid.y)}" r="${f1(rMid * 0.86)}" fill="${fill}" />${crease}${tipDetail}`;
+}
+
+function buildContouredPalmSvg(
+  pWrist: Projected2D,
+  pThumbBase: Projected2D,
+  pKIdx: Projected2D,
+  pKMid: Projected2D,
+  pKRing: Projected2D,
+  pKPinky: Projected2D,
+  pPalmCenter: Projected2D,
+  scale: number,
+  isPalmFacing: boolean,
+  fillGrad: string,
+  strokeCol: string
+): string {
+  const kCenterX = (pKIdx.x + pKRing.x) * 0.5;
+  const kCenterY = (pKIdx.y + pKRing.y) * 0.5;
+  const ax = kCenterX - pWrist.x;
+  const ay = kCenterY - pWrist.y;
+  const aLen = Math.hypot(ax, ay) || 1;
+  let px = -ay / aLen;
+  let py = ax / aLen;
+
+  // Orient lateral vector consistently from thumb side (-) to pinky side (+)
+  const lateralDot = (pKPinky.x - pKIdx.x) * px + (pKPinky.y - pKIdx.y) * py;
+  if (lateralDot < 0) {
+    px = -px;
+    py = -py;
+  }
+
+  const wristHalf = 4.3 * scale;
+  const wThumbX = pWrist.x - px * wristHalf;
+  const wThumbY = pWrist.y - py * wristHalf;
+  const wPinkyX = pWrist.x + px * wristHalf;
+  const wPinkyY = pWrist.y + py * wristHalf;
+
+  // Fleshy thenar (thumb) and hypothenar (pinky) heel contours
+  const thenarX = (wThumbX + pThumbBase.x) * 0.5 - px * (2.3 * scale);
+  const thenarY = (wThumbY + pThumbBase.y) * 0.5 - py * (2.3 * scale);
+  const heelPinkyX = wPinkyX + (pKPinky.x - wPinkyX) * 0.45 + px * (2.6 * scale);
+  const heelPinkyY = wPinkyY + (pKPinky.y - wPinkyY) * 0.45 + py * (2.6 * scale);
+  const thumbWebX = pThumbBase.x + (pKIdx.x - pThumbBase.x) * 0.55 - px * (0.9 * scale);
+  const thumbWebY = pThumbBase.y + (pKIdx.y - pThumbBase.y) * 0.55 - py * (0.9 * scale);
+
+  const palmPath = `M ${f1(wThumbX)} ${f1(wThumbY)}
+    Q ${f1(thenarX)} ${f1(thenarY)} ${f1(pThumbBase.x)} ${f1(pThumbBase.y)}
+    Q ${f1(thumbWebX)} ${f1(thumbWebY)} ${f1(pKIdx.x)} ${f1(pKIdx.y)}
+    L ${f1(pKMid.x)} ${f1(pKMid.y)}
+    L ${f1(pKRing.x)} ${f1(pKRing.y)}
+    L ${f1(pKPinky.x)} ${f1(pKPinky.y)}
+    Q ${f1(heelPinkyX)} ${f1(heelPinkyY)} ${f1(wPinkyX)} ${f1(wPinkyY)} Z`;
+
+  // Palm-facing anatomical creases vs. dorsal knuckle highlights
+  let surfaceDetail = '';
+  if (isPalmFacing) {
+    const creaseStartX = pKIdx.x + (pPalmCenter.x - pKIdx.x) * 0.48;
+    const creaseStartY = pKIdx.y + (pPalmCenter.y - pKIdx.y) * 0.48;
+    const creaseEndX = pKPinky.x + (wPinkyX - pKPinky.x) * 0.36;
+    const creaseEndY = pKPinky.y + (wPinkyY - pKPinky.y) * 0.36;
+    const creaseMidX = (creaseStartX + creaseEndX) * 0.5 + (pPalmCenter.x - kCenterX) * 0.16;
+    const creaseMidY = (creaseStartY + creaseEndY) * 0.5 + (pPalmCenter.y - kCenterY) * 0.16;
+
+    const thenarArcEndX = pWrist.x + (pPalmCenter.x - pWrist.x) * 0.35;
+    const thenarArcEndY = pWrist.y + (pPalmCenter.y - pWrist.y) * 0.35;
+    const thenarArcCtrlX = pPalmCenter.x - px * (1.2 * scale);
+    const thenarArcCtrlY = pPalmCenter.y - py * (1.2 * scale);
+
+    surfaceDetail = `
+      <path d="M ${f1(creaseStartX)} ${f1(creaseStartY)} Q ${f1(creaseMidX)} ${f1(creaseMidY)} ${f1(creaseEndX)} ${f1(creaseEndY)}" fill="none" stroke="${strokeCol}" stroke-width="0.8" stroke-linecap="round" opacity="0.42" />
+      <path d="M ${f1(pThumbBase.x + (pPalmCenter.x - pThumbBase.x) * 0.32)} ${f1(pThumbBase.y + (pPalmCenter.y - pThumbBase.y) * 0.32)} Q ${f1(thenarArcCtrlX)} ${f1(thenarArcCtrlY)} ${f1(thenarArcEndX)} ${f1(thenarArcEndY)}" fill="none" stroke="${strokeCol}" stroke-width="0.8" stroke-linecap="round" opacity="0.38" />
+    `;
+  } else {
+    const knR = 1.65 * scale;
+    surfaceDetail = `
+      <circle cx="${f1(pKIdx.x)}" cy="${f1(pKIdx.y)}" r="${f1(knR)}" fill="#fff3e6" opacity="0.38" />
+      <circle cx="${f1(pKMid.x)}" cy="${f1(pKMid.y)}" r="${f1(knR)}" fill="#fff3e6" opacity="0.35" />
+      <circle cx="${f1(pKRing.x)}" cy="${f1(pKRing.y)}" r="${f1(knR * 0.9)}" fill="#fff3e6" opacity="0.32" />
+      <circle cx="${f1(pKPinky.x)}" cy="${f1(pKPinky.y)}" r="${f1(knR * 0.8)}" fill="#fff3e6" opacity="0.28" />
+    `;
+  }
+
+  return `
+    <path d="${palmPath}" fill="url(#${fillGrad})" stroke="${strokeCol}" stroke-width="1.05" stroke-linejoin="round" />
+    ${surfaceDetail}
+  `;
+}
+
+function renderSolvedArticulatedHandSvg(
+  solved: ReturnType<typeof solveHandKinematics>,
+  elbow3D: Point3D,
+  mirrorX: boolean,
+  cam: any,
+  ox: number,
+  oy: number
+): string {
+  const m = (p: Point3D): Point3D => (mirrorX ? { x: -p.x, y: p.y, z: p.z } : p);
+
+  const w3D = m(solved.wrist);
+  const kIdx3D = m(solved.knuckleIndex);
+  const tIdx3D = m(solved.tipIndex);
+  const rawKMid = m(solved.kMid);
+  const rawKRing = m(solved.kRing);
+  const rawKPinky = m(solved.kPinky);
+  const rawThumbBase = m(solved.thumbBase);
+  const rawThumbKnuckle = m(solved.thumbKnuckle);
+  const thumbTip3D = m(solved.thumbTip);
+
+  // Refine visual knuckle spread to realistic ~50% head-width human proportion
+  // while keeping exact index tip, index knuckle, wrist, and thumb tip positions.
+  const SPREAD = 0.58;
+  const kMid3D = lerpRaw3D(kIdx3D, rawKMid, SPREAD);
+  const kRing3D = lerpRaw3D(kIdx3D, rawKRing, SPREAD);
+  const kPinky3D = lerpRaw3D(kIdx3D, rawKPinky, SPREAD);
+
+  const knuckleCenter3D = lerpRaw3D(kIdx3D, kRing3D, 0.52);
+  const palmCenter3D = lerpRaw3D(w3D, knuckleCenter3D, 0.52);
+  const thumbBase3D = lerpRaw3D(w3D, rawThumbBase, 0.74);
+  const thumbKnuckle3D = lerpRaw3D(thumbBase3D, rawThumbKnuckle, 0.86);
+
+  const shape = solved.shape || 'flat-closed';
+  const idxCurled = shape === 'fist';
+  const midCurled = shape === 'fist' || shape === 'point' || shape === 'point-l' || shape === 'pinch';
+  const ringCurled = midCurled || shape === 'v';
+  const pinkyCurled = ringCurled;
+  const isCurved = shape === 'claw' || shape === 'c-shape';
+
+  const rawTMid = m(solved.tipMid);
+  const rawTRing = m(solved.tipRing);
+  const rawTPinky = m(solved.tipPinky);
+
+  const tMid3D = midCurled
+    ? lerpRaw3D(palmCenter3D, rawTMid, 0.72)
+    : add3D(rawTMid, sub3D(kMid3D, rawKMid));
+  const tRing3D = ringCurled
+    ? lerpRaw3D(palmCenter3D, rawTRing, 0.72)
+    : add3D(rawTRing, sub3D(kRing3D, rawKRing));
+  const tPinky3D = pinkyCurled
+    ? lerpRaw3D(palmCenter3D, rawTPinky, 0.72)
+    : add3D(rawTPinky, sub3D(kPinky3D, rawKPinky));
+
+  const nVec = m(solved.palmNormal || { x: 0, y: 0, z: 1 });
+  const pPalmCenter = project3DToSvg(palmCenter3D, cam, ox, oy);
+  const pNormalTip = project3DToSvg(
+    { x: palmCenter3D.x + nVec.x * 10, y: palmCenter3D.y + nVec.y * 10, z: palmCenter3D.z + nVec.z * 10 },
+    cam,
+    ox,
+    oy
+  );
+  const isPalmFacing = pNormalTip.depth < pPalmCenter.depth;
+
+  // Compute organic 3D intermediate (PIP) joint with realistic dorsal bend
+  const computePip3D = (knuckle: Point3D, tip: Point3D, curled: boolean, curved: boolean): Point3D => {
+    const baseMid = lerpRaw3D(knuckle, tip, curved ? 0.5 : curled ? 0.48 : 0.54);
+    const dorsalLift = curved ? 7.2 : curled ? 4.4 : 1.5;
+    return {
+      x: baseMid.x - nVec.x * dorsalLift,
+      y: baseMid.y - nVec.y * dorsalLift,
+      z: baseMid.z - nVec.z * dorsalLift,
+    };
+  };
+
+  const pipIdx3D = computePip3D(kIdx3D, tIdx3D, idxCurled, isCurved || shape === 'pinch');
+  const pipMid3D = computePip3D(kMid3D, tMid3D, midCurled, isCurved);
+  const pipRing3D = computePip3D(kRing3D, tRing3D, ringCurled, isCurved);
+  const pipPinky3D = computePip3D(kPinky3D, tPinky3D, pinkyCurled, isCurved);
+
+  const pElbow = project3DToSvg(elbow3D, cam, ox, oy);
+  const pWrist = project3DToSvg(w3D, cam, ox, oy);
+  const pThumbBase = project3DToSvg(thumbBase3D, cam, ox, oy);
+  const pThumbKnuckle = project3DToSvg(thumbKnuckle3D, cam, ox, oy);
+  const pThumbTip = project3DToSvg(thumbTip3D, cam, ox, oy);
+
+  const pKIdx = project3DToSvg(kIdx3D, cam, ox, oy);
+  const pKMid = project3DToSvg(kMid3D, cam, ox, oy);
+  const pKRing = project3DToSvg(kRing3D, cam, ox, oy);
+  const pKPinky = project3DToSvg(kPinky3D, cam, ox, oy);
+
+  const pPipIdx = project3DToSvg(pipIdx3D, cam, ox, oy);
+  const pPipMid = project3DToSvg(pipMid3D, cam, ox, oy);
+  const pPipRing = project3DToSvg(pipRing3D, cam, ox, oy);
+  const pPipPinky = project3DToSvg(pipPinky3D, cam, ox, oy);
+
+  const pTIdx = project3DToSvg(tIdx3D, cam, ox, oy);
+  const pTMid = project3DToSvg(tMid3D, cam, ox, oy);
+  const pTRing = project3DToSvg(tRing3D, cam, ox, oy);
+  const pTPinky = project3DToSvg(tPinky3D, cam, ox, oy);
+
+  const s = clampScale(pPalmCenter.scale);
+  const palmGrad = isPalmFacing ? 'bsl-hand-palm' : 'bsl-hand-back';
+  const strokeCol = isPalmFacing ? '#c98050' : '#b86d3f';
+
+  // Assemble render items with clean back-to-front depth layering
+  const fingerSpecs = [
+    { base: pKIdx, mid: pPipIdx, tip: pTIdx, rB: 2.35 * s, rM: 2.05 * s, rT: 1.75 * s, curled: idxCurled },
+    { base: pKMid, mid: pPipMid, tip: pTMid, rB: 2.35 * s, rM: 2.05 * s, rT: 1.75 * s, curled: midCurled },
+    { base: pKRing, mid: pPipRing, tip: pTRing, rB: 2.15 * s, rM: 1.9 * s, rT: 1.6 * s, curled: ringCurled },
+    { base: pKPinky, mid: pPipPinky, tip: pTPinky, rB: 1.85 * s, rM: 1.65 * s, rT: 1.4 * s, curled: pinkyCurled },
+  ];
+
+  const backDigits: { depth: number; svg: string }[] = [];
+  const frontDigits: { depth: number; svg: string }[] = [];
+
+  for (const fg of fingerSpecs) {
+    const svg = buildArticulatedFingerSvg(
+      fg.base,
+      fg.mid,
+      fg.tip,
+      fg.rB,
+      fg.rM,
+      fg.rT,
+      palmGrad,
+      strokeCol,
+      isPalmFacing,
+      fg.curled
+    );
+    const avgDepth = (fg.mid.depth + fg.tip.depth) * 0.5;
+    if (fg.curled) {
+      // Curled fingers rest on the front of the palm when palm faces viewer,
+      // and tuck naturally behind the back of the hand when dorsal side faces viewer.
+      if (isPalmFacing) frontDigits.push({ depth: avgDepth, svg });
+      else backDigits.push({ depth: avgDepth, svg });
+    } else if (avgDepth > pPalmCenter.depth + 2) {
+      backDigits.push({ depth: avgDepth, svg });
+    } else {
+      frontDigits.push({ depth: avgDepth, svg });
+    }
+  }
+
+  // Articulated 2-segment thumb
+  const thumbSvg = buildArticulatedFingerSvg(
+    pThumbBase,
+    pThumbKnuckle,
+    pThumbTip,
+    2.7 * s,
+    2.3 * s,
+    1.95 * s,
+    palmGrad,
+    strokeCol,
+    isPalmFacing,
+    false
+  );
+  const thumbDepth = (pThumbKnuckle.depth + pThumbTip.depth) * 0.5;
+  if (isPalmFacing || thumbDepth <= pPalmCenter.depth + 2) {
+    frontDigits.push({ depth: thumbDepth - 1, svg: thumbSvg });
+  } else {
+    backDigits.push({ depth: thumbDepth, svg: thumbSvg });
+  }
+
+  backDigits.sort((a, b) => b.depth - a.depth);
+  frontDigits.sort((a, b) => b.depth - a.depth);
+
+  const forearmSvg = buildForearmSvg(pElbow, pWrist, s);
+  const palmSvg = buildContouredPalmSvg(
+    pWrist,
+    pThumbBase,
+    pKIdx,
+    pKMid,
+    pKRing,
+    pKPinky,
+    pPalmCenter,
+    s,
+    isPalmFacing,
+    palmGrad,
+    strokeCol
+  );
+
+  return `
+    ${forearmSvg}
+    ${backDigits.map((d) => d.svg).join('')}
+    ${palmSvg}
+    ${frontDigits.map((d) => d.svg).join('')}
+  `;
+}
+
 export interface BaseHandLayerParams {
   cam: any;
   ox: number;
@@ -411,34 +801,7 @@ export function buildBaseHandLayerSvg(params: BaseHandLayerParams): BaseHandLaye
     const liveBasePalm: Point3D = { x: -solvedDom.palm.x, y: solvedDom.palm.y, z: solvedDom.palm.z };
     const liveBaseTip: Point3D = { x: -solvedDom.tipIndex.x, y: solvedDom.tipIndex.y, z: solvedDom.tipIndex.z };
 
-    const pForearm = project3DToSvg(leftElbow3D, cam, ox, oy);
-    const pWrist = project3DToSvg(liveBaseWrist, cam, ox, oy);
-    const pPalm = project3DToSvg(liveBasePalm, cam, ox, oy);
-    const pKnuckleIndex = project3DToSvg(liveBaseKnuckle, cam, ox, oy);
-    const pTipIndex = project3DToSvg(liveBaseTip, cam, ox, oy);
-    const pTipMid = project3DToSvg({ x: -solvedDom.tipMid.x, y: solvedDom.tipMid.y, z: solvedDom.tipMid.z }, cam, ox, oy);
-    const pTipRing = project3DToSvg({ x: -solvedDom.tipRing.x, y: solvedDom.tipRing.y, z: solvedDom.tipRing.z }, cam, ox, oy);
-    const pTipPinky = project3DToSvg({ x: -solvedDom.tipPinky.x, y: solvedDom.tipPinky.y, z: solvedDom.tipPinky.z }, cam, ox, oy);
-    const pThumbTip = project3DToSvg({ x: -solvedDom.thumbTip.x, y: solvedDom.thumbTip.y, z: solvedDom.thumbTip.z }, cam, ox, oy);
-    const pThumbKnuckle = project3DToSvg({ x: -solvedDom.thumbKnuckle.x, y: solvedDom.thumbKnuckle.y, z: solvedDom.thumbKnuckle.z }, cam, ox, oy);
-
-    const html = `
-        <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="10" stroke-linecap="round" />
-        <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9" stroke-linecap="round" />
-        <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="10" ry="8.5" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.4" />
-        <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pThumbKnuckle.x.toFixed(1)}" y2="${pThumbKnuckle.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.8" stroke-linecap="round" />
-        <line x1="${pThumbKnuckle.x.toFixed(1)}" y1="${pThumbKnuckle.y.toFixed(1)}" x2="${pThumbTip.x.toFixed(1)}" y2="${pThumbTip.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4" stroke-linecap="round" />
-        <circle cx="${pThumbTip.x.toFixed(1)}" cy="${pThumbTip.y.toFixed(1)}" r="3" fill="#ffedd5" stroke="#cb7c49" stroke-width="1" />
-        <line x1="${pKnuckleIndex.x.toFixed(1)}" y1="${pKnuckleIndex.y.toFixed(1)}" x2="${pTipIndex.x.toFixed(1)}" y2="${pTipIndex.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="5.2" stroke-linecap="round" />
-        <circle cx="${pKnuckleIndex.x.toFixed(1)}" cy="${pKnuckleIndex.y.toFixed(1)}" r="2.8" fill="#f8be93" />
-        <circle cx="${pTipIndex.x.toFixed(1)}" cy="${pTipIndex.y.toFixed(1)}" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.2" filter="url(#bsl-glow)" />
-        <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipMid.x.toFixed(1)}" y2="${pTipMid.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.2" stroke-linecap="round" />
-        <circle cx="${pTipMid.x.toFixed(1)}" cy="${pTipMid.y.toFixed(1)}" r="2.5" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-        <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipRing.x.toFixed(1)}" y2="${pTipRing.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.8" stroke-linecap="round" />
-        <circle cx="${pTipRing.x.toFixed(1)}" cy="${pTipRing.y.toFixed(1)}" r="2.3" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-        <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipPinky.x.toFixed(1)}" y2="${pTipPinky.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.2" stroke-linecap="round" />
-        <circle cx="${pTipPinky.x.toFixed(1)}" cy="${pTipPinky.y.toFixed(1)}" r="2" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-      `;
+    const html = renderSolvedArticulatedHandSvg(solvedDom, leftElbow3D, true, cam, ox, oy);
     return { html, liveBaseForearm, liveBaseWrist, liveBaseKnuckle, liveBasePalm, liveBaseTip };
   }
 
@@ -463,35 +826,77 @@ export function buildBaseHandLayerSvg(params: BaseHandLayerParams): BaseHandLaye
     const pForearm = project3DToSvg(leftElbow3D, cam, ox, oy);
     const pWrist = project3DToSvg(iWrist, cam, ox, oy);
     const pPalm = project3DToSvg(iPalm, cam, ox, oy);
+    const s = clampScale(pPalm.scale);
+
+    // Distinct anatomical knuckle anchors radiating smoothly to the exact 5 vowel tips (A, E, I, O, U)
+    const shiftedTips: Point3D[] = BSL_BASE_HAND.fingertips.map((tipPt) => ({
+      x: tipPt.x + palmShiftX,
+      y: tipPt.y + palmShiftY,
+      z: tipPt.z + palmShiftZ,
+    }));
+    const knuckleAnchors3D: Point3D[] = [
+      lerpRaw3D(iWrist, shiftedTips[0], 0.42), // Thumb base (A)
+      lerpRaw3D(iPalm, shiftedTips[1], 0.34),  // Index knuckle (E)
+      lerpRaw3D(iPalm, shiftedTips[2], 0.32),  // Middle knuckle (I)
+      lerpRaw3D(iPalm, shiftedTips[3], 0.34),  // Ring knuckle (O)
+      lerpRaw3D(iPalm, shiftedTips[4], 0.38),  // Pinky knuckle (U)
+    ];
+
+    const pKnuckles = knuckleAnchors3D.map((pt) => project3DToSvg(pt, cam, ox, oy));
+    const pTips = shiftedTips.map((pt) => project3DToSvg(pt, cam, ox, oy));
+    const digitRadii: [number, number, number][] = [
+      [2.8 * s, 2.35 * s, 2.0 * s], // Thumb (A)
+      [2.45 * s, 2.1 * s, 1.8 * s], // Index (E)
+      [2.45 * s, 2.1 * s, 1.8 * s], // Middle (I)
+      [2.25 * s, 1.95 * s, 1.65 * s], // Ring (O)
+      [1.95 * s, 1.7 * s, 1.45 * s], // Pinky (U)
+    ];
 
     let fingersSvg = '';
-    BSL_BASE_HAND.fingertips.forEach((tipPt, idx) => {
-      const shiftedTip: Point3D = {
-        x: tipPt.x + palmShiftX,
-        y: tipPt.y + palmShiftY,
-        z: tipPt.z + palmShiftZ,
+    for (let idx = 0; idx < 5; idx++) {
+      const pBase = pKnuckles[idx];
+      const pTip = pTips[idx];
+      const pMid: Projected2D = {
+        x: (pBase.x + pTip.x) * 0.5,
+        y: (pBase.y + pTip.y) * 0.5,
+        scale: pTip.scale,
+        depth: (pBase.depth + pTip.depth) * 0.5,
       };
-      const pTip = project3DToSvg(shiftedTip, cam, ox, oy);
+      const [rB, rM, rT] = digitRadii[idx];
+      fingersSvg += buildArticulatedFingerSvg(pBase, pMid, pTip, rB, rM, rT, 'bsl-hand-palm', '#c98050', true, false);
+
+      // Clean vowel target guide (amber highlight for active vowel, subtle sky marker for others)
       const isTarget = targetPose.isVowel && targetPose.activeVowelIndex === idx;
       const color = isTarget ? '#f59e0b' : '#38bdf8';
       fingersSvg += `
-          <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTip.x.toFixed(1)}" y2="${pTip.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.8" stroke-linecap="round" />
-          <circle cx="${pTip.x.toFixed(1)}" cy="${pTip.y.toFixed(1)}" r="${isTarget ? '5.4' : '4'}" fill="${color}" stroke="#ffffff" stroke-width="1.2" filter="${isTarget ? 'url(#bsl-glow)' : 'none'}" />
-          <circle cx="${pTip.x.toFixed(1)}" cy="${pTip.y.toFixed(1)}" r="1.5" fill="#ffffff" />
-        `;
-    });
+        <circle cx="${f1(pTip.x)}" cy="${f1(pTip.y)}" r="${isTarget ? f1(4.6 * s) : f1(2.9 * s)}" fill="${color}" fill-opacity="${isTarget ? '0.92' : '0.78'}" stroke="#ffffff" stroke-width="1" filter="${isTarget ? 'url(#bsl-glow)' : 'none'}" />
+        <circle cx="${f1(pTip.x)}" cy="${f1(pTip.y)}" r="${isTarget ? f1(1.6 * s) : f1(1.0 * s)}" fill="#ffffff" />
+      `;
+    }
+
+    const palmSvg = buildContouredPalmSvg(
+      pWrist,
+      pKnuckles[0],
+      pKnuckles[1],
+      pKnuckles[2],
+      pKnuckles[3],
+      pKnuckles[4],
+      pPalm,
+      s,
+      true,
+      'bsl-hand-palm',
+      '#c98050'
+    );
 
     const html = `
-        <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
-        <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
-        <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="11.5" ry="9.5" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.5" />
-        <path d="M ${(pPalm.x - 5).toFixed(1)} ${pPalm.y.toFixed(1)} Q ${pPalm.x.toFixed(1)} ${(pPalm.y + 3).toFixed(1)} ${(pPalm.x + 5).toFixed(1)} ${pPalm.y.toFixed(1)}" stroke="#d99564" stroke-width="1" fill="none" />
-        ${fingersSvg}
-      `;
+      ${buildForearmSvg(pForearm, pWrist, s)}
+      ${palmSvg}
+      ${fingersSvg}
+    `;
     return { html, liveBaseForearm, liveBaseWrist, liveBaseKnuckle, liveBasePalm, liveBaseTip };
   }
 
-  // 3. Base Workbench Anchor ('base-hold')
+  // 3. Base Workbench Anchor ('base-hold') — anatomical flat resting workbench hand
   if (mode === 'base-hold') {
     const targetWrist: Point3D = { x: -58, y: 52, z: 10 };
     const targetPalm: Point3D = { x: -42, y: 36, z: 15 };
@@ -507,18 +912,15 @@ export function buildBaseHandLayerSvg(params: BaseHandLayerParams): BaseHandLaye
     const liveBasePalm: Point3D = baseHoldAnchor;
     const liveBaseTip: Point3D = baseTip;
 
-    const pF = project3DToSvg(leftElbow3D, cam, ox, oy);
-    const pW = project3DToSvg(baseWrist, cam, ox, oy);
-    const pP = project3DToSvg(baseHoldAnchor, cam, ox, oy);
-    const pFingers = project3DToSvg(baseTip, cam, ox, oy);
-
-    const html = `
-        <line x1="${pF.x.toFixed(1)}" y1="${pF.y.toFixed(1)}" x2="${pW.x.toFixed(1)}" y2="${pW.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
-        <line x1="${pW.x.toFixed(1)}" y1="${pW.y.toFixed(1)}" x2="${pP.x.toFixed(1)}" y2="${pP.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
-        <ellipse cx="${pP.x.toFixed(1)}" cy="${pP.y.toFixed(1)}" rx="12" ry="7.5" fill="url(#bsl-hand-base)" stroke="#0284c7" stroke-width="1.8" />
-        <line x1="${pP.x.toFixed(1)}" y1="${pP.y.toFixed(1)}" x2="${pFingers.x.toFixed(1)}" y2="${pFingers.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="6.5" stroke-linecap="round" />
-        <circle cx="${pFingers.x.toFixed(1)}" cy="${pFingers.y.toFixed(1)}" r="3" fill="#ffedd5" stroke="#cb7c49" stroke-width="1" />
-      `;
+    // Solve cleanly as a left-hand flat-closed palm-up workbench surface
+    const solvedHold = solveHandKinematics(
+      { x: -baseWrist.x, y: baseWrist.y, z: baseWrist.z },
+      { x: -baseHoldAnchor.x, y: baseHoldAnchor.y, z: baseHoldAnchor.z },
+      { x: -baseTip.x, y: baseTip.y, z: baseTip.z },
+      'flat-closed',
+      'up'
+    );
+    const html = renderSolvedArticulatedHandSvg(solvedHold, leftElbow3D, true, cam, ox, oy);
     return { html, liveBaseForearm, liveBaseWrist, liveBaseKnuckle, liveBasePalm, liveBaseTip };
   }
 
@@ -548,29 +950,64 @@ export function buildBaseHandLayerSvg(params: BaseHandLayerParams): BaseHandLaye
     const pF = project3DToSvg(leftElbow3D, cam, ox, oy);
     const pW = project3DToSvg(anchorWrist, cam, ox, oy);
     const pP = project3DToSvg(anchorPalm, cam, ox, oy);
+    const s = clampScale(pP.scale);
 
-    const buoyCount = mode === 'buoy-pointer' ? 1 : targetPose.buoy?.count || 3;
+    const kPts3D: Point3D[] = [
+      { x: anchorPalm.x - 11, y: anchorPalm.y - 6, z: anchorPalm.z + 3 },
+      { x: anchorPalm.x - 4, y: anchorPalm.y - 9, z: anchorPalm.z + 4 },
+      { x: anchorPalm.x + 3, y: anchorPalm.y - 8, z: anchorPalm.z + 4 },
+      { x: anchorPalm.x + 10, y: anchorPalm.y - 5, z: anchorPalm.z + 3 },
+    ];
+    const thumbBase3D: Point3D = { x: anchorPalm.x - 13, y: anchorPalm.y + 5, z: anchorPalm.z + 2 };
+    const pThumbBase = project3DToSvg(thumbBase3D, cam, ox, oy);
+    const pKs = kPts3D.map((pt) => project3DToSvg(pt, cam, ox, oy));
+
+    const buoyCount = mode === 'buoy-pointer' ? 1 : Math.min(4, targetPose.buoy?.count || 3);
     let digitsSvg = '';
-    for (let d = 0; d < Math.min(4, buoyCount); d++) {
-      const fingerOffset = (d - 1.5) * 9;
-      const pD = project3DToSvg(
-        { x: anchorPalm.x + fingerOffset, y: anchorPalm.y - 26, z: anchorPalm.z + 6 },
-        cam,
-        ox,
-        oy
+    for (let d = 0; d < 4; d++) {
+      const extended = d < buoyCount;
+      const tip3D: Point3D = extended
+        ? { x: kPts3D[d].x + (d - 1.5) * 2.5, y: kPts3D[d].y - 20, z: kPts3D[d].z + 3 }
+        : { x: kPts3D[d].x, y: anchorPalm.y + 3, z: anchorPalm.z + 5 };
+      const mid3D = lerpRaw3D(kPts3D[d], tip3D, 0.52);
+      const pMid = project3DToSvg(mid3D, cam, ox, oy);
+      const pTip = project3DToSvg(tip3D, cam, ox, oy);
+      digitsSvg += buildArticulatedFingerSvg(
+        pKs[d],
+        pMid,
+        pTip,
+        (2.3 - d * 0.12) * s,
+        (2.0 - d * 0.1) * s,
+        (1.65 - d * 0.08) * s,
+        'bsl-hand-palm',
+        '#c98050',
+        true,
+        !extended
       );
-      digitsSvg += `
-          <line x1="${pP.x.toFixed(1)}" y1="${pP.y.toFixed(1)}" x2="${pD.x.toFixed(1)}" y2="${pD.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.4" stroke-linecap="round" />
-          <circle cx="${pD.x.toFixed(1)}" cy="${pD.y.toFixed(1)}" r="2.8" fill="#38bdf8" stroke="#ffffff" stroke-width="1" />
-        `;
+      if (extended) {
+        digitsSvg += `<circle cx="${f1(pTip.x)}" cy="${f1(pTip.y)}" r="${f1(2.2 * s)}" fill="#38bdf8" stroke="#ffffff" stroke-width="0.9" />`;
+      }
     }
 
+    const palmSvg = buildContouredPalmSvg(
+      pW,
+      pThumbBase,
+      pKs[0],
+      pKs[1],
+      pKs[2],
+      pKs[3],
+      pP,
+      s,
+      true,
+      'bsl-hand-palm',
+      '#c98050'
+    );
+
     const html = `
-        <line x1="${pF.x.toFixed(1)}" y1="${pF.y.toFixed(1)}" x2="${pW.x.toFixed(1)}" y2="${pW.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
-        <line x1="${pW.x.toFixed(1)}" y1="${pW.y.toFixed(1)}" x2="${pP.x.toFixed(1)}" y2="${pP.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
-        <ellipse cx="${pP.x.toFixed(1)}" cy="${pP.y.toFixed(1)}" rx="11" ry="8.5" fill="url(#bsl-hand-base)" stroke="#0284c7" stroke-width="1.5" />
-        ${digitsSvg}
-      `;
+      ${buildForearmSvg(pF, pW, s)}
+      ${palmSvg}
+      ${digitsSvg}
+    `;
     return { html, liveBaseForearm, liveBaseWrist, liveBaseKnuckle, liveBasePalm, liveBaseTip };
   }
 
@@ -598,34 +1035,7 @@ export function buildBaseHandLayerSvg(params: BaseHandLayerParams): BaseHandLaye
   const liveBasePalm: Point3D = { x: -solvedMirror.palm.x, y: solvedMirror.palm.y, z: solvedMirror.palm.z };
   const liveBaseTip: Point3D = baseTip;
 
-  const pForearm = project3DToSvg(leftElbow3D, cam, ox, oy);
-  const pWrist = project3DToSvg(baseWrist, cam, ox, oy);
-  const pPalm = project3DToSvg(liveBasePalm, cam, ox, oy);
-  const pKnuckleIndex = project3DToSvg({ x: -solvedMirror.knuckleIndex.x, y: solvedMirror.knuckleIndex.y, z: solvedMirror.knuckleIndex.z }, cam, ox, oy);
-  const pTipIndex = project3DToSvg({ x: -solvedMirror.tipIndex.x, y: solvedMirror.tipIndex.y, z: solvedMirror.tipIndex.z }, cam, ox, oy);
-  const pTipMid = project3DToSvg({ x: -solvedMirror.tipMid.x, y: solvedMirror.tipMid.y, z: solvedMirror.tipMid.z }, cam, ox, oy);
-  const pTipRing = project3DToSvg({ x: -solvedMirror.tipRing.x, y: solvedMirror.tipRing.y, z: solvedMirror.tipRing.z }, cam, ox, oy);
-  const pTipPinky = project3DToSvg({ x: -solvedMirror.tipPinky.x, y: solvedMirror.tipPinky.y, z: solvedMirror.tipPinky.z }, cam, ox, oy);
-  const pThumbTip = project3DToSvg({ x: -solvedMirror.thumbTip.x, y: solvedMirror.thumbTip.y, z: solvedMirror.thumbTip.z }, cam, ox, oy);
-  const pThumbKnuckle = project3DToSvg({ x: -solvedMirror.thumbKnuckle.x, y: solvedMirror.thumbKnuckle.y, z: solvedMirror.thumbKnuckle.z }, cam, ox, oy);
-
-  const html = `
-      <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
-      <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
-      <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="9.5" ry="8" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.3" />
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pThumbKnuckle.x.toFixed(1)}" y2="${pThumbKnuckle.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.5" stroke-linecap="round" />
-      <line x1="${pThumbKnuckle.x.toFixed(1)}" y1="${pThumbKnuckle.y.toFixed(1)}" x2="${pThumbTip.x.toFixed(1)}" y2="${pThumbTip.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.8" stroke-linecap="round" />
-      <circle cx="${pThumbTip.x.toFixed(1)}" cy="${pThumbTip.y.toFixed(1)}" r="2.8" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.9" />
-      <line x1="${pKnuckleIndex.x.toFixed(1)}" y1="${pKnuckleIndex.y.toFixed(1)}" x2="${pTipIndex.x.toFixed(1)}" y2="${pTipIndex.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.8" stroke-linecap="round" />
-      <circle cx="${pKnuckleIndex.x.toFixed(1)}" cy="${pKnuckleIndex.y.toFixed(1)}" r="2.5" fill="#f8be93" />
-      <circle cx="${pTipIndex.x.toFixed(1)}" cy="${pTipIndex.y.toFixed(1)}" r="2.8" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.9" />
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipMid.x.toFixed(1)}" y2="${pTipMid.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4" stroke-linecap="round" />
-      <circle cx="${pTipMid.x.toFixed(1)}" cy="${pTipMid.y.toFixed(1)}" r="2.3" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipRing.x.toFixed(1)}" y2="${pTipRing.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.6" stroke-linecap="round" />
-      <circle cx="${pTipRing.x.toFixed(1)}" cy="${pTipRing.y.toFixed(1)}" r="2.1" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipPinky.x.toFixed(1)}" y2="${pTipPinky.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.1" stroke-linecap="round" />
-      <circle cx="${pTipPinky.x.toFixed(1)}" cy="${pTipPinky.y.toFixed(1)}" r="1.9" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-    `;
+  const html = renderSolvedArticulatedHandSvg(solvedMirror, leftElbow3D, true, cam, ox, oy);
   return { html, liveBaseForearm, liveBaseWrist, liveBaseKnuckle, liveBasePalm, liveBaseTip };
 }
 
@@ -642,46 +1052,5 @@ export function buildDominantHandLayerSvg(
 ): string {
   // Kinematic Hand Solver with forearm anchored directly to the anatomical right elbow
   const solved = solveHandKinematics(wrist, knuckle, tip, shape, palm);
-
-  const pForearm = project3DToSvg(rightElbow3D, cam, ox, oy);
-  const pWrist = project3DToSvg(solved.wrist, cam, ox, oy);
-  const pPalm = project3DToSvg(solved.palm, cam, ox, oy);
-  const pKnuckleIndex = project3DToSvg(solved.knuckleIndex, cam, ox, oy);
-  const pTipIndex = project3DToSvg(solved.tipIndex, cam, ox, oy);
-  const pTipMid = project3DToSvg(solved.tipMid, cam, ox, oy);
-  const pTipRing = project3DToSvg(solved.tipRing, cam, ox, oy);
-  const pTipPinky = project3DToSvg(solved.tipPinky, cam, ox, oy);
-  const pThumbTip = project3DToSvg(solved.thumbTip, cam, ox, oy);
-  const pThumbKnuckle = project3DToSvg(solved.thumbKnuckle, cam, ox, oy);
-
-  return `
-      <!-- Forearm Limb in Natural Skin Tone -->
-      <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="10" stroke-linecap="round" />
-      
-      <!-- Wrist to Palm Pad (Thenar & Hypothenar Cushion) -->
-      <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9" stroke-linecap="round" />
-      <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="10" ry="8.5" fill="url(#bsl-hand-dominant)" stroke="#cb7c49" stroke-width="1.4" />
-      
-      <!-- Thumb (Metacarpal + Phalanx) -->
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pThumbKnuckle.x.toFixed(1)}" y2="${pThumbKnuckle.y.toFixed(1)}" stroke="url(#bsl-hand-dominant)" stroke-width="4.8" stroke-linecap="round" />
-      <line x1="${pThumbKnuckle.x.toFixed(1)}" y1="${pThumbKnuckle.y.toFixed(1)}" x2="${pThumbTip.x.toFixed(1)}" y2="${pThumbTip.y.toFixed(1)}" stroke="url(#bsl-hand-dominant)" stroke-width="4" stroke-linecap="round" />
-      <circle cx="${pThumbTip.x.toFixed(1)}" cy="${pThumbTip.y.toFixed(1)}" r="3" fill="#ffedd5" stroke="#cb7c49" stroke-width="1" />
-
-      <!-- Primary Index Finger (Proximal + Intermediate + Distal Phalanx) -->
-      <line x1="${pKnuckleIndex.x.toFixed(1)}" y1="${pKnuckleIndex.y.toFixed(1)}" x2="${pTipIndex.x.toFixed(1)}" y2="${pTipIndex.y.toFixed(1)}" stroke="url(#bsl-hand-dominant)" stroke-width="5.2" stroke-linecap="round" />
-      <!-- Knuckle accent -->
-      <circle cx="${pKnuckleIndex.x.toFixed(1)}" cy="${pKnuckleIndex.y.toFixed(1)}" r="2.8" fill="#f8be93" />
-      <!-- Fingertip pad & nail highlight -->
-      <circle cx="${pTipIndex.x.toFixed(1)}" cy="${pTipIndex.y.toFixed(1)}" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.2" filter="url(#bsl-glow)" />
-
-      <!-- Secondary Fingers (Mid, Ring, Pinky) -->
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipMid.x.toFixed(1)}" y2="${pTipMid.y.toFixed(1)}" stroke="url(#bsl-hand-dominant)" stroke-width="4.2" stroke-linecap="round" />
-      <circle cx="${pTipMid.x.toFixed(1)}" cy="${pTipMid.y.toFixed(1)}" r="2.5" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipRing.x.toFixed(1)}" y2="${pTipRing.y.toFixed(1)}" stroke="url(#bsl-hand-dominant)" stroke-width="3.8" stroke-linecap="round" />
-      <circle cx="${pTipRing.x.toFixed(1)}" cy="${pTipRing.y.toFixed(1)}" r="2.3" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-
-      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipPinky.x.toFixed(1)}" y2="${pTipPinky.y.toFixed(1)}" stroke="url(#bsl-hand-dominant)" stroke-width="3.2" stroke-linecap="round" />
-      <circle cx="${pTipPinky.x.toFixed(1)}" cy="${pTipPinky.y.toFixed(1)}" r="2" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-    `;
+  return renderSolvedArticulatedHandSvg(solved, rightElbow3D, false, cam, ox, oy);
 }
