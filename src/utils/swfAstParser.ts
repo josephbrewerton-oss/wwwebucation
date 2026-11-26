@@ -4011,33 +4011,54 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       const rootMat = matrix ? formatMatrixAttr(matrix) : '';
       const transformStack: string[] = rootMat ? [rootMat] : [];
       const out: string[] = [];
+      const ALLOWED_CLIP_ATTRS = new Set([
+        'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'points', 'fill-rule', 'clip-rule'
+      ]);
+      const escAttr = (val: string): string =>
+        val
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      const parseAttrMap = (rawAttrs: string): Map<string, string> => {
+        const map = new Map<string, string>();
+        const attrRe = /([a-zA-Z_][\w:-]*)\s*=\s*"([^"]*)"/g;
+        let am: RegExpExecArray | null;
+        while ((am = attrRe.exec(rawAttrs)) !== null) {
+          map.set(am[1].toLowerCase(), am[2]);
+        }
+        return map;
+      };
       const tokenRe = /<(\/?)(g|path|rect|circle|ellipse|polygon|polyline)\b([^>]*?)(\/?)>/gi;
       let match: RegExpExecArray | null;
       while ((match = tokenRe.exec(expandedSvg)) !== null) {
         const isClose = match[1] === '/';
         const tagName = match[2].toLowerCase();
-        const attrs = match[3] || '';
+        const attrMap = parseAttrMap(match[3] || '');
         const isSelfClose = match[4] === '/';
         if (tagName === 'g') {
           if (isClose) {
             if (transformStack.length > (rootMat ? 1 : 0)) transformStack.pop();
           } else if (!isSelfClose) {
-            const tm = attrs.match(/\btransform="([^"]*)"/i);
-            transformStack.push(tm ? tm[1] : '');
+            transformStack.push(attrMap.get('transform') || '');
           }
           continue;
         }
         if (isClose) continue;
-        let cleanAttrs = attrs
-          .replace(/\s+id="[^"]*"/gi, '')
-          .replace(/\s+fill="[^"]*"/gi, '')
-          .replace(/\s+stroke="[^"]*"/gi, '');
-        const selfTm = cleanAttrs.match(/\btransform="([^"]*)"/i);
+        const safeParts: string[] = [];
+        for (const [k, v] of attrMap.entries()) {
+          if (ALLOWED_CLIP_ATTRS.has(k)) {
+            safeParts.push(` ${k}="${escAttr(v)}"`);
+          }
+        }
         const chain = transformStack.filter(Boolean);
-        if (selfTm && selfTm[1]) chain.push(selfTm[1]);
-        cleanAttrs = cleanAttrs.replace(/\s+transform="[^"]*"/gi, '');
-        const finalTransform = chain.length > 0 ? ` transform="${chain.join(' ')}"` : '';
-        out.push(`<${tagName}${cleanAttrs}${finalTransform} />`);
+        const selfTransform = attrMap.get('transform');
+        if (selfTransform) chain.push(selfTransform);
+        if (chain.length > 0) {
+          safeParts.push(` transform="${escAttr(chain.join(' '))}"`);
+        }
+        out.push(`<${tagName}${safeParts.join('')} />`);
       }
       return out.join('\n      ');
     };

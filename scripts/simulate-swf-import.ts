@@ -830,19 +830,64 @@ async function runSimulations() {
     const mockNodes = new Map<string, any>();
     let totalNodesCreated = 0;
 
-    // Parse all id="..." elements from SVG into lightweight mock DOM nodes
-    const idRe = /<([a-zA-Z0-9_-]+)((?:\s+[^>]*?)?\s+)id="([^"]+)"([^>]*)>/g;
-    let m: RegExpExecArray | null;
-    while ((m = idRe.exec(svgMarkup)) !== null) {
-      const tag = m[1];
-      const attrChunk = `${m[2]} id="${m[3]}" ${m[4]}`;
-      const id = m[3];
-      const attrs = new Map<string, string>();
-      const aRe = /([a-zA-Z0-9_:-]+)="([^"]*)"/g;
-      let am: RegExpExecArray | null;
-      while ((am = aRe.exec(attrChunk)) !== null) {
-        attrs.set(am[1], am[2]);
+    // Parse all id="..." elements from SVG into lightweight mock DOM nodes via linear scanner
+    let scanPos = 0;
+    const svgLen = svgMarkup.length;
+    while (scanPos < svgLen) {
+      const lt = svgMarkup.indexOf('<', scanPos);
+      if (lt === -1) break;
+      scanPos = lt + 1;
+      if (scanPos >= svgLen) break;
+      const firstCh = svgMarkup[scanPos];
+      if (firstCh === '/' || firstCh === '!' || firstCh === '?') {
+        const gt = svgMarkup.indexOf('>', scanPos);
+        if (gt === -1) break;
+        scanPos = gt + 1;
+        continue;
       }
+      const nameStart = scanPos;
+      while (scanPos < svgLen && /[a-zA-Z0-9_-]/.test(svgMarkup[scanPos])) scanPos++;
+      const tag = svgMarkup.slice(nameStart, scanPos);
+      const attrs = new Map<string, string>();
+      while (scanPos < svgLen) {
+        while (scanPos < svgLen && /\s/.test(svgMarkup[scanPos])) scanPos++;
+        if (scanPos >= svgLen) break;
+        const ch = svgMarkup[scanPos];
+        if (ch === '>') {
+          scanPos++;
+          break;
+        }
+        if (ch === '/' && svgMarkup[scanPos + 1] === '>') {
+          scanPos += 2;
+          break;
+        }
+        const kStart = scanPos;
+        while (scanPos < svgLen && /[a-zA-Z0-9_:-]/.test(svgMarkup[scanPos])) scanPos++;
+        const key = svgMarkup.slice(kStart, scanPos);
+        if (!key) {
+          scanPos++;
+          continue;
+        }
+        while (scanPos < svgLen && /\s/.test(svgMarkup[scanPos])) scanPos++;
+        if (svgMarkup[scanPos] === '=') {
+          scanPos++;
+          while (scanPos < svgLen && /\s/.test(svgMarkup[scanPos])) scanPos++;
+          if (svgMarkup[scanPos] === '"' || svgMarkup[scanPos] === "'") {
+            const q = svgMarkup[scanPos++];
+            const vStart = scanPos;
+            const vEnd = svgMarkup.indexOf(q, vStart);
+            if (vEnd === -1) {
+              attrs.set(key, svgMarkup.slice(vStart));
+              scanPos = svgLen;
+            } else {
+              attrs.set(key, svgMarkup.slice(vStart, vEnd));
+              scanPos = vEnd + 1;
+            }
+          }
+        }
+      }
+      const id = attrs.get('id');
+      if (!tag || !id) continue;
       totalNodesCreated++;
       const node: any = {
         tagName: tag.toUpperCase(),

@@ -3832,41 +3832,137 @@
             }
           } catch (_) {}
         }
-        // Pure-JS XML parser fallback (for environments without DOMParser)
+        // Pure-JS linear O(n) XML parser fallback (for environments without DOMParser; zero regex backtracking)
         const stack = [this];
-        const tokenRe = /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[([\s\S]*?)\]\]>|<\/([A-Za-z_][\w:.-]*)\s*>|<([A-Za-z_][\w:.-]*)((?:\s+[^<>'"\/]+=(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)/g;
-        let m;
-        while ((m = tokenRe.exec(raw)) !== null) {
-          const parent = stack[stack.length - 1];
-          if (m[1] !== undefined || m[6] !== undefined) {
-            const txt = m[1] !== undefined ? m[1] : m[6];
-            if (this.ignoreWhite && !txt.trim()) continue;
-            parent.childNodes.push({
-              nodeType: 3, nodeName: null, nodeValue: txt, attributes: {},
-              childNodes: [], firstChild: null, lastChild: null,
-              parentNode: parent, previousSibling: null, nextSibling: null,
-              toString() { return txt; },
-            });
-          } else if (m[2]) {
-            if (stack.length > 1) {
-              linkSiblings(stack.pop());
+        const len = raw.length;
+        let pos = 0;
+        const isSpace = (ch) => ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r';
+        const isNameStart = (ch) => (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch === '_';
+        const isNameChar = (ch) => isNameStart(ch) || (ch >= '0' && ch <= '9') || ch === ':' || ch === '.' || ch === '-';
+
+        while (pos < len) {
+          const lt = raw.indexOf('<', pos);
+          if (lt === -1) {
+            const txt = raw.slice(pos);
+            if (!this.ignoreWhite || txt.trim()) {
+              const parent = stack[stack.length - 1];
+              parent.childNodes.push({
+                nodeType: 3, nodeName: null, nodeValue: txt, attributes: {},
+                childNodes: [], firstChild: null, lastChild: null,
+                parentNode: parent, previousSibling: null, nextSibling: null,
+                toString() { return txt; },
+              });
             }
-          } else if (m[3]) {
+            break;
+          }
+          if (lt > pos) {
+            const txt = raw.slice(pos, lt);
+            if (!this.ignoreWhite || txt.trim()) {
+              const parent = stack[stack.length - 1];
+              parent.childNodes.push({
+                nodeType: 3, nodeName: null, nodeValue: txt, attributes: {},
+                childNodes: [], firstChild: null, lastChild: null,
+                parentNode: parent, previousSibling: null, nextSibling: null,
+                toString() { return txt; },
+              });
+            }
+          }
+          pos = lt;
+          if (raw.startsWith('<!--', pos)) {
+            const end = raw.indexOf('-->', pos + 4);
+            pos = end === -1 ? len : end + 3;
+            continue;
+          }
+          if (raw.startsWith('<?', pos)) {
+            const end = raw.indexOf('?>', pos + 2);
+            pos = end === -1 ? len : end + 2;
+            continue;
+          }
+          if (raw.startsWith('<![CDATA[', pos)) {
+            const end = raw.indexOf(']]>', pos + 9);
+            const txt = end === -1 ? raw.slice(pos + 9) : raw.slice(pos + 9, end);
+            if (!this.ignoreWhite || txt.trim()) {
+              const parent = stack[stack.length - 1];
+              parent.childNodes.push({
+                nodeType: 3, nodeName: null, nodeValue: txt, attributes: {},
+                childNodes: [], firstChild: null, lastChild: null,
+                parentNode: parent, previousSibling: null, nextSibling: null,
+                toString() { return txt; },
+              });
+            }
+            pos = end === -1 ? len : end + 3;
+            continue;
+          }
+          if (raw.startsWith('</', pos)) {
+            const end = raw.indexOf('>', pos + 2);
+            if (stack.length > 1) linkSiblings(stack.pop());
+            pos = end === -1 ? len : end + 1;
+            continue;
+          }
+          // Opening or self-closing tag
+          let i = pos + 1;
+          if (i < len && isNameStart(raw[i])) {
+            const nameStart = i;
+            i++;
+            while (i < len && isNameChar(raw[i])) i++;
+            const tagName = raw.slice(nameStart, i);
             const attrs = {};
-            const attrStr = m[4] || '';
-            const attrRe = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-            let am;
-            while ((am = attrRe.exec(attrStr)) !== null) {
-              attrs[am[1]] = am[2] !== undefined ? am[2] : (am[3] || '');
+            let selfClose = false;
+            while (i < len) {
+              while (i < len && isSpace(raw[i])) i++;
+              if (i >= len) break;
+              if (raw[i] === '>') { i++; break; }
+              if (raw[i] === '/' && i + 1 < len && raw[i + 1] === '>') {
+                selfClose = true;
+                i += 2;
+                break;
+              }
+              if (!isNameStart(raw[i])) {
+                const gt = raw.indexOf('>', i);
+                i = gt === -1 ? len : gt + 1;
+                break;
+              }
+              const kStart = i;
+              i++;
+              while (i < len && isNameChar(raw[i])) i++;
+              const attrKey = raw.slice(kStart, i);
+              while (i < len && isSpace(raw[i])) i++;
+              if (i < len && raw[i] === '=') {
+                i++;
+                while (i < len && isSpace(raw[i])) i++;
+                let attrVal = '';
+                if (i < len && (raw[i] === '"' || raw[i] === "'")) {
+                  const quote = raw[i++];
+                  const vStart = i;
+                  const vEnd = raw.indexOf(quote, vStart);
+                  if (vEnd === -1) {
+                    attrVal = raw.slice(vStart);
+                    i = len;
+                  } else {
+                    attrVal = raw.slice(vStart, vEnd);
+                    i = vEnd + 1;
+                  }
+                } else {
+                  const vStart = i;
+                  while (i < len && !isSpace(raw[i]) && raw[i] !== '>' && raw[i] !== '/') i++;
+                  attrVal = raw.slice(vStart, i);
+                }
+                attrs[attrKey] = attrVal;
+              }
             }
+            const parent = stack[stack.length - 1];
             const el = {
-              nodeType: 1, nodeName: m[3], nodeValue: null, attributes: attrs,
+              nodeType: 1, nodeName: tagName, nodeValue: null, attributes: attrs,
               childNodes: [], firstChild: null, lastChild: null,
               parentNode: parent, previousSibling: null, nextSibling: null,
               toString() { return `<${this.nodeName}/>`; },
             };
             parent.childNodes.push(el);
-            if (!m[5]) stack.push(el);
+            if (!selfClose) stack.push(el);
+            pos = i;
+          } else {
+            // Malformed '<' character; skip safely
+            pos = lt + 1;
           }
         }
         while (stack.length > 0) linkSiblings(stack.pop());
