@@ -86,7 +86,23 @@ export function renderPlayerPage(): HTMLElement {
   // Read initial preset (?preset= or ?app=) or external ?src= from URL
   const params = new URLSearchParams(window.location.search);
   const requestedPresetParam = params.get('preset') || params.get('app');
-  const initialSrcParam = params.get('src') || params.get('file');
+  const sanitizeSameOriginSrc = (raw: string | null): string | null => {
+    if (!raw || typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = new URL(trimmed, window.location.href);
+      if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.origin !== window.location.origin) {
+        return null;
+      }
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return null;
+    }
+  };
+  const rawSrcParam = params.get('src') || params.get('file');
+  const initialSrcParam = sanitizeSameOriginSrc(rawSrcParam);
+  const blockedExternalSrcOnBoot = Boolean(rawSrcParam && !initialSrcParam);
   const resolvedInitialPreset = !requestedPresetParam && initialSrcParam && initialSrcParam.includes('lumina-architecture')
     ? 'lumina-architecture'
     : normalizePresetId(requestedPresetParam);
@@ -1431,7 +1447,7 @@ export function renderPlayerPage(): HTMLElement {
   const onPopState = () => {
     const p = new URLSearchParams(window.location.search);
     const nextPreset = p.get('preset') || p.get('app');
-    const nextSrc = p.get('src') || p.get('file');
+    const nextSrc = sanitizeSameOriginSrc(p.get('src') || p.get('file'));
     if (nextPreset) {
       updatePreset(nextPreset, false, false);
     } else if (nextSrc) {
@@ -1491,9 +1507,15 @@ export function renderPlayerPage(): HTMLElement {
 
   async function loadExternalSwfUrl(swfUrl: string) {
     try {
-      const safeUrl = swfUrl.trim();
-      if (!safeUrl || /^javascript:/i.test(safeUrl)) return;
-      showImportStatus(`⚡ Fetching & transpiling Flash SWF (${safeUrl})...`, 'success');
+      const safeUrl = sanitizeSameOriginSrc(swfUrl);
+      if (!safeUrl) {
+        showImportStatus(
+          'External remote URLs are blocked to keep the portal offline-safe. Download the .swf file and drop it into the local Flash Upgrade panel instead.',
+          'error'
+        );
+        return;
+      }
+      showImportStatus(`⚡ Fetching & transpiling local Flash SWF (${safeUrl})...`, 'success');
       const res = await fetch(safeUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${safeUrl}`);
       const buf = await res.arrayBuffer();
@@ -1503,9 +1525,15 @@ export function renderPlayerPage(): HTMLElement {
       });
       await handleUploadedFiles([file]);
     } catch (err: any) {
-      console.error('[media-player] Failed loading external SWF URL:', swfUrl, err);
-      showImportStatus(`Could not load Flash SWF from URL: ${err?.message || 'fetch error'}`, 'error');
+      console.error('[media-player] Failed loading local SWF URL:', swfUrl, err);
+      showImportStatus(`Could not load Flash SWF: ${err?.message || 'fetch error'}`, 'error');
     }
+  }
+  if (blockedExternalSrcOnBoot) {
+    showImportStatus(
+      'External remote ?src= links are blocked to keep the portal offline-safe. Please import files locally using Open File or Upgrade Flash (.swf).',
+      'error'
+    );
   }
 
   function renderRecentStrip() {

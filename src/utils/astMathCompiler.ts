@@ -89,22 +89,19 @@ export function compileExpressionToMathKernel(expr: string, targetAttr?: string)
     else if (targetAttr === 'height') detectedTransform = 'height';
   }
 
-  // 2. Symbolic Linear Affine Detection via Multi-Point Evaluation Probe
-  // Check if innerMath depends solely on t (or linear affine combinations)
-  // We evaluate at t = 0, t = 1, t = 2, and t = 0.5
+  // 2. Symbolic Linear Affine Detection via Safe Zero-Eval Multi-Point Probe
+  // Evaluates pure numeric expressions in `t` at t = 0, 1, 2, 0.5 with zero eval / new Function sinks.
   try {
-    const fn = new Function('t', 'vars', 'Math', `"use strict"; return (${innerMath});`);
-    const mockVars = {};
-    const y0 = fn(0, mockVars, Math);
-    const y1 = fn(1, mockVars, Math);
-    const y2 = fn(2, mockVars, Math);
-    const yHalf = fn(0.5, mockVars, Math);
+    const y0 = evalSafeMathExpr(innerMath, 0);
+    const y1 = evalSafeMathExpr(innerMath, 1);
+    const y2 = evalSafeMathExpr(innerMath, 2);
+    const yHalf = evalSafeMathExpr(innerMath, 0.5);
 
     if (
-      typeof y0 === 'number' && Number.isFinite(y0) &&
-      typeof y1 === 'number' && Number.isFinite(y1) &&
-      typeof y2 === 'number' && Number.isFinite(y2) &&
-      typeof yHalf === 'number' && Number.isFinite(yHalf)
+      Number.isFinite(y0) &&
+      Number.isFinite(y1) &&
+      Number.isFinite(y2) &&
+      Number.isFinite(yHalf)
     ) {
       const slope = y1 - y0;
       const c = y0;
@@ -127,10 +124,190 @@ export function compileExpressionToMathKernel(expr: string, targetAttr?: string)
       }
     }
   } catch {
-    // If dynamic probing fails (e.g. references complex string arrays or state machines), fallback gracefully
+    // If probing fails (e.g. references variables, strings, or state machines), fallback gracefully
   }
 
   return { kind: 'fallback', originalExpr: expr };
+}
+
+const SAFE_MATH_CONSTANTS: Record<string, number> = {
+  PI: Math.PI,
+  E: Math.E,
+  LN2: Math.LN2,
+  LN10: Math.LN10,
+  SQRT2: Math.SQRT2,
+};
+
+const SAFE_MATH_FUNCS: Record<string, (...args: number[]) => number> = {
+  abs: Math.abs,
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  sqrt: Math.sqrt,
+  pow: Math.pow,
+  min: Math.min,
+  max: Math.max,
+  floor: Math.floor,
+  ceil: Math.ceil,
+  round: Math.round,
+};
+
+/**
+ * Pure recursive-descent numeric math evaluator (zero eval / new Function).
+ * Supports numeric literals, `t`, `Math.<const|fn>`, unary +/-, + - * / %, and parentheses.
+ * Returns NaN on any non-math syntax or unknown identifier.
+ */
+function evalSafeMathExpr(src: string, tVal: number): number {
+  let pos = 0;
+  const len = src.length;
+  const skipWs = () => {
+    while (pos < len && (src[pos] === ' ' || src[pos] === '\t' || src[pos] === '\n' || src[pos] === '\r')) pos++;
+  };
+
+  const parseExpr = (): number => {
+    let left = parseTerm();
+    while (true) {
+      skipWs();
+      if (pos >= len) break;
+      const ch = src[pos];
+      if (ch === '+') {
+        pos++;
+        left = left + parseTerm();
+      } else if (ch === '-') {
+        pos++;
+        left = left - parseTerm();
+      } else {
+        break;
+      }
+    }
+    return left;
+  };
+
+  const parseTerm = (): number => {
+    let left = parseUnary();
+    while (true) {
+      skipWs();
+      if (pos >= len) break;
+      const ch = src[pos];
+      if (ch === '*') {
+        pos++;
+        left = left * parseUnary();
+      } else if (ch === '/') {
+        pos++;
+        left = left / parseUnary();
+      } else if (ch === '%') {
+        pos++;
+        left = left % parseUnary();
+      } else {
+        break;
+      }
+    }
+    return left;
+  };
+
+  const parseUnary = (): number => {
+    skipWs();
+    if (pos < len && src[pos] === '+') {
+      pos++;
+      return +parseUnary();
+    }
+    if (pos < len && src[pos] === '-') {
+      pos++;
+      return -parseUnary();
+    }
+    return parsePrimary();
+  };
+
+  const parsePrimary = (): number => {
+    skipWs();
+    if (pos >= len) return NaN;
+
+    if (src[pos] === '(') {
+      pos++;
+      const val = parseExpr();
+      skipWs();
+      if (src[pos] !== ')') return NaN;
+      pos++;
+      return val;
+    }
+
+    // Numeric literal
+    if ((src[pos] >= '0' && src[pos] <= '9') || src[pos] === '.') {
+      const start = pos;
+      while (pos < len && ((src[pos] >= '0' && src[pos] <= '9') || src[pos] === '.')) pos++;
+      if (pos < len && (src[pos] === 'e' || src[pos] === 'E')) {
+        pos++;
+        if (pos < len && (src[pos] === '+' || src[pos] === '-')) pos++;
+        while (pos < len && src[pos] >= '0' && src[pos] <= '9') pos++;
+      }
+      const num = Number(src.slice(start, pos));
+      return Number.isFinite(num) ? num : NaN;
+    }
+
+    // Identifier (`t` or `Math.<member>`)
+    if ((src[pos] >= 'a' && src[pos] <= 'z') || (src[pos] >= 'A' && src[pos] <= 'Z') || src[pos] === '_') {
+      const start = pos;
+      while (
+        pos < len &&
+        ((src[pos] >= 'a' && src[pos] <= 'z') ||
+          (src[pos] >= 'A' && src[pos] <= 'Z') ||
+          (src[pos] >= '0' && src[pos] <= '9') ||
+          src[pos] === '_')
+      ) {
+        pos++;
+      }
+      const ident = src.slice(start, pos);
+      if (ident === 't') return tVal;
+      if (ident === 'Math') {
+        skipWs();
+        if (src[pos] !== '.') return NaN;
+        pos++;
+        skipWs();
+        const mStart = pos;
+        while (
+          pos < len &&
+          ((src[pos] >= 'a' && src[pos] <= 'z') ||
+            (src[pos] >= 'A' && src[pos] <= 'Z') ||
+            (src[pos] >= '0' && src[pos] <= '9') ||
+            src[pos] === '_')
+        ) {
+          pos++;
+        }
+        const member = src.slice(mStart, pos);
+        if (Object.prototype.hasOwnProperty.call(SAFE_MATH_CONSTANTS, member)) {
+          return SAFE_MATH_CONSTANTS[member];
+        }
+        if (Object.prototype.hasOwnProperty.call(SAFE_MATH_FUNCS, member)) {
+          skipWs();
+          if (src[pos] !== '(') return NaN;
+          pos++;
+          const args: number[] = [];
+          skipWs();
+          if (src[pos] !== ')') {
+            while (true) {
+              args.push(parseExpr());
+              skipWs();
+              if (src[pos] === ',') {
+                pos++;
+                continue;
+              }
+              break;
+            }
+          }
+          if (src[pos] !== ')') return NaN;
+          pos++;
+          return SAFE_MATH_FUNCS[member](...args);
+        }
+      }
+      return NaN;
+    }
+
+    return NaN;
+  };
+
+  const result = parseExpr();
+  skipWs();
+  return pos === len && Number.isFinite(result) ? result : NaN;
 }
 
 /**

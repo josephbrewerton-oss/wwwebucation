@@ -387,19 +387,57 @@ export function exportCustomCartridgeBundle(
       renderScene();
     }
 
+    function mountSafeSvg(container, rawSvg) {
+      container.replaceChildren();
+      try {
+        const doc = new DOMParser().parseFromString(rawSvg, 'image/svg+xml');
+        const root = doc.documentElement;
+        if (!root || root.tagName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) return false;
+        root.querySelectorAll('script, foreignObject, iframe, object, embed, link, meta').forEach((n) => n.remove());
+        const walk = [root, ...Array.from(root.querySelectorAll('*'))];
+        walk.forEach((el) => {
+          Array.from(el.attributes).forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            const val = (attr.value || '').trim().toLowerCase();
+            if (name.startsWith('on') || val.startsWith('javascript:') || val.startsWith('vbscript:') || val.startsWith('data:text/html')) {
+              el.removeAttribute(attr.name);
+            }
+          });
+        });
+        container.appendChild(document.importNode(root, true));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
     function renderScene() {
       const cur = scenes[currentIdx];
       paramDock.style.display = 'none';
       paramDock.innerHTML = '';
 
-      if (cur.svgMarkup && cur.svgMarkup.includes('<svg')) {
-        viewport.innerHTML = cur.svgMarkup;
-      } else {
+      if (!(cur.svgMarkup && cur.svgMarkup.includes('<svg') && mountSafeSvg(viewport, cur.svgMarkup))) {
         // Fallback default vector stage
-        viewport.innerHTML = \`<svg viewBox="0 0 800 480" width="800" height="480">
-          <rect width="800" height="480" fill="#090d16" />
-          <text x="400" y="240" fill="#38bdf8" font-size="22" font-weight="900" text-anchor="middle">\${cur.title}</text>
-        </svg>\`;
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', '0 0 800 480');
+        svg.setAttribute('width', '800');
+        svg.setAttribute('height', '480');
+        const bg = document.createElementNS(ns, 'rect');
+        bg.setAttribute('width', '800');
+        bg.setAttribute('height', '480');
+        bg.setAttribute('fill', '#090d16');
+        const txt = document.createElementNS(ns, 'text');
+        txt.setAttribute('x', '400');
+        txt.setAttribute('y', '240');
+        txt.setAttribute('fill', '#38bdf8');
+        txt.setAttribute('font-size', '22');
+        txt.setAttribute('font-weight', '900');
+        txt.setAttribute('text-anchor', 'middle');
+        txt.textContent = String(cur.title || 'Interactive Lab');
+        svg.appendChild(bg);
+        svg.appendChild(txt);
+        viewport.replaceChildren(svg);
       }
 
       // Specialized Reactive Manipulative Hooks

@@ -490,6 +490,15 @@
             resolvedUrl = dynamicBase.replace(/\/$/, '') + url;
           }
         }
+        if (typeof window !== 'undefined' && window.location) {
+          const parsedUrl = new URL(resolvedUrl, window.location.href);
+          const allowedProto = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'file:';
+          const sameOrigin = parsedUrl.protocol === 'file:' ? window.location.protocol === 'file:' : parsedUrl.origin === window.location.origin;
+          if (!allowedProto || !sameOrigin) {
+            throw new Error('Blocked external URL: only same-origin resources or local file imports are allowed.');
+          }
+          resolvedUrl = parsedUrl.href;
+        }
         const res = await fetch(resolvedUrl);
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);

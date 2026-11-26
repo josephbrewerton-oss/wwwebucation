@@ -553,9 +553,9 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       mockBytes: () => buildFlashAs3LabSampleSwf(),
     },
     {
-      id: 'pacman',
-      title: 'Pac-Man Arcade (pacman.swf)',
-      desc: 'Live binary SWF v8 Pac-Man with chomping sprite, Arrow/WASD steering, GlowFilter walls/ghosts, PCM waka/power Web Audio, Color.setRGB frightened ghosts, and editable player input.',
+      id: 'maze-arcade',
+      title: 'Maze Chomper Arcade (maze-arcade.swf)',
+      desc: 'Original procedural binary SWF v8 maze demo with chomping vector sprite, Arrow/WASD steering, GlowFilter walls/chasers, PCM Web Audio, Color.setRGB frightened mode, and editable player input.',
       mockBytes: () => buildFlashPacmanSampleSwf(),
     },
     {
@@ -590,7 +590,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
   });
   root.appendChild(samplesWrap);
 
-  // 2b. Honest Compatibility & Known Limits Notice
+  // 2b. Honest Compatibility, Rights & Trademark Notice
   const limitsBox = document.createElement('div');
   limitsBox.style.cssText =
     'padding:10px 12px; border-radius:8px; background:rgba(15, 23, 42, 0.75); border:1px solid #1e293b; font-size:0.74rem; line-height:1.5; color:#cbd5e1; display:flex; flex-direction:column; gap:4px;';
@@ -599,6 +599,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     <span><strong style="color:#86efac;">Works best:</strong> Vector-first Flash 5&ndash;8 (ActionScript 1/2) applets, quizzes, simulations, and classic games with timeline animation, buttons, keyboard/mouse controls, editable text, and embedded PCM/ADPCM sound.</span>
     <span><strong style="color:#fde68a;">Partial / experimental:</strong> ActionScript 3 (AVM2) runs core vector timelines and basic events, while complex AS3/Flex frameworks and heavy real-world SWFs may have edge cases &mdash; please test each file before a lesson.</span>
     <span><strong style="color:#fca5a5;">Not supported (by design):</strong> Stage3D/WebGL, pixel-buffer <code style="color:#e2e8f0;">BitmapData</code> shaders, streaming FLV video (<code style="color:#e2e8f0;">NetStream</code>), camera/mic/sockets, and live external web/high-score APIs (runs 100% offline in pure SVG).</span>
+    <span style="margin-top:4px; padding-top:6px; border-top:1px solid #1e293b; color:#94a3b8; font-size:0.71rem;"><strong style="color:#cbd5e1;">Local Processing &amp; Rights:</strong> Files are parsed and converted 100% locally in your browser and are never uploaded or hosted by this site. Please only import, convert, or adapt <code style="color:#cbd5e1;">.swf</code> files that you own, authored, or hold permission/open licences to reuse. Independent clean-room compatibility tool; Adobe and Flash are trademarks of Adobe Inc. (no affiliation or endorsement).</span>
   `;
   root.appendChild(limitsBox);
 

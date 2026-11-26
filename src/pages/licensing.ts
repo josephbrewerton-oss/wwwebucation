@@ -64,6 +64,23 @@ export function renderLicensingPage(): HTMLElement {
         </li>
       </ul>
     </div>
+
+    <!-- Legacy Format Conversion & Trademark Notice -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.75rem; margin-bottom: 2.5rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 0.75rem 0;">Legacy Format Conversion, User Rights &amp; Trademarks</h2>
+      <ul style="font-size: 0.88rem; color: #475569; line-height: 1.75; margin: 0; padding-left: 1.25rem;">
+        <li>
+          <strong>100% Local On-Device Conversion:</strong> The Flash (<code style="color: #0f172a;">.swf</code>), PhET, and syllabus import tools run entirely inside your browser using clean-room open-source code. User-supplied files are never uploaded to, stored on, or redistributed by our servers.
+        </li>
+        <li>
+          <strong>User Content Responsibility:</strong> Teachers, schools, and learners are responsible for ensuring they own, authored, or hold the appropriate licence or permission to convert, update, or reuse any third-party <code style="color: #0f172a;">.swf</code> or curriculum file they load locally.
+        </li>
+        <li>
+          <strong>Independent Tooling &amp; Trademark Notice:</strong> References to third-party formats and curricula are descriptive only. Adobe and Flash are trademarks of Adobe Inc.; PhET is a trademark of the University of Colorado Boulder; AQA, Edexcel, and OCR are trademarks of their respective awarding bodies. St Joseph's Curriculum Portal is an independent open-source project and is not affiliated with or endorsed by any of those organisations.
+        </li>
+      </ul>
+    </div>
+
     <!-- Back to Home -->
     <div style="text-align: center; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
       <a href="${base}" style="color: #0284c7; font-weight: 700; text-decoration: none;">&larr; Back to St Joseph's Portal</a>
