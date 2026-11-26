@@ -23,8 +23,8 @@
   'use strict';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const MAX_OPS_PER_CALL = 60000;
-  const MAX_OPS_PER_TICK = 150000;
+  const MAX_OPS_PER_CALL = 250000;
+  const MAX_OPS_PER_TICK = 450000;
   const MAX_CALL_DEPTH = 96;
   const SAFE_DATA_IMAGE_RE = /^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=\s]+$/i;
 
@@ -1518,16 +1518,30 @@
       if (b.h > 0) this.scaleY = (Number(v) || 0) / b.h;
     }
 
-    _getGlobalPosition() {
-      let gx = 0;
-      let gy = 0;
+    _getGlobalTransform() {
+      const chain = [];
       let cur = this;
       while (cur && !cur._isStage) {
-        gx += cur._x || 0;
-        gy += cur._y || 0;
+        chain.push(cur);
         cur = cur.parent;
       }
-      return { x: gx, y: gy };
+      let gx = 0;
+      let gy = 0;
+      let sx = 1;
+      let sy = 1;
+      for (let i = chain.length - 1; i >= 0; i--) {
+        const node = chain[i];
+        gx += (node._x || 0) * sx;
+        gy += (node._y || 0) * sy;
+        sx *= node._scaleX !== undefined ? node._scaleX : 1;
+        sy *= node._scaleY !== undefined ? node._scaleY : 1;
+      }
+      return { x: gx, y: gy, sx, sy };
+    }
+
+    _getGlobalPosition() {
+      const gt = this._getGlobalTransform();
+      return { x: gt.x, y: gt.y };
     }
 
     _computeBounds() {
@@ -1536,8 +1550,17 @@
 
     getBounds() {
       const b = this._computeBounds();
-      const g = this._getGlobalPosition();
-      return new AS3Rectangle(g.x + b.x * this._scaleX, g.y + b.y * this._scaleY, b.w * Math.abs(this._scaleX), b.h * Math.abs(this._scaleY));
+      const gt = this._getGlobalTransform();
+      const x1 = gt.x + b.x * gt.sx;
+      const y1 = gt.y + b.y * gt.sy;
+      const x2 = x1 + b.w * gt.sx;
+      const y2 = y1 + b.h * gt.sy;
+      return new AS3Rectangle(
+        Math.min(x1, x2),
+        Math.min(y1, y2),
+        Math.abs(x2 - x1),
+        Math.abs(y2 - y1)
+      );
     }
 
     hitTestObject(other) {
@@ -1782,6 +1805,8 @@
   class AS3Shape extends AS3DisplayObject {
     constructor(vm) {
       super(vm);
+      // In Flash AS3, Shape extends DisplayObject (not InteractiveObject), so static shapes & DefineText overlays never intercept clicks
+      this.mouseEnabled = false;
       this.graphics = new AS3Graphics(this);
       this._graphicsEl = null;
     }
@@ -3827,8 +3852,89 @@
           }
           el.appendChild(path);
         }
+        if (prims.length === 0 && typeof shDef.svg === 'string' && shDef.svg.trim()) {
+          try {
+            if (typeof DOMParser !== 'undefined') {
+              const parsed = new DOMParser().parseFromString(
+                `<svg xmlns="${SVG_NS}">${shDef.svg}</svg>`,
+                'image/svg+xml'
+              );
+              const rootSvg = parsed && parsed.documentElement;
+              if (rootSvg && !rootSvg.querySelector('parsererror')) {
+                const nodes = Array.from(rootSvg.childNodes);
+                for (let k = 0; k < nodes.length; k++) {
+                  const imported = this._doc.importNode ? this._doc.importNode(nodes[k], true) : nodes[k].cloneNode(true);
+                  el.appendChild(imported);
+                }
+              }
+            }
+          } catch (_) {}
+        }
       }
       return shape;
+    }
+
+    _buildButtonStateContainer(records, stateMask) {
+      const matching = [];
+      for (let i = 0; i < records.length; i++) {
+        if ((records[i].s & stateMask) !== 0) matching.push(records[i]);
+      }
+      if (matching.length === 0) return null;
+      const container = new AS3Sprite(this);
+      container.mouseChildren = false;
+      for (let i = 0; i < matching.length; i++) {
+        const rec = matching[i];
+        let part = null;
+        if (this.program.et && this.program.et[rec.c]) {
+          part = new AS3TextField(this, this.program.et[rec.c]);
+        } else if (this.program.sp && this.program.sp[rec.c]) {
+          part = new AS3MovieClip(this, this.program.sp[rec.c]);
+          part._syncTimeline();
+        } else if (this.program.sh && this.program.sh[rec.c]) {
+          part = this._buildShapeDisplayObject(rec.c);
+        }
+        if (!part) continue;
+        if (Array.isArray(rec.m) && rec.m.length === 6) {
+          part._scaleX = rec.m[0];
+          part._scaleY = rec.m[3];
+          part._x = rec.m[4];
+          part._y = rec.m[5];
+          part._transformDirty = true;
+        }
+        if (rec.a !== undefined && rec.a < 1) {
+          part.alpha = rec.a;
+        }
+        container.addChild(part);
+      }
+      return container;
+    }
+
+    _buildSimpleButtonFromDef(charId) {
+      const def = this.program.bt && this.program.bt[charId];
+      if (!def) return null;
+      const recs = (def.r || []).slice().sort((a, b) => (a.d || 0) - (b.d || 0));
+      const upState = this._buildButtonStateContainer(recs, 0x01);
+      const overState = this._buildButtonStateContainer(recs, 0x02);
+      const downState = this._buildButtonStateContainer(recs, 0x04);
+      const hitTestState = this._buildButtonStateContainer(recs, 0x08)
+        || upState
+        || (recs.length > 0 ? this._buildButtonStateContainer([recs[0]], recs[0].s || 0x0f) : null);
+
+      const symName = this.program.sym && this.program.sym[charId];
+      const clsDesc = symName ? this._resolveClass(symName) : null;
+      let btn = null;
+      if (clsDesc) {
+        btn = this._instantiateClass(clsDesc, []);
+      }
+      if (!btn || !(btn instanceof AS3SimpleButton)) {
+        btn = new AS3SimpleButton(this, upState, overState, downState, hitTestState);
+      } else {
+        if (!btn.upState && upState) btn.upState = upState;
+        if (!btn.overState && overState) btn.overState = overState;
+        if (!btn.downState && downState) btn.downState = downState;
+        if (!btn.hitTestState && hitTestState) btn.hitTestState = hitTestState;
+      }
+      return btn;
     }
 
     _resolveTimelineFrameEntries(timelineDef, frame1Based) {
@@ -3907,6 +4013,8 @@
         if (!child) {
           if (this.program.et && this.program.et[item.c]) {
             child = new AS3TextField(this, this.program.et[item.c]);
+          } else if (this.program.bt && this.program.bt[item.c]) {
+            child = this._buildSimpleButtonFromDef(item.c);
           } else if (this.program.sp && this.program.sp[item.c]) {
             const symName = this.program.sym && this.program.sym[item.c];
             const clsDesc = symName ? this._resolveClass(symName) : null;
@@ -4101,6 +4209,7 @@
 
     _hitTestDeepest(node, sx, sy) {
       if (!node || !node._visible) return null;
+      if (node instanceof AS3SimpleButton && !node.enabled) return null;
       if (node._children && node.mouseChildren !== false) {
         for (let i = node._children.length - 1; i >= 0; i--) {
           const hit = this._hitTestDeepest(node._children[i], sx, sy);
@@ -4124,6 +4233,8 @@
       }
 
       if (ev.kind === 'key-down' || ev.kind === 'key-up') {
+        const prevFrame = this.rootDoc ? this.rootDoc.currentFrame : 1;
+        const prevPlaying = this.rootDoc ? Boolean(this.rootDoc._playing) : false;
         const kc = Number(ev.keyCode) || decodeKeyCode(ev.key, ev.code);
         const ch = typeof ev.key === 'string' && ev.key.length === 1 ? ev.key.charCodeAt(0) : 0;
         if (ev.kind === 'key-down') {
@@ -4147,10 +4258,17 @@
         const target = this.stage.focus || this.stage;
         target.dispatchEvent(kbEv);
         if (this._doc) this.stage._syncSvg(this._doc);
+        if (this.rootDoc && ((this.rootDoc.currentFrame !== prevFrame) || (!prevPlaying && this.rootDoc._playing))) {
+          if (this.engine && !this.engine.isPlaying && typeof this.engine.play === 'function') {
+            this.engine.play();
+          }
+        }
         return true;
       }
 
       if (ev.kind === 'pointer-move' || ev.kind === 'pointer-down' || ev.kind === 'pointer-up' || ev.kind === 'wheel') {
+        const prevFrame = this.rootDoc ? this.rootDoc.currentFrame : 1;
+        const prevPlaying = this.rootDoc ? Boolean(this.rootDoc._playing) : false;
         if (Number.isFinite(ev.stageX)) this._mouseX = ev.stageX;
         if (Number.isFinite(ev.stageY)) this._mouseY = ev.stageY;
 
@@ -4165,6 +4283,10 @@
         const ly = this._mouseY - g.y;
 
         if (ev.kind === 'pointer-down') {
+          this._pressedTarget = target;
+          if (target instanceof AS3SimpleButton && target.enabled) {
+            target._state = 'down';
+          }
           if (target instanceof AS3TextField && target.type === 'input') {
             this.stage.focus = target;
           } else if (this.stage.focus) {
@@ -4172,14 +4294,35 @@
           }
           target.dispatchEvent(new AS3MouseEvent(AS3MouseEvent.MOUSE_DOWN, true, false, lx, ly, this._mouseX, this._mouseY));
         } else if (ev.kind === 'pointer-up') {
+          const pressed = this._pressedTarget;
+          this._pressedTarget = null;
+          if (pressed instanceof AS3SimpleButton) {
+            pressed._state = pressed === target ? 'over' : 'up';
+          }
           target.dispatchEvent(new AS3MouseEvent(AS3MouseEvent.MOUSE_UP, true, false, lx, ly, this._mouseX, this._mouseY));
-          target.dispatchEvent(new AS3MouseEvent(AS3MouseEvent.CLICK, true, false, lx, ly, this._mouseX, this._mouseY));
+          let clickTarget = target;
+          if (pressed && pressed !== target && pressed instanceof AS3SimpleButton && pressed.enabled && pressed.hitTestPoint(this._mouseX, this._mouseY)) {
+            clickTarget = pressed;
+          }
+          clickTarget.dispatchEvent(new AS3MouseEvent(AS3MouseEvent.CLICK, true, false, lx, ly, this._mouseX, this._mouseY));
         } else if (ev.kind === 'pointer-move') {
+          if (this._hoverTarget && this._hoverTarget !== target && this._hoverTarget instanceof AS3SimpleButton) {
+            this._hoverTarget._state = 'up';
+          }
+          this._hoverTarget = target;
+          if (target instanceof AS3SimpleButton && target.enabled) {
+            target._state = this._pressedTarget === target ? 'down' : 'over';
+          }
           target.dispatchEvent(new AS3MouseEvent(AS3MouseEvent.MOUSE_MOVE, true, false, lx, ly, this._mouseX, this._mouseY));
         } else if (ev.kind === 'wheel') {
           target.dispatchEvent(new AS3MouseEvent(AS3MouseEvent.MOUSE_WHEEL, true, false, lx, ly, this._mouseX, this._mouseY, ev.deltaY || 0));
         }
         if (this._doc) this.stage._syncSvg(this._doc);
+        if (this.rootDoc && ((this.rootDoc.currentFrame !== prevFrame) || (!prevPlaying && this.rootDoc._playing))) {
+          if (this.engine && !this.engine.isPlaying && typeof this.engine.play === 'function') {
+            this.engine.play();
+          }
+        }
         return true;
       }
 
