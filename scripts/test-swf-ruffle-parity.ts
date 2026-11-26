@@ -933,11 +933,450 @@ async function testDecoupledMediaInputRoute() {
   console.log('✓ Test 4 passed: Decoupled Universal Media Input Route (player-gestures.ast -> site-gestures.js -> Independent Media Sink)');
 }
 
+// ============================================================================
+// TEST 5: General-Purpose AVM1 Spec Compliance
+//   - ActionWith timeline/target scoping (stop/gotoAndStop inside with(child) never freezes _root)
+//   - Relative ".." / "../" / "../:var" / ":local" / "/child" target & variable paths
+//   - Function base_clip (fn._defClip) vs `this` scoping on child.onEnterFrame
+//   - AS2 ActionExtends + super() constructor + super.method()
+//   - Flash Array.sort(flags), numeric attachMovie(lnk, 0, depth), unknown frame label no-op, SWF 5 undefined == 0
+// ============================================================================
+
+async function testAvm1CoreSpecCompliance() {
+  const { ASTAVM1Runtime } = createAvm1Sandbox();
+
+  const actionWith = (body: number[]): number[] => [0x94, 0x02, 0x00, ...u16le(body.length), ...body];
+  const actionDefFn = (name: string, params: string[], body: number[]): number[] => {
+    const hdr = [...cstr(name), ...u16le(params.length)];
+    for (const p of params) hdr.push(...cstr(p));
+    hdr.push(...u16le(body.length));
+    return [0x9b, ...u16le(hdr.length), ...hdr, ...body];
+  };
+  const actionGotoFrame = (frame0: number): number[] => [0x81, 0x02, 0x00, ...u16le(frame0)];
+  const actionSetTarget = (name: string): number[] => {
+    const payload = cstr(name);
+    return [0x8b, ...u16le(payload.length), ...payload];
+  };
+
+  // Sprite 10 (childClip): 2 frames; Frame 2 runs tellTarget("..") { play(); }, "../:fromChild" = 42, ":ownLocal" = 7
+  const childF2Bytecode = [
+    ...actionSetTarget('..'),
+    0x06, // ActionPlay on _parent (_root)
+    ...actionSetTarget(''),
+    ...actionPush([{ t: 'str', v: '../:fromChild' }, { t: 'int', v: 42 }]),
+    0x1d, // ActionSetVariable
+    ...actionPush([{ t: 'str', v: ':ownLocal' }, { t: 'int', v: 7 }]),
+    0x1d, // ActionSetVariable
+    0x07, // ActionStop on childClip
+    0x00,
+  ];
+
+  const onEfBody = [
+    // rootCount = rootCount + 1
+    ...actionPush([{ t: 'str', v: 'rootCount' }, { t: 'str', v: 'rootCount' }]),
+    0x1c,
+    ...actionPush([{ t: 'int', v: 1 }]),
+    0x47,
+    0x1d,
+    // this._x = this._x + 5
+    ...actionPush([{ t: 'str', v: 'this' }]),
+    0x1c,
+    ...actionPush([{ t: 'str', v: '_x' }, { t: 'str', v: 'this' }]),
+    0x1c,
+    ...actionPush([{ t: 'str', v: '_x' }]),
+    0x4e,
+    ...actionPush([{ t: 'int', v: 5 }]),
+    0x47,
+    0x4f,
+    // if (rootCount == 3) gotoAndStop(2)
+    ...actionPush([{ t: 'str', v: 'rootCount' }]),
+    0x1c,
+    ...actionPush([{ t: 'int', v: 3 }]),
+    0x49,
+    0x12,
+    0x9d, 0x02, 0x00, ...u16le(5),
+    ...actionGotoFrame(1), // 0-based 1 => Frame 2 on _root (fn._defClip)
+    0x00,
+  ];
+
+  const rootF1Bytecode = [
+    // with (childClip) { gotoAndStop(2); }
+    ...actionPush([{ t: 'str', v: 'childClip' }]),
+    0x1c,
+    ...actionWith([
+      ...actionGotoFrame(1), // 0-based 1 => frame 2 on childClip ONLY
+    ]),
+    // gotoAndStop("nonexistent_label") -> must be a no-op (must NOT pause _root)
+    0x8c, ...u16le('nonexistent_label'.length + 1), ...cstr('nonexistent_label'),
+    // rootCount = 0
+    ...actionPush([{ t: 'str', v: 'rootCount' }, { t: 'int', v: 0 }]),
+    0x1d,
+    // childClip.onEnterFrame = function() { ... }
+    ...actionPush([{ t: 'str', v: 'childClip' }]),
+    0x1c,
+    ...actionPush([{ t: 'str', v: 'onEnterFrame' }]),
+    ...actionDefFn('', [], onEfBody),
+    0x4f,
+    // sorted = [10, 2, 30, 5]; sorted.sort(18) (NUMERIC|DESCENDING)
+    ...actionPush([{ t: 'str', v: 'sorted' }, { t: 'int', v: 5 }, { t: 'int', v: 30 }, { t: 'int', v: 2 }, { t: 'int', v: 10 }, { t: 'int', v: 4 }]),
+    0x42,
+    0x1d,
+    ...actionPush([{ t: 'int', v: 18 }, { t: 'int', v: 1 }, { t: 'str', v: 'sorted' }]),
+    0x1c,
+    ...actionPush([{ t: 'str', v: 'sort' }]),
+    0x52, 0x17,
+    // idxArr = [30, 10, 20].sort(24) (NUMERIC|RETURNINDEXEDARRAY)
+    ...actionPush([{ t: 'str', v: 'idxArr' }, { t: 'int', v: 24 }, { t: 'int', v: 1 }, { t: 'int', v: 20 }, { t: 'int', v: 10 }, { t: 'int', v: 30 }, { t: 'int', v: 3 }]),
+    0x42,
+    ...actionPush([{ t: 'str', v: 'sort' }]),
+    0x52,
+    0x1d,
+    // attachMovie("dotSym", 0, 1)
+    ...actionPush([{ t: 'int', v: 1 }, { t: 'int', v: 0 }, { t: 'str', v: 'dotSym' }, { t: 'int', v: 3 }, { t: 'str', v: 'attachMovie' }]),
+    0x3d, 0x17,
+    0x00,
+  ];
+
+  const prog1 = {
+    v: 1, swfVer: 6, fps: 30, w: 400, h: 300, bg: '#000000', fc: 2,
+    l: [{ frame: 2, name: 'gameplay' }],
+    sh: {}, et: {}, bt: {},
+    sp: {
+      10: { fc: 2, l: [], fr: [[], []], ac: [{ f: 2, b64: Buffer.from(childF2Bytecode).toString('base64') }] },
+      11: { fc: 1, l: [], fr: [[]], ac: [] },
+    },
+    exp: { dotSym: 11 },
+    fr: [
+      [{ d: 1, c: 10, n: 'childClip', m: [1, 0, 0, 1, 10, 20] }],
+      [{ d: 1, c: 10, n: 'childClip', m: [1, 0, 0, 1, 10, 20] }],
+    ],
+    ac: [{ f: 1, b64: Buffer.from(rootF1Bytecode).toString('base64') }],
+  };
+
+  const stage1 = new MockSvgNode('svg');
+  const rt1 = new ASTAVM1Runtime(Buffer.from(JSON.stringify(prog1)).toString('base64'), { engine: { vars: {} } });
+  rt1.mount(stage1, stage1);
+
+  const child1 = rt1.rootClip.getChildByName('childClip');
+  assert.ok(child1, 'childClip must exist');
+  assert.equal(child1._currentframe, 2, 'with(childClip) { gotoAndStop(2) } must move childClip to frame 2');
+  assert.equal(rt1.rootClip._currentframe, 1, 'with(childClip) { gotoAndStop(2) } and unknown label must NOT jump _root');
+  assert.equal(rt1.rootClip._playing, true, 'tellTarget("..") { play() } + unknown label no-op must leave _root playing');
+  assert.equal(rt1.rootClip._vars.fromChild, 42, 'Relative "../:fromChild" from childClip must write to _root.fromChild');
+  assert.equal(child1._vars.ownLocal, 7, 'Relative ":ownLocal" must write to childClip itself, not _root');
+  assert.equal(rt1._resolveTargetPath('/childClip', rt1.rootClip), child1, 'Absolute slash path "/childClip" must resolve');
+  assert.equal(rt1._resolveTargetPath('..', child1), rt1.rootClip, 'Relative ".." path must resolve to _parent');
+  assert.deepEqual(rt1.rootClip._vars.sorted, [30, 10, 5, 2], 'Array.sort(NUMERIC | DESCENDING) must sort numerically descending');
+  assert.deepEqual(rt1.rootClip._vars.idxArr, [1, 2, 0], 'Array.sort(NUMERIC | RETURNINDEXEDARRAY) must return sorted indices');
+  const zeroClip = rt1.rootClip.getChildByName('0');
+  assert.ok(zeroClip && zeroClip._name === '0', 'attachMovie("dotSym", 0, 1) must preserve numeric name "0"');
+
+  rt1.rootClip.stop();
+  rt1.stepOneSwfFrame();
+  rt1.stepOneSwfFrame();
+  assert.equal(rt1.rootClip._vars.rootCount, 2, 'Root-defined child.onEnterFrame must increment _root.rootCount');
+  assert.equal(child1._x, 20, 'this._x inside child.onEnterFrame must still mutate childClip._x (10 + 5 + 5)');
+  assert.equal(rt1.rootClip._currentframe, 1);
+  rt1.stepOneSwfFrame();
+  assert.equal(rt1.rootClip._vars.rootCount, 3);
+  assert.equal(rt1.rootClip._currentframe, 2, 'Unqualified gotoAndStop(2) in root-defined child.onEnterFrame must jump _root to frame 2');
+  assert.equal(rt1.getDebugReport().avm1Faults.runtimeErrors.length, 0, 'Zero AVM1 runtime errors expected');
+  rt1.destroy();
+
+  // 2) AS2 ActionExtends + super() constructor + super.greet() + SWF 5 undefined == 0 loose equality
+  const baseCtorBody = [
+    ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'baseVal' }, { t: 'str', v: 'v' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 2 }]), 0x0c,
+    0x4f,
+    0x00,
+  ];
+  const baseGreetBody = [
+    ...actionPush([{ t: 'str', v: 'hello:' }, { t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'baseVal' }]), 0x4e,
+    0x47,
+    0x3e,
+    0x00,
+  ];
+  const subCtorBody = [
+    ...actionPush([{ t: 'str', v: 'v' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 1 }, { t: 'str', v: 'super' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: '' }]),
+    0x52, 0x17,
+    ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'subVal' }, { t: 'int', v: 0 }, { t: 'str', v: 'super' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'greet' }]),
+    0x52,
+    0x4f,
+    0x00,
+  ];
+  const as2TestBytecode = [
+    ...actionDefFn('Base', ['v'], baseCtorBody),
+    ...actionPush([{ t: 'str', v: 'Base' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'prototype' }]), 0x4e,
+    ...actionPush([{ t: 'str', v: 'greet' }]),
+    ...actionDefFn('', [], baseGreetBody),
+    0x4f,
+    ...actionDefFn('Sub', ['v'], subCtorBody),
+    ...actionPush([{ t: 'str', v: 'Sub' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'Base' }]), 0x1c,
+    0x69,
+    ...actionPush([{ t: 'str', v: 'inst' }, { t: 'int', v: 21 }, { t: 'int', v: 1 }, { t: 'str', v: 'Sub' }]),
+    0x40,
+    0x1d,
+    ...actionPush([{ t: 'str', v: 'eqZero' }, { t: 'str', v: 'undefVar' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 0 }]),
+    0x49,
+    0x1d,
+    0x00,
+  ];
+  const prog2 = {
+    v: 1, swfVer: 5, fps: 30, w: 320, h: 240, bg: '#000000', fc: 1,
+    l: [], sh: {}, et: {}, bt: {}, sp: {}, exp: {},
+    fr: [[]],
+    ac: [{ f: 1, b64: Buffer.from(as2TestBytecode).toString('base64') }],
+  };
+  const stage2 = new MockSvgNode('svg');
+  const rt2 = new ASTAVM1Runtime(Buffer.from(JSON.stringify(prog2)).toString('base64'), { engine: { vars: {} } });
+  rt2.mount(stage2, stage2);
+  assert.equal(rt2.rootClip._vars.inst.baseVal, 42, 'AS2 super(21) must invoke Base constructor with `this = inst`');
+  assert.equal(rt2.rootClip._vars.inst.subVal, 'hello:42', 'AS2 super.greet() must invoke Base.prototype.greet with `this = inst`');
+  assert.equal(rt2.rootClip._vars.eqZero, true, 'SWF <= 5 ActionEquals2 must treat undefined == 0 as true');
+  assert.equal(rt2.getDebugReport().avm1Faults.runtimeErrors.length, 0);
+  rt2.destroy();
+
+  console.log('✓ Test 5 passed: General-Purpose AVM1 Spec Compliance (ActionWith, relative ../ paths, base_clip scoping, AS2 super, Array.sort flags, SWF 5 equality)');
+}
+
+// ============================================================================
+// TEST 6: Extended AVM1 Compliance (addProperty, ActionCastOp on MC, ActionCallFunction super,
+//         ActionTry catch/return, with-closure capture, createTextField, getInstanceAtDepth, runtimeSnapshot)
+// ============================================================================
+
+async function testAvm1ExtendedCompliance() {
+  const { ASTAVM1Runtime } = createAvm1Sandbox();
+  const actionDefFn = (name: string, params: string[], body: number[]): number[] => {
+    const header = [
+      ...cstr(name),
+      ...u16le(params.length),
+      ...params.flatMap((p) => cstr(p)),
+      ...u16le(body.length),
+    ];
+    return [0x9b, ...u16le(header.length), ...header, ...body];
+  };
+
+  // Build ActionTry helper (flags: 0x01=catch, 0x02=finally, 0x04=catchInReg)
+  const actionTry = (flags: number, catchTarget: string | number, tryBody: number[], catchBody: number[], finBody: number[]): number[] => {
+    const hdr = [
+      flags,
+      ...u16le(tryBody.length),
+      ...u16le(catchBody.length),
+      ...u16le(finBody.length),
+      ...(typeof catchTarget === 'number' ? [catchTarget] : cstr(catchTarget)),
+    ];
+    return [0x8f, ...u16le(hdr.length), ...hdr, ...tryBody, ...catchBody, ...finBody];
+  };
+
+  // 1) addProperty getter/setter on registered MovieClip subclass + ActionCastOp(Actor, mc) + createTextField + getInstanceAtDepth
+  const actorCtorBody = [
+    ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: '_hp' }, { t: 'int', v: 10 }]),
+    0x4f,
+    0x00,
+  ];
+  const getHpBody = [
+    ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: '_hp' }]), 0x4e,
+    ...actionPush([{ t: 'int', v: 10 }]), 0x0c,
+    0x3e,
+    0x00,
+  ];
+  const setHpBody = [
+    ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: '_hp' }, { t: 'str', v: 'v' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 1 }]), 0x0a,
+    0x4f,
+    0x00,
+  ];
+
+  // ActionCallFunction("super", [7]) inside ChildCtor extending ParentCtor
+  const parentCtorBody = [
+    ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'pVal' }, { t: 'str', v: 'n' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 3 }]), 0x0c,
+    0x4f,
+    0x00,
+  ];
+  const childCtorBody = [
+    ...actionPush([{ t: 'str', v: 'n' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 1 }, { t: 'str', v: 'super' }]),
+    0x3d, 0x17, // ActionCallFunction("super", [n])
+    0x00,
+  ];
+
+  // ActionTry inside function: throw "boom", catch(err) { caughtMsg = err; return "caught:" + err; } finally { finRan = true; }
+  const tryBody = [
+    ...actionPush([{ t: 'str', v: 'boom' }]),
+    0x2a, // ActionThrow
+  ];
+  const catchBody = [
+    ...actionPush([{ t: 'str', v: 'caughtMsg' }, { t: 'str', v: 'err' }]), 0x1c,
+    0x1d,
+    ...actionPush([{ t: 'str', v: 'caught:' }, { t: 'str', v: 'err' }]), 0x1c,
+    0x47,
+    0x3e, // ActionReturn
+  ];
+  const finBody = [
+    ...actionPush([{ t: 'str', v: 'finRan' }, { t: 'int', v: 1 }]),
+    0x1d,
+  ];
+  const testTryFnBody = [
+    ...actionTry(0x03, 'err', tryBody, catchBody, finBody),
+    ...actionPush([{ t: 'str', v: 'unreachable' }]),
+    0x3e,
+  ];
+
+  // with (actorMc) { function readTag() { return secretTag; } }
+  const readTagFnBody = [
+    ...actionPush([{ t: 'str', v: 'secretTag' }]), 0x1c,
+    0x3e,
+  ];
+  const withClosureBlock = [
+    ...actionDefFn('readTag', [], readTagFnBody),
+  ];
+
+  const mainBytecode = [
+    // Define Actor extends MovieClip + addProperty("hp", getHp, setHp) + Object.registerClass("actorSym", Actor)
+    ...actionDefFn('Actor', [], actorCtorBody),
+    ...actionPush([{ t: 'str', v: 'Actor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'MovieClip' }]), 0x1c,
+    0x69, // ActionExtends
+    ...actionDefFn('OtherClass', [], [0x00]),
+    ...actionDefFn('', ['v'], setHpBody),
+    ...actionDefFn('', [], getHpBody),
+    ...actionPush([{ t: 'str', v: 'hp' }, { t: 'int', v: 3 }, { t: 'str', v: 'Actor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'prototype' }]), 0x4e,
+    ...actionPush([{ t: 'str', v: 'addProperty' }]),
+    0x52, 0x17,
+    ...actionPush([{ t: 'str', v: 'Actor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'actorSym' }, { t: 'int', v: 2 }, { t: 'str', v: 'Object' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'registerClass' }]),
+    0x52, 0x17,
+
+    // actorMc = attachMovie("actorSym", "a1", 5)
+    ...actionPush([{ t: 'str', v: 'actorMc' }, { t: 'int', v: 5 }, { t: 'str', v: 'a1' }, { t: 'str', v: 'actorSym' }, { t: 'int', v: 3 }, { t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'attachMovie' }]),
+    0x52,
+    0x1d,
+
+    // hpBefore = actorMc.hp; actorMc.hp = 4; hpAfter = actorMc.hp
+    ...actionPush([{ t: 'str', v: 'hpBefore' }, { t: 'str', v: 'actorMc' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'hp' }]), 0x4e,
+    0x1d,
+    ...actionPush([{ t: 'str', v: 'actorMc' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'hp' }, { t: 'int', v: 4 }]),
+    0x4f,
+    ...actionPush([{ t: 'str', v: 'hpAfter' }, { t: 'str', v: 'actorMc' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'hp' }]), 0x4e,
+    0x1d,
+
+    // castOk = Actor(actorMc); castFail = OtherClass(actorMc)
+    ...actionPush([{ t: 'str', v: 'castOk' }, { t: 'str', v: 'actorMc' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'Actor' }]), 0x1c,
+    0x2b, // ActionCastOp
+    0x1d,
+    ...actionPush([{ t: 'str', v: 'castFail' }, { t: 'str', v: 'actorMc' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'OtherClass' }]), 0x1c,
+    0x2b, // ActionCastOp
+    0x1d,
+
+    // atDepth = getInstanceAtDepth(5); ver = getSWFVersion()
+    ...actionPush([{ t: 'str', v: 'atDepth' }, { t: 'int', v: 5 }, { t: 'int', v: 1 }, { t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'getInstanceAtDepth' }]),
+    0x52, 0x1d,
+    ...actionPush([{ t: 'str', v: 'ver' }, { t: 'int', v: 0 }, { t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'getSWFVersion' }]),
+    0x52, 0x1d,
+
+    // hud = createTextField("hudTxt", 9, 10, 20, 120, 24); hud.text = "READY"
+    ...actionPush([{ t: 'str', v: 'hud' }, { t: 'int', v: 24 }, { t: 'int', v: 120 }, { t: 'int', v: 20 }, { t: 'int', v: 10 }, { t: 'int', v: 9 }, { t: 'str', v: 'hudTxt' }, { t: 'int', v: 6 }, { t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'createTextField' }]),
+    0x52, 0x1d,
+    ...actionPush([{ t: 'str', v: 'hud' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'text' }, { t: 'str', v: 'READY' }]),
+    0x4f,
+
+    // ParentCtor / ChildCtor using ActionCallFunction("super", [7])
+    ...actionDefFn('ParentCtor', ['n'], parentCtorBody),
+    ...actionDefFn('ChildCtor', ['n'], childCtorBody),
+    ...actionPush([{ t: 'str', v: 'ChildCtor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'ParentCtor' }]), 0x1c,
+    0x69,
+    ...actionPush([{ t: 'str', v: 'childObj' }, { t: 'int', v: 7 }, { t: 'int', v: 1 }, { t: 'str', v: 'ChildCtor' }]),
+    0x40, 0x1d,
+
+    // ActionTry catch + finally + return propagation
+    ...actionDefFn('runTry', [], testTryFnBody),
+    ...actionPush([{ t: 'str', v: 'tryResult' }, { t: 'int', v: 0 }, { t: 'str', v: 'runTry' }]),
+    0x3d, 0x1d,
+
+    // actorMc.secretTag = 'ghost_ok'; with (actorMc) { function readTag() { return secretTag; } }; tagOut = readTag();
+    ...actionPush([{ t: 'str', v: 'actorMc' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'secretTag' }, { t: 'str', v: 'ghost_ok' }]),
+    0x4f,
+    ...actionPush([{ t: 'str', v: 'actorMc' }]), 0x1c,
+    0x94, 0x02, 0x00, ...u16le(withClosureBlock.length), ...withClosureBlock,
+    ...actionPush([{ t: 'str', v: 'tagOut' }, { t: 'int', v: 0 }, { t: 'str', v: 'readTag' }]),
+    0x3d, 0x1d,
+    0x00,
+  ];
+
+  const prog = {
+    v: 1, swfVer: 8, fps: 30, w: 320, h: 240, bg: '#000000', fc: 1,
+    l: [], sh: {}, et: {}, bt: {},
+    sp: { 20: { fc: 1, l: [], fr: [[]], ac: [] } },
+    exp: { actorSym: 20 },
+    fr: [[]],
+    ac: [{ f: 1, b64: Buffer.from(mainBytecode).toString('base64') }],
+  };
+
+  const stage = new MockSvgNode('svg');
+  const rt = new ASTAVM1Runtime(Buffer.from(JSON.stringify(prog)).toString('base64'), { engine: { vars: {} } });
+  rt.mount(stage, stage);
+
+  assert.equal(rt.rootClip._vars.hpBefore, 100, 'addProperty getter must read MovieClip _hp * 10 = 100');
+  assert.equal(rt.rootClip._vars.hpAfter, 50, 'addProperty setter must set _hp = 4 + 1 = 5 -> getter returns 50');
+  assert.equal(rt.rootClip._vars.castOk, rt.rootClip._vars.actorMc, 'ActionCastOp Actor(actorMc) must return actorMc');
+  assert.equal(rt.rootClip._vars.castFail, null, 'ActionCastOp OtherClass(actorMc) must return null');
+  assert.equal(rt.rootClip._vars.atDepth, rt.rootClip._vars.actorMc, 'getInstanceAtDepth(5) must return actorMc');
+  assert.equal(rt.rootClip._vars.ver, 8, 'getSWFVersion() must return SWF version 8');
+  assert.equal(rt.rootClip._vars.hud.text, 'READY', 'createTextField must create live SVG TextField');
+  assert.equal(rt.rootClip.getChildByName('hudTxt'), rt.rootClip._vars.hud, 'createTextField instance must be addressable by name');
+  assert.equal(rt.rootClip._vars.childObj.pVal, 21, 'ActionCallFunction("super", [7]) must invoke ParentCtor(7)');
+  assert.equal(rt.rootClip._vars.caughtMsg, 'boom', 'ActionTry must bind caught exception variable');
+  assert.equal(rt.rootClip._vars.finRan, 1, 'ActionTry finally block must execute even on return from catch');
+  assert.equal(rt.rootClip._vars.tryResult, 'caught:boom', 'ActionReturn inside ActionTry catch must return from enclosing function');
+  assert.equal(rt.rootClip._vars.tagOut, 'ghost_ok', 'Closure defined inside ActionWith must capture with-object scope');
+
+  const rep = rt.getDebugReport();
+  assert.ok(rep.runtimeSnapshot, 'getDebugReport must expose runtimeSnapshot');
+  assert.equal(rep.runtimeSnapshot.swfVer, 8);
+  assert.equal(rep.runtimeSnapshot.rootFrame, 1);
+  assert.equal(rep.runtimeSnapshot.rootVars.hpAfter, 50);
+  assert.ok(rep.runtimeSnapshot.childClips.some((c: any) => c.name === 'a1'), 'runtimeSnapshot.childClips must list active MovieClips');
+  assert.equal(rep.avm1Faults.runtimeErrors.length, 0);
+  rt.destroy();
+
+  console.log('✓ Test 6 passed: Extended AVM1 Compliance (addProperty, ActionCastOp MC, ActionCallFunction super, ActionTry catch/return, with-closure, createTextField, getInstanceAtDepth, runtimeSnapshot)');
+}
+
 (async () => {
   await testSwfSoundEngine();
   await testPureSvgVisualFx();
   await testInteractiveEditText();
   await testDecoupledMediaInputRoute();
+  await testAvm1CoreSpecCompliance();
+  await testAvm1ExtendedCompliance();
   console.log('ALL RUFFLE-PARITY SWF ENGINE TESTS PASSED!');
   process.exit(0);
 })();
