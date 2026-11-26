@@ -21,8 +21,8 @@
   const MAX_OPS_PER_EXEC = 1500000;
   const TICK_OPS_BUDGET = 600000;
   const BOOT_OPS_BUDGET = 2500000;
-  const TICK_TIME_BUDGET_MS = 100;
-  const BOOT_TIME_BUDGET_MS = 1000;
+  const TICK_TIME_BUDGET_MS = 250;
+  const BOOT_TIME_BUDGET_MS = 1500;
   const MAX_CALL_DEPTH = 128;
   const MAX_LIVE_CLIPS = 4000;
   const MAX_CHILDREN_PER_CLIP = 2500;
@@ -434,6 +434,17 @@
       offsetToIdx.set(off, instrs.length);
       instrs.push({ off, end: pEnd, code, pStart, pEnd });
       pos = pEnd;
+      // Skip inline nested bodies so an ActionEnd (0x00) inside a function or try block
+      // never prematurely terminates decoding of the enclosing script block.
+      if ((code === 0x9B || code === 0x8E) && pEnd - pStart >= 2) {
+        const codeSize = readUI16(bytes, pEnd - 2);
+        pos = Math.min(end, pEnd + codeSize);
+      } else if (code === 0x8F && pEnd - pStart >= 7) {
+        const trySize = readUI16(bytes, pStart + 1);
+        const catchSize = readUI16(bytes, pStart + 3);
+        const finallySize = readUI16(bytes, pStart + 5);
+        pos = Math.min(end, pEnd + trySize + catchSize + finallySize);
+      }
     }
     offsetToIdx.set(pos, instrs.length);
     return { bytes, start, end, instrs, offsetToIdx };
@@ -2193,8 +2204,8 @@
         if (mc._removed) continue;
         mc._justSpawned = false;
         this._vm._ensureSpriteInitAction(mc.charId, mc);
-        this._vm._applyRegisteredClass(mc);
         mc.reconcileDisplayList(1, true);
+        this._vm._applyRegisteredClass(mc);
         if (!this._vm._isOverBudget()) {
           mc._fireClipEvents(CE_LOAD);
           const loadFn = mc._getEventHandler('onLoad');
@@ -2424,14 +2435,14 @@
       const mc = slot && slot.obj;
       if (mc && mc._isMovieClip) {
         if (initObj && typeof initObj === 'object') {
-          for (const k of Object.keys(initObj)) {
+          for (const k in initObj) {
             this._vm._setMember(mc, k, initObj[k]);
           }
         }
         mc._justSpawned = false;
         this._vm._ensureSpriteInitAction(mc.charId, mc);
+        mc.reconcileDisplayList(1, true);
         this._vm._applyRegisteredClass(mc, linkageName);
-        mc.reconcileDisplayList(1);
         mc._fireClipEvents(CE_LOAD);
         const loadFn = mc._getEventHandler('onLoad');
         if (!mc._removed && typeof loadFn === 'function') {
@@ -2482,14 +2493,14 @@
         dup._visible = this._visible;
         dup._scriptModifiedTransform = true;
         if (initObj && typeof initObj === 'object') {
-          for (const k of Object.keys(initObj)) {
+          for (const k in initObj) {
             this._vm._setMember(dup, k, initObj[k]);
           }
         }
         dup._justSpawned = false;
         this._vm._ensureSpriteInitAction(dup.charId, dup);
+        dup.reconcileDisplayList(1, true);
         this._vm._applyRegisteredClass(dup);
-        dup.reconcileDisplayList(1);
         dup._fireClipEvents(CE_LOAD);
         const loadFn = dup._getEventHandler('onLoad');
         if (!dup._removed && typeof loadFn === 'function') {
@@ -3184,7 +3195,9 @@
 
       // Flash Color class -> drives live SVG <feColorMatrix> ColorTransform on target MovieClip
       function FlashColor(target) {
-        this._target = target;
+        this._target = typeof target === 'string'
+          ? (vm._resolveTargetPath(target, vm.rootClip) || null)
+          : target;
         this._rgb = 0;
         this._transform = { ra: 100, rb: 0, ga: 100, gb: 0, ba: 100, bb: 0, aa: 100, ab: 0 };
       }
@@ -3235,7 +3248,8 @@
         this._soundId = null;
         this._volume = 100;
         this._pan = 0;
-        this._startMs = 0;
+        this._startMs = -1;
+        this._isPlaying = false;
         this._durationMs = 0;
       }
       Object.defineProperty(FlashSound.prototype, 'duration', {
@@ -3245,7 +3259,7 @@
       });
       Object.defineProperty(FlashSound.prototype, 'position', {
         get() {
-          if (!this._startMs) return 0;
+          if (!this._isPlaying || this._startMs < 0) return 0;
           const elapsed = Math.max(0, vm._elapsedMs - this._startMs);
           return this._durationMs > 0 ? Math.min(this._durationMs, elapsed) : elapsed;
         },
@@ -3262,8 +3276,11 @@
       FlashSound.prototype.start = function (secondOffset, loops) {
         const self = this;
         const loopsN = Math.max(1, Number(loops) || 1);
-        this._startMs = vm._elapsedMs;
+        const offsetMs = Math.max(0, Number(secondOffset) || 0) * 1000;
+        this._startMs = Math.max(0, vm._elapsedMs - offsetMs);
+        this._isPlaying = true;
         const onComplete = () => {
+          self._isPlaying = false;
           const cb = vm._getMember(self, 'onSoundComplete');
           if (typeof cb === 'function') {
             vm._invokeValue(cb, self, []);
@@ -3282,6 +3299,7 @@
         });
       };
       FlashSound.prototype.stop = function (linkageId) {
+        this._isPlaying = false;
         if (linkageId) {
           const resolved = vm._lookupExport(String(linkageId));
           if (resolved !== undefined) vm._stopSwfSound(resolved);
@@ -3435,7 +3453,7 @@
       g.unescape = unescape;
       g.int = (v) => Math.trunc(vm._toNum(v));
       g.random = (n) => Math.floor(Math.random() * Math.max(1, Math.floor(vm._toNum(n))));
-      g.getTimer = () => Math.round(vm._elapsedMs);
+      g.getTimer = () => Math.max(1, Math.round(vm._elapsedMs));
       g.trace = (m) => { vm._pushTrace(String(m)); };
       g.updateAfterEvent = () => {};
       g.ASSetPropFlags = () => {};
@@ -3472,7 +3490,7 @@
         if (typeof args[0] === 'function') {
           const fn = args[0];
           const ms = Math.max(10, Number(args[1]) || 16);
-          vm._intervals.set(id, { fn, thisObj: vm.rootClip, args: args.slice(2), ms, acc: 0 });
+          vm._intervals.set(id, { fn, thisObj: fn._defClip || vm.rootClip, args: args.slice(2), ms, acc: 0 });
         } else if (args[0] && typeof args[1] === 'string') {
           const obj = args[0];
           const methodName = args[1];
@@ -4718,7 +4736,7 @@
       this._soundLog.push({ op: 'start', id: soundId, fmt: def.fmt, rate: def.rate, loops, volume, pan });
       if (this._soundLog.length > 100) this._soundLog.shift();
 
-      if (this.engine && this.engine.isMuted) {
+      if (this.engine && (this.engine.muted || this.engine.isMuted)) {
         armFallback(Math.min(400, estDurationMs));
         return true;
       }
@@ -6001,12 +6019,12 @@
         }
         if (key === 'enabled') return obj.enabled;
         if (key === 'useHandCursor') return obj.useHandCursor;
-        // Own variables first
-        if (key in obj._vars) return obj._vars[key];
+        // Own defined variables first (never let an uninitialized `var foo;` = undefined shadow a named child clip)
+        if (key in obj._vars && obj._vars[key] !== undefined) return obj._vars[key];
         if (this.caseInsensitive) {
           const kl = key.toLowerCase();
           for (const k in obj._vars) {
-            if (k.toLowerCase() === kl) return obj._vars[k];
+            if (k.toLowerCase() === kl && obj._vars[k] !== undefined) return obj._vars[k];
           }
         }
         // Named child MovieClip / Button / TextField
@@ -6600,11 +6618,21 @@
           case 0x8D: // ActionWaitForFrame2
             stack.pop();
             break;
-          case 0x9E: { // ActionCall (execute actions on specified frame without moving playhead)
+          case 0x9E: { // ActionCall (execute actions on specified frame without moving playhead; supports target:frame)
             const frameVal = stack.pop();
-            if (curTarget && curTarget._isMovieClip) {
-              const fNum = curTarget.resolveFrameNumber(frameVal);
-              curTarget.runFrameActions(fNum);
+            let callTarget = curTarget;
+            let frameSpec = frameVal;
+            if (typeof frameVal === 'string') {
+              const colonIdx = frameVal.indexOf(':');
+              if (colonIdx !== -1) {
+                const targetPart = frameVal.slice(0, colonIdx);
+                frameSpec = frameVal.slice(colonIdx + 1);
+                callTarget = this._resolveTargetPath(targetPart || '/', curTarget);
+              }
+            }
+            if (callTarget && callTarget._isMovieClip) {
+              const fNum = callTarget.resolveFrameNumber(frameSpec);
+              callTarget.runFrameActions(fNum);
             }
             break;
           }
@@ -6722,7 +6750,7 @@
           case 0x36: { const s = this._toStr(stack.pop()); stack.push(s.length > 0 ? s.charCodeAt(0) : 0); break; }
           case 0x33:
           case 0x37: { stack.push(String.fromCharCode(toAvm1Number(stack.pop()) & 0xffff)); break; }
-          case 0x34: { stack.push(Math.round(this._elapsedMs)); break; }
+          case 0x34: { stack.push(Math.max(1, Math.round(this._elapsedMs))); break; }
           case 0x47: { // ActionAdd2
             const a = stack.pop();
             const b = stack.pop();
@@ -6932,18 +6960,52 @@
             const prop = this._toStr(stack.pop());
             const obj = stack.pop();
             let ok = false;
-            if (obj && obj._isMovieClip) { ok = delete obj._vars[prop]; }
-            else if (obj && typeof obj === 'object') { ok = delete obj[prop]; }
+            if (obj && obj._isMovieClip) {
+              if (prop in obj._vars) {
+                ok = delete obj._vars[prop];
+              } else if (this.caseInsensitive) {
+                const pl = prop.toLowerCase();
+                for (const k in obj._vars) {
+                  if (k.toLowerCase() === pl) { ok = delete obj._vars[k]; break; }
+                }
+              }
+            } else if (obj && typeof obj === 'object') {
+              if (prop in obj) {
+                ok = delete obj[prop];
+              } else if (this.caseInsensitive) {
+                const pl = prop.toLowerCase();
+                const keys = Object.keys(obj);
+                for (let i = 0; i < keys.length; i++) {
+                  if (keys[i].toLowerCase() === pl) { ok = delete obj[keys[i]]; break; }
+                }
+              }
+            }
             stack.push(ok);
             break;
           }
           case 0x3B: { // ActionDelete2
             const name = this._toStr(stack.pop());
             let ok = false;
-            if (scopes.length > 0 && name in scopes[scopes.length - 1]) {
-              ok = delete scopes[scopes.length - 1][name];
-            } else if (curTarget && curTarget._isMovieClip) {
-              ok = delete curTarget._vars[name];
+            if (scopes.length > 0) {
+              const local = scopes[scopes.length - 1];
+              if (name in local) {
+                ok = delete local[name];
+              } else if (this.caseInsensitive) {
+                const nl = name.toLowerCase();
+                for (const k in local) {
+                  if (k.toLowerCase() === nl) { ok = delete local[k]; break; }
+                }
+              }
+            }
+            if (!ok && curTarget && curTarget._isMovieClip) {
+              if (name in curTarget._vars) {
+                ok = delete curTarget._vars[name];
+              } else if (this.caseInsensitive) {
+                const nl = name.toLowerCase();
+                for (const k in curTarget._vars) {
+                  if (k.toLowerCase() === nl) { ok = delete curTarget._vars[k]; break; }
+                }
+              }
             }
             stack.push(ok);
             break;
@@ -6951,7 +7013,19 @@
           case 0x54: { // ActionInstanceOf
             const ctor = stack.pop();
             const obj = stack.pop();
-            stack.push(typeof ctor === 'function' ? (obj instanceof ctor) : false);
+            let isInst = false;
+            if (typeof ctor === 'function' && obj != null) {
+              if (obj._isMovieClip) {
+                if (ctor === this._global.MovieClip || ctor === this._global.Object) {
+                  isInst = true;
+                } else if (ctor.prototype && obj._proto) {
+                  isInst = obj._proto === ctor.prototype || ctor.prototype.isPrototypeOf(obj._proto);
+                }
+              } else {
+                isInst = obj instanceof ctor;
+              }
+            }
+            stack.push(isInst);
             break;
           }
           case 0x69: { // ActionExtends
