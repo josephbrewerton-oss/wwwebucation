@@ -214,6 +214,11 @@
     const scene = this.engine && this.engine.scene;
     if (!scene || !this.engine.vars) return;
 
+    // Priority 1.4: Sync declarative scene keyboard binding vars (100% media-agnostic)
+    if (typeof this.engine.setKeyBindingState === 'function') {
+      this.engine.setKeyBindingState(e.code, e.key, true);
+    }
+
     // Priority 1.5: Universal Media Input Route (100% media-agnostic; driven by (:media-routes ...) in player-gestures.ast)
     if (typeof this.routeMediaInputEvent === 'function') {
       const mediaRes = this.routeMediaInputEvent('keydown', e);
@@ -335,6 +340,10 @@
       }
     }
 
+    if (this.engine && typeof this.engine.setKeyBindingState === 'function') {
+      this.engine.setKeyBindingState(e.code, e.key, false);
+    }
+
     if (typeof this.routeMediaInputEvent === 'function') {
       this.routeMediaInputEvent('keyup', e);
     }
@@ -348,6 +357,9 @@
     _clearActiveHoverVars.call(this, false);
     _clearActivePressVars.call(this, false);
     this._releaseAllHeldInputs(true);
+    if (this.engine && typeof this.engine.clearKeyBindingsState === 'function') {
+      this.engine.clearKeyBindingsState();
+    }
     if (typeof this.routeMediaInputEvent === 'function') {
       this.routeMediaInputEvent('blur', null);
     }

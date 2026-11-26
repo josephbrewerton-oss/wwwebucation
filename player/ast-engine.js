@@ -588,6 +588,14 @@
     }
 
     emitTelemetrySnapshot(lastUserAction = 'IDLE', lastErrorKey = null) {
+      // Throttle passive/continuous tick telemetry & BSL status sync to ~10 Hz (100ms),
+      // while allowing discrete user actions (e.g. PAUSE, RESET, TOGGLE_BSL) to flush immediately.
+      const now = (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
+      const isPassiveTick = lastUserAction === 'IDLE' || lastUserAction === 'TICK' || lastUserAction === 'FRAME';
+      if (isPassiveTick && this._lastTelemetryPostMs && (now - this._lastTelemetryPostMs) < 100) {
+        return this._lastTelemetryPayload || null;
+      }
+      this._lastTelemetryPostMs = now;
       const sceneId = this.activePresetId || (this.scene && this.scene.id) || 'scene';
       const spatial = this.emitSpatialTelemetry(lastUserAction);
       const telemetry = {
@@ -601,6 +609,7 @@
         spatialTelemetry: spatial,
         timestamp: Date.now()
       };
+      this._lastTelemetryPayload = telemetry;
       this.notifyParent(telemetry);
       return telemetry;
     }
@@ -1465,6 +1474,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
   /** 60 FPS Reactive Binding Evaluator, Emitters, Scopes & Ledgers (implemented in static/player/ast-binding-runtime.js) */
   applyBindings(t, dt = 0.016, isTickStep = false) { const _br = _getASTBindingRuntime(); if (_br && typeof _br.applyBindings === 'function') _br.applyBindings.call(this, t, dt, isTickStep); }
+  initKeyBindings(scene) { const _br = _getASTBindingRuntime(); return _br && typeof _br.initKeyBindings === 'function' ? _br.initKeyBindings.call(this, scene) : []; }
+  getKeyBindings() { const _br = _getASTBindingRuntime(); return _br && typeof _br.getKeyBindings === 'function' ? _br.getKeyBindings.call(this) : []; }
+  setKeyBindingState(code, key, isDown) { const _br = _getASTBindingRuntime(); return _br && typeof _br.setKeyBindingState === 'function' ? _br.setKeyBindingState.call(this, code, key, isDown) : false; }
+  clearKeyBindingsState() { const _br = _getASTBindingRuntime(); return _br && typeof _br.clearKeyBindingsState === 'function' ? _br.clearKeyBindingsState.call(this) : false; }
   renderCurrentVector(container) { const _br = _getASTBindingRuntime(); return _br && typeof _br.renderCurrentVector === 'function' ? _br.renderCurrentVector.call(this, container) : ''; }
 
   tick(currentTimestamp) {

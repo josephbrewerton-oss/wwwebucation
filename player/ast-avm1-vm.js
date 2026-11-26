@@ -34,6 +34,55 @@
       ? performance.now()
       : Date.now();
   }
+
+  /**
+   * Ruffle-compatible AVM1 (SWF < 7) numeric coercion:
+   * - undefined / null -> 0 (instead of JS NaN)
+   * - boolean -> 1 / 0
+   * - numeric strings -> finite number; empty/non-numeric strings -> 0
+   */
+  function toAvm1Number(val) {
+    if (typeof val === 'number') return val;
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'boolean') return val ? 1 : 0;
+    if (typeof val === 'string') {
+      const s = val.trim();
+      if (s === '') return 0;
+      const n = Number(s);
+      return Number.isNaN(n) ? 0 : n;
+    }
+    const n = Number(val);
+    return Number.isNaN(n) ? 0 : n;
+  }
+
+  // Zero-overhead opt-in SWF diagnostic flag & shared state registry (default false)
+  if (typeof global.__SWF_DEBUG__ === 'undefined') {
+    global.__SWF_DEBUG__ = false;
+  }
+  function _isSwfDebugEnabled() {
+    return global.__SWF_DEBUG__ === true;
+  }
+  function _getSwfDebugSharedState() {
+    if (!global.__SWF_DEBUG_STATE__) {
+      global.__SWF_DEBUG_STATE__ = {
+        importSummary: { totalTagsParsed: 0, cachedDefsShapes: 0, skippedTagIds: [] },
+        activeRuntime: null,
+      };
+    }
+    return global.__SWF_DEBUG_STATE__;
+  }
+  function _countSubtreeElements(el) {
+    if (!el) return 0;
+    let count = 0;
+    const kids = el.children || el.childNodes || [];
+    for (let i = 0; i < kids.length; i++) {
+      const child = kids[i];
+      if (!child || (child.nodeType !== undefined && child.nodeType !== 1)) continue;
+      count += 1 + _countSubtreeElements(child);
+    }
+    return count;
+  }
+
   function matEquals(a, b) {
     if (a === b) return true;
     if (!a || !b || a.length < 6 || b.length < 6) return false;
@@ -674,13 +723,24 @@
 
     syncVariableFromScope() {
       if (!this._variable || !this._parent || this._focused) return;
-      const val = this._vm._resolveVariablePath(this._variable, this._parent);
-      if (val !== undefined) {
-        const s = String(val);
-        if (this._text !== s) {
-          this._text = s;
-          this._renderTextDisplay();
+      const exists = this._vm._hasVariablePath(this._variable, this._parent);
+      if (!exists) {
+        // Preserve static DefineEditText initialText until the bound variable exists,
+        // while ensuring undefined/empty dynamic bindings format as "" (never "undefined").
+        if (this._hadBoundVarSync || !this._text) {
+          if (this._text !== '') {
+            this._text = '';
+            this._renderTextDisplay();
+          }
         }
+        return;
+      }
+      this._hadBoundVarSync = true;
+      const val = this._vm._resolveVariablePath(this._variable, this._parent);
+      const s = (val === undefined || val === null) ? '' : String(val);
+      if (this._text !== s) {
+        this._text = s;
+        this._renderTextDisplay();
       }
     }
 
@@ -1346,6 +1406,7 @@
     }
 
     commitSvg() {
+      const dbgT0 = this._vm && this._vm._dbgActiveThisTick ? _nowMs() : 0;
       const mat = this.getLocalMatrix();
       const tStr = `matrix(${fmtNum(mat[0])} ${fmtNum(mat[1])} ${fmtNum(mat[2])} ${fmtNum(mat[3])} ${fmtNum(mat[4])} ${fmtNum(mat[5])})`;
       if (tStr !== this._lastTransform) {
@@ -1370,6 +1431,9 @@
       }
       if (this._maskClip && !this._maskClip._removed) {
         this._syncDynamicMask();
+      }
+      if (dbgT0) {
+        this._vm._tickSvgRenderMs += _nowMs() - dbgT0;
       }
     }
 
@@ -1402,8 +1466,11 @@
       // True Flash hold frame (identical display list array reference) -> 0-cost skip on sequential playback
       if (!force && this._lastReconciledEntries === entries) return;
       this._lastReconciledEntries = entries;
+      const dbgT0 = this._vm && this._vm._dbgActiveThisTick ? _nowMs() : 0;
+      const frozenDepths = this._staticFrozenDepths;
       const wantedByDepth = new Map();
       for (let i = 0; i < entries.length; i++) {
+        if (frozenDepths && frozenDepths.has(entries[i].d)) continue;
         wantedByDepth.set(entries[i].d, entries[i]);
       }
 
@@ -1426,10 +1493,11 @@
       const activeMasks = [];
       const newlySpawnedClips = [];
 
-      // 3. Create or update entries in ascending depth order
+      // 3. Create or update entries in ascending depth order (skipping frozen static layer depths)
       for (let i = 0; i < entries.length; i++) {
         const e = entries[i];
         const depth = e.d;
+        if (frozenDepths && frozenDepths.has(depth)) continue;
 
         // ClipDepth mask layer -> register SVG <clipPath> in stage <defs>
         if (e.cd && e.cd > depth) {
@@ -1521,6 +1589,9 @@
       if (childrenMutated) {
         this._reorderSvgChildren();
       }
+      if (dbgT0) {
+        this._vm._tickSvgRenderMs += _nowMs() - dbgT0;
+      }
 
       // Initialize newly spawned MovieClips (reconcile frame 1, fire DoInitAction, registered AS2 class, onClipEvent(load), frame 1 DoAction)
       for (let i = 0; i < newlySpawnedClips.length; i++) {
@@ -1596,7 +1667,9 @@
         _lastOpacity: initOpStr,
       };
       this._childrenByDepth.set(depth, slot);
-      this.svgEl.appendChild(svgOuter);
+      this._vm._treeVersion++;
+      const hostEl = this._dynamicLayerEl || this.svgEl;
+      hostEl.appendChild(svgOuter);
       return slot;
     }
 
@@ -1604,6 +1677,7 @@
       const slot = this._childrenByDepth.get(depth);
       if (!slot) return;
       this._childrenByDepth.delete(depth);
+      this._vm._treeVersion++;
       if (slot.maskEl && slot.maskEl.parentNode) {
         slot.maskEl.parentNode.removeChild(slot.maskEl);
       }
@@ -1617,6 +1691,7 @@
     }
 
     _reorderSvgChildren() {
+      const hostEl = this._dynamicLayerEl || this.svgEl;
       const sorted = Array.from(this._childrenByDepth.values())
         .filter((s) => !s.clipDepth && s.svgOuter)
         .sort((a, b) => a.depth - b.depth);
@@ -1624,7 +1699,7 @@
       for (let i = sorted.length - 1; i >= 0; i--) {
         const el = sorted[i].svgOuter;
         if (el.nextSibling !== prev) {
-          this.svgEl.insertBefore(el, prev);
+          hostEl.insertBefore(el, prev);
         }
         prev = el;
       }
@@ -1984,7 +2059,8 @@
       if (!this._drawGroup) {
         this._drawGroup = createSvgEl(this._vm.doc, 'g');
         this._drawGroup.setAttribute('data-avm1-draw', '1');
-        this.svgEl.appendChild(this._drawGroup);
+        const hostEl = this._dynamicLayerEl || this.svgEl;
+        hostEl.appendChild(this._drawGroup);
       }
       if (!this._drawState) {
         this._drawState = {
@@ -2180,9 +2256,34 @@
       this._maskCounter = 0;
       this._decodedCache = new Map();
       this._shapeTemplateCache = new Map();
+      this._shapeDefsMap = new Map();
+      this._targetPathCache = new Map();
+      this._treeVersion = 1;
+      this._lastTelemetrySyncMs = 0;
       this._exportLookup = new Map();
       this._initedSprites = new Set();
       this._liveButtons = new Set();
+      this._astKeyByCode = new Map();
+      this._astKeyByKey = new Map();
+      this._staticLayerEl = null;
+      this._dynamicLayerEl = null;
+
+      // Zero-overhead diagnostic collector state (active ONLY when window.__SWF_DEBUG__ === true)
+      this._dbgActiveThisTick = false;
+      this._tickSvgRenderMs = 0;
+      this._dbgUnhandledOpcodes = new Set();
+      this._dbgNanMap = new Map();
+      this._dbgAvm1MsBuf = new Float64Array(60);
+      this._dbgSvgMsBuf = new Float64Array(60);
+      this._dbgBufIdx = 0;
+      this._dbgBufCount = 0;
+      this._dbgActiveDynamicNodes = 0;
+      this._dbgImportSummary = {
+        totalTagsParsed: (this.program.dbg && this.program.dbg.tt) || 0,
+        cachedDefsShapes: (this.program.dbg && this.program.dbg.ds) || 0,
+        skippedTagIds: (this.program.dbg && Array.isArray(this.program.dbg.sk)) ? this.program.dbg.sk.slice() : [],
+      };
+      this._loadAstKeyBindings();
 
       // Build export linkage lookup (exact + case-insensitive)
       this._exportByCharId = new Map();
@@ -2656,14 +2757,76 @@
       return [];
     }
 
+    _ensureShapeDef(charId) {
+      if (!this.defsEl || !this.doc) return null;
+      if (this._shapeDefsMap.has(charId)) {
+        return this._shapeDefsMap.get(charId);
+      }
+      const defId = `swf-shape-${charId}`;
+      let g = null;
+      const sh = this.program.sh && this.program.sh[charId];
+      if (sh && Array.isArray(sh.p)) {
+        g = createSvgEl(this.doc, 'g');
+        g.setAttribute('id', defId);
+        g.setAttribute('data-swf-vm-def', '1');
+        const prims = sh.p;
+        for (let i = 0; i < prims.length; i++) {
+          const pr = prims[i];
+          const pEl = createSvgEl(this.doc, 'path');
+          pEl.setAttribute('d', pr[0]);
+          pEl.setAttribute('fill', pr[1]);
+          pEl.setAttribute('stroke', pr[2]);
+          if (pr[2] !== 'none') {
+            pEl.setAttribute('stroke-width', String(pr[3] || 1));
+            pEl.setAttribute('stroke-linecap', 'round');
+            pEl.setAttribute('stroke-linejoin', 'round');
+          }
+          g.appendChild(pEl);
+        }
+      } else if (sh && sh.svg) {
+        const tpl = parseSvgSnippetToNode(this.doc, sh.svg);
+        g = createSvgEl(this.doc, 'g');
+        g.setAttribute('id', defId);
+        g.setAttribute('data-swf-vm-def', '1');
+        if (tpl) g.appendChild(tpl);
+      } else {
+        const mo = this.program.mo && this.program.mo[charId];
+        if (mo && mo.s) {
+          g = createSvgEl(this.doc, 'g');
+          g.setAttribute('id', defId);
+          g.setAttribute('data-swf-vm-def', '1');
+          const p = createSvgEl(this.doc, 'path');
+          p.setAttribute('d', mo.s);
+          p.setAttribute('fill', mo.sf || 'none');
+          p.setAttribute('stroke', mo.st || 'none');
+          if (mo.sw) p.setAttribute('stroke-width', String(mo.sw));
+          g.appendChild(p);
+        }
+      }
+      if (g) {
+        this.defsEl.appendChild(g);
+        this._shapeDefsMap.set(charId, g);
+        return g;
+      }
+      return null;
+    }
+
     _instantiateStaticCharSvg(charId, visited = null, depth = 0) {
       if (depth > 16) return null;
+      // Primary path: cache shape once inside <defs> as <g id="swf-shape-{charId}"> and instance via <use>
+      if (this.defsEl && ((this.program.sh && this.program.sh[charId]) || (this.program.mo && this.program.mo[charId]))) {
+        const defG = this._ensureShapeDef(charId);
+        if (defG) {
+          const useEl = createSvgEl(this.doc, 'use');
+          useEl.setAttribute('href', `#swf-shape-${charId}`);
+          return useEl;
+        }
+      }
       if (this._shapeTemplateCache.has(charId)) {
         return this._shapeTemplateCache.get(charId).cloneNode(true);
       }
       const sh = this.program.sh && this.program.sh[charId];
       if (sh && Array.isArray(sh.p)) {
-        // Zero-DOMParser, zero-regex direct SVG <path> primitive instantiation (v2 compact format)
         const g = createSvgEl(this.doc, 'g');
         const prims = sh.p;
         for (let i = 0; i < prims.length; i++) {
@@ -2719,6 +2882,17 @@
       return null;
     }
 
+    _resolveShapeUseTarget(el) {
+      if (!el || typeof el.getAttribute !== 'function') return null;
+      const href = el.getAttribute('href') || el.getAttribute('xlink:href') || '';
+      if (!href.startsWith('#swf-shape-')) return null;
+      const idNum = Number(href.slice('#swf-shape-'.length));
+      if (Number.isFinite(idNum) && this._shapeDefsMap.has(idNum)) {
+        return this._shapeDefsMap.get(idNum);
+      }
+      return null;
+    }
+
     _populateClipPath(clipPathEl, charId, matrix) {
       const node = this._instantiateStaticCharSvg(charId);
       if (!node) return;
@@ -2728,6 +2902,11 @@
         const tag = (el.nodeName || el.tagName || '').toLowerCase();
         const ownT = el.getAttribute && el.getAttribute('transform');
         const nextChain = ownT ? (chain ? `${chain} ${ownT}` : ownT) : chain;
+        if (tag === 'use') {
+          const targetDef = this._resolveShapeUseTarget(el);
+          if (targetDef) collect(targetDef, nextChain);
+          return;
+        }
         if (tag === 'path' || tag === 'rect' || tag === 'circle' || tag === 'ellipse' || tag === 'polygon' || tag === 'polyline') {
           const clone = el.cloneNode(false);
           if (clone.removeAttribute) {
@@ -2752,6 +2931,11 @@
         const tag = (el.nodeName || el.tagName || '').toLowerCase();
         const ownT = (!isRoot || !skipRootTransform) && el.getAttribute ? el.getAttribute('transform') : '';
         const nextChain = ownT ? (chain ? `${chain} ${ownT}` : ownT) : chain;
+        if (tag === 'use') {
+          const targetDef = this._resolveShapeUseTarget(el);
+          if (targetDef) collect(targetDef, nextChain, false);
+          return;
+        }
         if (tag === 'path' || tag === 'rect' || tag === 'circle' || tag === 'ellipse' || tag === 'polygon' || tag === 'polyline') {
           const clone = el.cloneNode(false);
           if (clone.removeAttribute) {
@@ -2794,6 +2978,187 @@
       }
     }
 
+    _loadAstKeyBindings() {
+      this._astKeyByCode.clear();
+      this._astKeyByKey.clear();
+      const registerBinding = (entry) => {
+        if (!entry) return;
+        const rawCode = entry.code ? String(entry.code) : '';
+        const rawKey = entry.key ? String(entry.key) : '';
+        const explicitFlash = entry.flashKey ?? entry.flashKeyCode ?? entry.keyCode ?? entry.fk;
+        const flashKeyCode = explicitFlash !== undefined && explicitFlash !== null
+          ? Number(explicitFlash)
+          : mapEventKeyToFlashCode({ code: rawCode, key: rawKey });
+        const varName = entry.var || entry.holdVar || entry.setVar || entry.v || '';
+        const rec = {
+          code: rawCode,
+          key: rawKey,
+          flashKeyCode: Number.isFinite(flashKeyCode) && flashKeyCode > 0 ? flashKeyCode : 0,
+          varName: varName ? String(varName) : '',
+          label: entry.label || '',
+        };
+        if (rawCode) this._astKeyByCode.set(rawCode, rec);
+        if (rawKey) {
+          this._astKeyByKey.set(rawKey, rec);
+          if (rawKey.length === 1) this._astKeyByKey.set(rawKey.toLowerCase(), rec);
+        }
+      };
+
+      // 1. SWF program detected keyboard map (program.kb)
+      const progKb = this.program && Array.isArray(this.program.kb) ? this.program.kb : [];
+      for (let i = 0; i < progKb.length; i++) registerBinding(progKb[i]);
+
+      // 2. AST cartridge (:key-bindings ...) & (:key ...) gestures override / augment program bindings
+      const scene = this.engine && this.engine.scene;
+      if (scene) {
+        if (Array.isArray(scene.keyBindings)) {
+          for (let i = 0; i < scene.keyBindings.length; i++) registerBinding(scene.keyBindings[i]);
+        }
+        if (Array.isArray(scene.gestures)) {
+          for (let i = 0; i < scene.gestures.length; i++) {
+            const g = scene.gestures[i];
+            if (!g || g.type !== 'key') continue;
+            const keys = Array.isArray(g.keys) ? g.keys : (g.key ? [g.key] : []);
+            const code = g.code || (keys.length === 1 && keys[0].length > 1 ? keys[0] : '');
+            const key = keys.length > 0 ? keys[0] : '';
+            registerBinding({
+              code,
+              key,
+              flashKey: g.flashKey ?? g.keyCode,
+              var: g.holdVar || g.var || g.setVar || '',
+              label: g.label || '',
+            });
+          }
+        }
+      }
+    }
+
+    _resolveAstKeyBinding(payload) {
+      if (!payload) return null;
+      if (payload.code && this._astKeyByCode.has(payload.code)) {
+        return this._astKeyByCode.get(payload.code);
+      }
+      if (payload.key) {
+        if (this._astKeyByKey.has(payload.key)) return this._astKeyByKey.get(payload.key);
+        const low = payload.key.length === 1 ? payload.key.toLowerCase() : '';
+        if (low && this._astKeyByKey.has(low)) return this._astKeyByKey.get(low);
+      }
+      return null;
+    }
+
+    _resolveFlashKeyFromEvent(payload) {
+      const bound = this._resolveAstKeyBinding(payload);
+      if (bound && bound.flashKeyCode) return bound.flashKeyCode;
+      return mapEventKeyToFlashCode(payload);
+    }
+
+    _syncAstKeyState(payload, isDown) {
+      if (!this.engine) return;
+      if (typeof this.engine.setKeyBindingState === 'function') {
+        this.engine.setKeyBindingState(payload && payload.code, payload && payload.key, isDown);
+        return;
+      }
+      const bound = this._resolveAstKeyBinding(payload);
+      if (bound && bound.varName && this.engine.vars) {
+        this.engine.vars[bound.varName] = isDown ? 1 : 0;
+      }
+    }
+
+    _initRootStaticLayer() {
+      const root = this.rootClip;
+      if (!root || !this._staticLayerEl) return;
+      const frames = root._frames || [];
+      const f1 = frames[0] || [];
+      const frozenDepths = new Set();
+      if (f1.length === 0) {
+        root._staticFrozenDepths = frozenDepths;
+        return;
+      }
+      const prog = this.program;
+      // Compute frame-1 mask ranges so masked depths remain in the dynamic layer
+      const maskedRanges = [];
+      for (let i = 0; i < f1.length; i++) {
+        if (f1[i].cd && f1[i].cd > f1[i].d) {
+          maskedRanges.push([f1[i].d, f1[i].cd]);
+        }
+      }
+      const isMasked = (d) => {
+        for (let i = 0; i < maskedRanges.length; i++) {
+          if (d >= maskedRanges[i][0] && d <= maskedRanges[i][1]) return true;
+        }
+        return false;
+      };
+      const isStaticCandidate = (e) => {
+        if (!e || e.cd || e.n || e.ca || e.cai !== undefined) return false;
+        if (isMasked(e.d)) return false;
+        if ((prog.sp && prog.sp[e.c]) || (prog.bt && prog.bt[e.c]) || (prog.et && prog.et[e.c])) return false;
+        if (!(prog.sh && prog.sh[e.c]) && !(prog.mo && prog.mo[e.c])) return false;
+        return true;
+      };
+
+      // Check which frame-1 static candidates stay identical across every root frame
+      const staticEligible = new Map();
+      for (let i = 0; i < f1.length; i++) {
+        const e = f1[i];
+        if (!isStaticCandidate(e)) continue;
+        let unchanged = true;
+        for (let fi = 1; fi < frames.length; fi++) {
+          const fr = frames[fi];
+          if (fr === f1) continue;
+          let found = null;
+          for (let j = 0; j < fr.length; j++) {
+            if (fr[j].d === e.d) { found = fr[j]; break; }
+          }
+          if (
+            !found ||
+            found.c !== e.c ||
+            found.cd ||
+            found.n ||
+            !matEquals(found.m || null, e.m || null) ||
+            (found.a !== undefined ? found.a : 1) !== (e.a !== undefined ? e.a : 1) ||
+            JSON.stringify(found.cx || null) !== JSON.stringify(e.cx || null) ||
+            JSON.stringify(found.fl || null) !== JSON.stringify(e.fl || null)
+          ) {
+            unchanged = false;
+            break;
+          }
+        }
+        if (unchanged) staticEligible.set(e.d, e);
+      }
+
+      // Preserve exact painter's z-order: only freeze contiguous bottom background depths
+      // strictly below the lowest non-static depth across all frames.
+      let lowestDynamicDepth = Infinity;
+      for (let fi = 0; fi < frames.length; fi++) {
+        const fr = frames[fi];
+        if (fi > 0 && fr === frames[fi - 1]) continue;
+        for (let j = 0; j < fr.length; j++) {
+          const d = fr[j].d;
+          if (!staticEligible.has(d) && d < lowestDynamicDepth) {
+            lowestDynamicDepth = d;
+          }
+        }
+      }
+
+      const sortedStatic = Array.from(staticEligible.values())
+        .filter((e) => e.d < lowestDynamicDepth)
+        .sort((a, b) => a.d - b.d);
+
+      for (let i = 0; i < sortedStatic.length; i++) {
+        const e = sortedStatic[i];
+        frozenDepths.add(e.d);
+        const wrap = createSvgEl(this.doc, 'g');
+        const mat = e.m || [1, 0, 0, 1, 0, 0];
+        wrap.setAttribute('transform', `matrix(${mat.map(fmtNum).join(' ')})`);
+        if (e.a !== undefined && e.a < 1) wrap.setAttribute('opacity', fmtNum(e.a));
+        const inner = this._instantiateStaticCharSvg(e.c);
+        if (inner) wrap.appendChild(inner);
+        if (e.cx || e.fl) this._applyVisualFx(wrap, e.cx || null, e.fl || null);
+        this._staticLayerEl.appendChild(wrap);
+      }
+      root._staticFrozenDepths = frozenDepths;
+    }
+
     /**
      * Mounts the AVM1 pure-SVG runtime onto the stage container, replacing static fallback
      * geometry inside #scene-root with the live hierarchical AVM1 MovieClip SVG DOM tree.
@@ -2802,6 +3167,11 @@
       this.container = container || this.container;
       this.stageSvg = stageSvg || this.stageSvg;
       if (!this.container) return false;
+
+      this._shapeDefsMap.clear();
+      this._targetPathCache.clear();
+      this._treeVersion++;
+      this._loadAstKeyBindings();
 
       if (this.stageSvg && typeof this.stageSvg.setAttribute === 'function') {
         this.stageSvg.setAttribute('viewBox', `0 0 ${this.stageWidth} ${this.stageHeight}`);
@@ -2820,7 +3190,7 @@
         } catch (_) {}
       }
 
-      // Build clean stage structure: <defs><clipPath id="swf-stage-clip">...</defs><rect id="bg"/><g id="avm1-stage-clip-root" clip-path="..."><g id="avm1-root"/></g>
+      // Build clean stage structure: <defs><clipPath id="swf-stage-clip">...</defs><rect id="bg"/><g id="avm1-stage-clip-root" clip-path="..."><g id="avm1-root"><g id="stage-static-layer"/><g id="stage-dynamic-layer"/></g></g>
       const defs = createSvgEl(this.doc, 'defs');
       const stageClip = createSvgEl(this.doc, 'clipPath');
       stageClip.setAttribute('id', 'swf-stage-clip');
@@ -2847,6 +3217,19 @@
       sceneClipRoot.setAttribute('id', 'avm1-stage-clip-root');
       sceneClipRoot.setAttribute('clip-path', 'url(#swf-stage-clip)');
       this.rootClip.svgEl.setAttribute('id', 'avm1-root');
+
+      const staticLayer = createSvgEl(this.doc, 'g');
+      staticLayer.setAttribute('id', 'stage-static-layer');
+      staticLayer.setAttribute('data-static', 'true');
+      const dynamicLayer = createSvgEl(this.doc, 'g');
+      dynamicLayer.setAttribute('id', 'stage-dynamic-layer');
+      this._staticLayerEl = staticLayer;
+      this._dynamicLayerEl = dynamicLayer;
+      this.rootClip._staticLayerEl = staticLayer;
+      this.rootClip._dynamicLayerEl = dynamicLayer;
+      this.rootClip.svgEl.appendChild(staticLayer);
+      this.rootClip.svgEl.appendChild(dynamicLayer);
+
       sceneClipRoot.appendChild(this.rootClip.svgEl);
 
       if (typeof this.container.replaceChildren === 'function') {
@@ -2860,6 +3243,20 @@
 
       this._bindStageInputs();
       this._mounted = true;
+
+      // Register active runtime for console diagnostic inspection
+      const dbgShared = _getSwfDebugSharedState();
+      dbgShared.activeRuntime = this;
+      if (this.program.dbg) {
+        dbgShared.importSummary = {
+          totalTagsParsed: this.program.dbg.tt || 0,
+          cachedDefsShapes: Math.max(this.program.dbg.ds || 0, this._shapeDefsMap.size),
+          skippedTagIds: Array.isArray(this.program.dbg.sk) ? this.program.dbg.sk.slice() : [],
+        };
+      }
+
+      // Populate frozen static background layer once before frame-1 dynamic reconciliation
+      this._initRootStaticLayer();
 
       // Boot frame 1 with a bounded wall-clock & op budget so runaway SWF boot scripts cannot freeze the tab
       this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
@@ -2891,7 +3288,7 @@
         }
       }
       this.rootClip.commitSvg();
-      this._syncTelemetry();
+      this._syncTelemetry(true);
       return true;
     }
 
@@ -2983,7 +3380,8 @@
           'key-down'(payload) {
             if (!self._mounted || !payload) return;
             if (payload.originalEvent) self._syncModifierToggles(payload.originalEvent);
-            const kc = mapEventKeyToFlashCode(payload);
+            self._syncAstKeyState(payload, true);
+            const kc = self._resolveFlashKeyFromEvent(payload);
             if (!kc) return;
             let consumed = false;
             if (self._focusedTarget && self._focusedTarget._isTextField && self._focusedTarget._editable) {
@@ -2997,7 +3395,8 @@
           'key-up'(payload) {
             if (!self._mounted || !payload) return;
             if (payload.originalEvent) self._syncModifierToggles(payload.originalEvent);
-            const kc = mapEventKeyToFlashCode(payload);
+            self._syncAstKeyState(payload, false);
+            const kc = self._resolveFlashKeyFromEvent(payload);
             if (!kc) return;
             self.triggerKeyUp(kc);
           },
@@ -3042,7 +3441,8 @@
       this._onKeyDown = (e) => {
         if (e && e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
         this._syncModifierToggles(e);
-        const kc = mapEventKeyToFlashCode(e);
+        this._syncAstKeyState(e, true);
+        const kc = this._resolveFlashKeyFromEvent(e);
         if (!kc) return;
         if (this._focusedTarget && this._focusedTarget._isTextField && this._focusedTarget._editable) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
@@ -3055,7 +3455,8 @@
       };
       this._onKeyUp = (e) => {
         this._syncModifierToggles(e);
-        const kc = mapEventKeyToFlashCode(e);
+        this._syncAstKeyState(e, false);
+        const kc = this._resolveFlashKeyFromEvent(e);
         if (!kc) return;
         this.triggerKeyUp(kc);
       };
@@ -3501,15 +3902,19 @@
 
     handleForwardedKeyEvent(kind, payload) {
       if (!this._mounted || !payload) return;
-      const kc = mapEventKeyToFlashCode(payload);
-      if (!kc) return;
       if (kind === 'keydown') {
+        this._syncAstKeyState(payload, true);
+        const kc = this._resolveFlashKeyFromEvent(payload);
+        if (!kc) return;
         if (this._focusedTarget && this._focusedTarget._isTextField && this._focusedTarget._editable) {
           this._focusedTarget.handleKeyInput(kc, payload.key || '');
         }
         const ascii = (payload.key && payload.key.length === 1) ? payload.key.charCodeAt(0) : kc;
         this.triggerKeyDown(kc, ascii);
       } else if (kind === 'keyup') {
+        this._syncAstKeyState(payload, false);
+        const kc = this._resolveFlashKeyFromEvent(payload);
+        if (!kc) return;
         this.triggerKeyUp(kc);
       }
     }
@@ -3518,6 +3923,9 @@
       const held = Array.from(this._keysDown);
       for (let i = 0; i < held.length; i++) {
         this.triggerKeyUp(held[i]);
+      }
+      if (this.engine && typeof this.engine.clearKeyBindingsState === 'function') {
+        this.engine.clearKeyBindingsState();
       }
       if (this._mouseDown || this._pressedInteractive) {
         this.triggerMouseUp();
@@ -3715,6 +4123,7 @@
         // Native-FPS frame pacing (cap catchup to 2 SWF frames per render tick; abort immediately on budget overrun)
         this._frameAcc += dt;
         let steps = 0;
+        const dbgEnabled = _isSwfDebugEnabled();
         while (this._frameAcc >= this.frameStepSec - 1e-5 && steps < 2) {
           if (this._isOverBudget()) {
             this._frameAcc = 0;
@@ -3722,7 +4131,17 @@
           }
           this._frameAcc -= this.frameStepSec;
           this._tickCount++;
-          this.rootClip.stepFrame();
+          if (dbgEnabled) {
+            this._dbgActiveThisTick = true;
+            this._tickSvgRenderMs = 0;
+            const t0 = _nowMs();
+            this.rootClip.stepFrame();
+            const totalMs = _nowMs() - t0;
+            this._dbgActiveThisTick = false;
+            this._recordDbgFrameTiming(totalMs, this._tickSvgRenderMs);
+          } else {
+            this.rootClip.stepFrame();
+          }
           steps++;
         }
         if (this._frameAcc > this.frameStepSec * 2) {
@@ -3742,8 +4161,9 @@
           this._consecutiveBudgetExceeds = 0;
         }
 
-        this._syncTelemetry();
+        this._syncTelemetry(false);
       } catch (err) {
+        this._dbgActiveThisTick = false;
         if (!this._warnedStepErr) {
           this._warnedStepErr = true;
           console.warn('[AST AVM1] Non-fatal frame step exception:', err);
@@ -3761,18 +4181,95 @@
       this._skipBgScriptsThisTick = false;
       this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
       this._updateDrag();
-      this.rootClip.stepFrame();
-      this._syncTelemetry();
+      if (_isSwfDebugEnabled()) {
+        this._dbgActiveThisTick = true;
+        this._tickSvgRenderMs = 0;
+        const t0 = _nowMs();
+        this.rootClip.stepFrame();
+        const totalMs = _nowMs() - t0;
+        this._dbgActiveThisTick = false;
+        this._recordDbgFrameTiming(totalMs, this._tickSvgRenderMs);
+      } else {
+        this.rootClip.stepFrame();
+      }
+      this._syncTelemetry(true);
     }
 
-    _syncTelemetry() {
-      if (this.engine && this.engine.vars) {
-        this.engine.vars.swf_frame = this.rootClip._currentframe;
-        this.engine.vars.swf_playing = this.rootClip._playing ? 1 : 0;
-        this.engine.vars.swf_totalframes = this.rootClip._totalframes;
-        this.engine.vars.swf_framesloaded = this.rootClip._totalframes;
-        this.engine.vars.swf_tick = this._tickCount;
+    _recordDbgFrameTiming(totalMs, svgMs) {
+      const safeSvg = Math.max(0, Math.min(totalMs, svgMs));
+      const avm1Ms = Math.max(0, totalMs - safeSvg);
+      this._dbgAvm1MsBuf[this._dbgBufIdx] = avm1Ms;
+      this._dbgSvgMsBuf[this._dbgBufIdx] = safeSvg;
+      this._dbgBufIdx = (this._dbgBufIdx + 1) % 60;
+      if (this._dbgBufCount < 60) this._dbgBufCount++;
+      this._dbgActiveDynamicNodes = _countSubtreeElements(this._dynamicLayerEl || (this.rootClip && this.rootClip.svgEl));
+    }
+
+    _recordDbgNanFault(obj, varName) {
+      if (!_isSwfDebugEnabled()) return;
+      const targetPath = (obj && typeof obj.getTargetPath === 'function')
+        ? obj.getTargetPath()
+        : (obj && obj._name ? `/${obj._name}` : '/');
+      const variable = String(varName || '');
+      const key = `${targetPath}::${variable}`;
+      if (!this._dbgNanMap.has(key)) {
+        this._dbgNanMap.set(key, { targetPath, variable });
       }
+    }
+
+    getDebugReport() {
+      const n = this._dbgBufCount;
+      let sumAvm1 = 0;
+      let sumSvg = 0;
+      for (let i = 0; i < n; i++) {
+        sumAvm1 += this._dbgAvm1MsBuf[i];
+        sumSvg += this._dbgSvgMsBuf[i];
+      }
+      const round3 = (v) => Math.round(v * 1000) / 1000;
+      const sharedImport = _getSwfDebugSharedState().importSummary || {};
+      const totalTagsParsed = this._dbgImportSummary.totalTagsParsed || sharedImport.totalTagsParsed || 0;
+      const cachedDefsShapes = Math.max(
+        this._shapeDefsMap.size,
+        this._dbgImportSummary.cachedDefsShapes || 0,
+        sharedImport.cachedDefsShapes || 0
+      );
+      const skippedTagIds = this._dbgImportSummary.skippedTagIds.length > 0
+        ? this._dbgImportSummary.skippedTagIds.slice()
+        : (Array.isArray(sharedImport.skippedTagIds) ? sharedImport.skippedTagIds.slice() : []);
+      return {
+        enabled: _isSwfDebugEnabled(),
+        importSummary: {
+          totalTagsParsed,
+          cachedDefsShapes,
+          skippedTagIds,
+        },
+        avm1Faults: {
+          unhandledOpcodes: Array.from(this._dbgUnhandledOpcodes).sort(),
+          nanProperties: Array.from(this._dbgNanMap.values()),
+        },
+        frameTiming: {
+          sampleCount: n,
+          avgAvm1ExecMs: n > 0 ? round3(sumAvm1 / n) : 0,
+          avgSvgRenderMs: n > 0 ? round3(sumSvg / n) : 0,
+          activeDynamicDomNodes: this._dbgActiveDynamicNodes || _countSubtreeElements(this._dynamicLayerEl || (this.rootClip && this.rootClip.svgEl)),
+        },
+      };
+    }
+
+    _syncTelemetry(force = false) {
+      if (!this.engine || !this.engine.vars) return;
+      if (!force) {
+        const now = _nowMs();
+        if (now - this._lastTelemetrySyncMs < 100) return;
+        this._lastTelemetrySyncMs = now;
+      } else {
+        this._lastTelemetrySyncMs = _nowMs();
+      }
+      this.engine.vars.swf_frame = this.rootClip._currentframe;
+      this.engine.vars.swf_playing = this.rootClip._playing ? 1 : 0;
+      this.engine.vars.swf_totalframes = this.rootClip._totalframes;
+      this.engine.vars.swf_framesloaded = this.rootClip._totalframes;
+      this.engine.vars.swf_tick = this._tickCount;
     }
 
     reset() {
@@ -3846,6 +4343,11 @@
           return '';
         }
         const rawTag = (el.tagName || el.nodeName || '').toLowerCase();
+        if (rawTag === 'use') {
+          const targetDef = this._resolveShapeUseTarget(el);
+          if (!targetDef) return '';
+          return serializeNode(targetDef, depth + 1);
+        }
         if (!rawTag || !allowedTags.has(rawTag)) return '';
 
         const getAttr = (k) => (typeof el.getAttribute === 'function' ? el.getAttribute(k) : (el.attrs ? el.attrs[k] : null));
@@ -4146,6 +4648,11 @@
       }
       if (this.rootClip) this.rootClip.destroy();
       this._liveButtons.clear();
+      this._shapeDefsMap.clear();
+      this._targetPathCache.clear();
+      if (_getSwfDebugSharedState().activeRuntime === this) {
+        _getSwfDebugSharedState().activeRuntime = null;
+      }
       if (!keepCaches) {
         this._shapeTemplateCache.clear();
         this._decodedCache.clear();
@@ -4158,16 +4665,7 @@
     // =========================================================================
 
     _toNum(v) {
-      if (typeof v === 'number') return v;
-      if (v === undefined) return this.swfVer <= 6 ? 0 : NaN;
-      if (v === null) return 0;
-      if (typeof v === 'boolean') return v ? 1 : 0;
-      if (typeof v === 'string') {
-        if (v === '') return this.swfVer <= 6 ? 0 : NaN;
-        const n = Number(v);
-        return Number.isNaN(n) && this.swfVer <= 4 ? 0 : n;
-      }
-      return Number(v);
+      return toAvm1Number(v);
     }
 
     _toBool(v) {
@@ -4198,13 +4696,21 @@
       if (!s || s === '.' || s === 'this') return baseClip || this.rootClip;
       if (s === '/' || s === '_root' || s === '_level0') return this.rootClip;
 
-      // Normalize slash paths (/a/b, ../foo) and dot paths (_root.a.b)
-      let cur = baseClip || this.rootClip;
-      if (s.startsWith('/')) {
-        cur = this.rootClip;
-        s = s.slice(1);
+      const base = baseClip || this.rootClip;
+      const cacheKey = `${base ? base._uid : 0}|${s}`;
+      const cached = this._targetPathCache.get(cacheKey);
+      if (cached && cached.v === this._treeVersion) {
+        return cached.res;
       }
-      const parts = s.split(/[./]+/).filter(Boolean);
+
+      // Normalize slash paths (/a/b, ../foo) and dot paths (_root.a.b)
+      let cur = base;
+      let work = s;
+      if (work.startsWith('/')) {
+        cur = this.rootClip;
+        work = work.slice(1);
+      }
+      const parts = work.split(/[./]+/).filter(Boolean);
       for (let i = 0; i < parts.length; i++) {
         if (!cur) return undefined;
         const p = parts[i];
@@ -4219,7 +4725,46 @@
           cur = this._getMember(cur, p);
         }
       }
+      if (cur && (cur._isMovieClip || cur._isTextField || cur._isButton)) {
+        if (this._targetPathCache.size >= 512) this._targetPathCache.clear();
+        this._targetPathCache.set(cacheKey, { v: this._treeVersion, res: cur });
+      }
       return cur;
+    }
+
+    _hasVariablePath(varName, baseClip) {
+      const s = String(varName || '');
+      if (!s) return false;
+      const checkOnClip = (obj, prop) => {
+        if (!obj || typeof obj !== 'object') return false;
+        const bag = obj._isMovieClip ? obj._vars : obj;
+        if (!bag) return false;
+        if (prop in bag) return true;
+        if (this.caseInsensitive) {
+          const pl = prop.toLowerCase();
+          for (const k in bag) {
+            if (k.toLowerCase() === pl) return true;
+          }
+        }
+        return false;
+      };
+      const colonIdx = s.indexOf(':');
+      if (colonIdx !== -1) {
+        const target = this._resolveTargetPath(s.slice(0, colonIdx) || '/', baseClip);
+        return checkOnClip(target, s.slice(colonIdx + 1));
+      }
+      if (s.includes('.')) {
+        const parts = s.split('.');
+        let cur = this._getVariable(parts[0], baseClip, null, null);
+        for (let i = 1; i < parts.length - 1; i++) {
+          if (cur == null) return false;
+          cur = this._getMember(cur, parts[i]);
+        }
+        return checkOnClip(cur, parts[parts.length - 1]);
+      }
+      if (checkOnClip(baseClip, s)) return true;
+      if (baseClip !== this.rootClip && checkOnClip(this.rootClip, s)) return true;
+      return checkOnClip(this._global, s);
     }
 
     _resolveVariablePath(varName, baseClip) {
@@ -4288,19 +4833,21 @@
     _setClipProp(clip, prop, val) {
       const pl = String(prop).toLowerCase();
       switch (pl) {
-        case '_x': clip._x = this._toNum(val); clip._scriptModifiedTransform = true; clip.commitSvg(); return true;
-        case '_y': clip._y = this._toNum(val); clip._scriptModifiedTransform = true; clip.commitSvg(); return true;
-        case '_xscale': clip._xscale = this._toNum(val); clip._scriptModifiedTransform = true; clip.commitSvg(); return true;
-        case '_yscale': clip._yscale = this._toNum(val); clip._scriptModifiedTransform = true; clip.commitSvg(); return true;
-        case '_rotation': clip._rotation = this._toNum(val); clip._scriptModifiedTransform = true; clip.commitSvg(); return true;
-        case '_alpha': clip._alpha = this._toNum(val); clip._scriptModifiedAlpha = true; clip.commitSvg(); return true;
+        case '_x': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_x'); clip._x = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
+        case '_y': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_y'); clip._y = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
+        case '_xscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_xscale'); clip._xscale = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
+        case '_yscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_yscale'); clip._yscale = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
+        case '_rotation': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_rotation'); clip._rotation = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
+        case '_alpha': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_alpha'); clip._alpha = n; clip._scriptModifiedAlpha = true; clip.commitSvg(); return true; }
         case '_visible': clip._visible = this._toBool(val); clip.commitSvg(); return true;
-        case '_name': clip._name = this._toStr(val); return true;
+        case '_name': clip._name = this._toStr(val); this._treeVersion++; return true;
         case '_width': {
           if (clip._isMovieClip) {
             const bb = clip.getLocalBBox();
             if (bb.w > 0) {
-              clip._xscale = (this._toNum(val) / bb.w) * 100;
+              const n = toAvm1Number(val);
+              if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_width');
+              clip._xscale = (n / bb.w) * 100;
               clip._scriptModifiedTransform = true;
               clip.commitSvg();
             }
@@ -4311,7 +4858,9 @@
           if (clip._isMovieClip) {
             const bb = clip.getLocalBBox();
             if (bb.h > 0) {
-              clip._yscale = (this._toNum(val) / bb.h) * 100;
+              const n = toAvm1Number(val);
+              if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_height');
+              clip._yscale = (n / bb.h) * 100;
               clip._scriptModifiedTransform = true;
               clip.commitSvg();
             }
@@ -4458,6 +5007,9 @@
     _setMember(obj, propName, val) {
       if (obj === null || obj === undefined) return;
       const key = String(propName);
+      if (typeof val === 'number' && Number.isNaN(val)) {
+        this._recordDbgNanFault(obj, key);
+      }
 
       if (obj._isMovieClip) {
         if (key.startsWith('_') && this._setClipProp(obj, key, val)) return;
@@ -4610,12 +5162,18 @@
         for (let i = scopes.length - 1; i >= 0; i--) {
           const sc = scopes[i];
           if (key in sc) {
+            if (typeof val === 'number' && isNaN(val) && _isSwfDebugEnabled()) {
+              this._recordDebugNaN(targetClip, key);
+            }
             sc[key] = val;
             return;
           }
           if (this.caseInsensitive) {
             for (const k in sc) {
               if (k.toLowerCase() === kl) {
+                if (typeof val === 'number' && isNaN(val) && _isSwfDebugEnabled()) {
+                  this._recordDebugNaN(targetClip, k);
+                }
                 sc[k] = val;
                 return;
               }
@@ -4823,53 +5381,67 @@
             break;
           }
 
-          // --- Stack & Constants ---
+          // --- Stack & Constants (memoized per instruction to eliminate per-tick re-parsing) ---
           case 0x88: { // ActionConstantPool
-            const count = readUI16(bytes, ins.pStart);
-            let p = ins.pStart + 2;
-            constPool = new Array(count);
-            for (let i = 0; i < count && p < ins.pEnd; i++) {
-              const r = readCString(bytes, p, ins.pEnd);
-              constPool[i] = r.value;
-              p = r.next;
+            let pool = ins._constPool;
+            if (!pool) {
+              const count = readUI16(bytes, ins.pStart);
+              let p = ins.pStart + 2;
+              pool = new Array(count);
+              for (let i = 0; i < count && p < ins.pEnd; i++) {
+                const r = readCString(bytes, p, ins.pEnd);
+                pool[i] = r.value;
+                p = r.next;
+              }
+              ins._constPool = pool;
             }
+            constPool = pool;
             break;
           }
           case 0x96: { // ActionPush
-            let p = ins.pStart;
-            while (p < ins.pEnd) {
-              const t = bytes[p++];
-              if (t === 0) {
-                const r = readCString(bytes, p, ins.pEnd);
-                stack.push(r.value);
-                p = r.next;
-              } else if (t === 1) {
-                stack.push(readFloat32(bytes, p));
-                p += 4;
-              } else if (t === 2) {
-                stack.push(null);
-              } else if (t === 3) {
-                stack.push(undefined);
-              } else if (t === 4) {
-                stack.push(regs[bytes[p++]]);
-              } else if (t === 5) {
-                stack.push(bytes[p++] !== 0);
-              } else if (t === 6) {
-                stack.push(readSwfDouble(bytes, p));
-                p += 8;
-              } else if (t === 7) {
-                stack.push(readSI32(bytes, p));
-                p += 4;
-              } else if (t === 8) {
-                const idx = bytes[p++];
-                stack.push(constPool[idx] !== undefined ? constPool[idx] : '');
-              } else if (t === 9) {
-                const idx = readUI16(bytes, p);
-                p += 2;
-                stack.push(constPool[idx] !== undefined ? constPool[idx] : '');
-              } else {
-                break;
+            let items = ins._pushItems;
+            if (!items) {
+              items = [];
+              let p = ins.pStart;
+              while (p < ins.pEnd) {
+                const t = bytes[p++];
+                if (t === 0) {
+                  const r = readCString(bytes, p, ins.pEnd);
+                  items.push({ k: 0, v: r.value });
+                  p = r.next;
+                } else if (t === 1) {
+                  items.push({ k: 0, v: readFloat32(bytes, p) });
+                  p += 4;
+                } else if (t === 2) {
+                  items.push({ k: 0, v: null });
+                } else if (t === 3) {
+                  items.push({ k: 0, v: undefined });
+                } else if (t === 4) {
+                  items.push({ k: 1, v: bytes[p++] });
+                } else if (t === 5) {
+                  items.push({ k: 0, v: bytes[p++] !== 0 });
+                } else if (t === 6) {
+                  items.push({ k: 0, v: readSwfDouble(bytes, p) });
+                  p += 8;
+                } else if (t === 7) {
+                  items.push({ k: 0, v: readSI32(bytes, p) });
+                  p += 4;
+                } else if (t === 8) {
+                  items.push({ k: 2, v: bytes[p++] });
+                } else if (t === 9) {
+                  items.push({ k: 2, v: readUI16(bytes, p) });
+                  p += 2;
+                } else {
+                  break;
+                }
               }
+              ins._pushItems = items;
+            }
+            for (let i = 0; i < items.length; i++) {
+              const it = items[i];
+              if (it.k === 0) stack.push(it.v);
+              else if (it.k === 1) stack.push(regs[it.v]);
+              else stack.push(constPool[it.v] !== undefined ? constPool[it.v] : '');
             }
             break;
           }
@@ -4891,14 +5463,14 @@
             break;
           }
 
-          // --- Arithmetic, Comparison, Logic, Bitwise, String ---
-          case 0x0A: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(b + a); break; }
-          case 0x0B: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(b - a); break; }
-          case 0x0C: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(b * a); break; }
-          case 0x0D: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(a === 0 ? (b === 0 ? NaN : Infinity) : b / a); break; }
-          case 0x3F: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(b % a); break; }
-          case 0x0E: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(b === a); break; }
-          case 0x0F: { const a = this._toNum(stack.pop()); const b = this._toNum(stack.pop()); stack.push(b < a); break; }
+          // --- Arithmetic, Comparison, Logic, Bitwise, String (Ruffle AVM1 toAvm1Number coercion) ---
+          case 0x0A: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(b + a); break; }
+          case 0x0B: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(b - a); break; }
+          case 0x0C: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(b * a); break; }
+          case 0x0D: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(a === 0 ? (b === 0 ? NaN : Infinity) : b / a); break; }
+          case 0x3F: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(b % a); break; }
+          case 0x0E: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(b === a); break; }
+          case 0x0F: { const a = toAvm1Number(stack.pop()); const b = toAvm1Number(stack.pop()); stack.push(b < a); break; }
           case 0x10: { const a = this._toBool(stack.pop()); const b = this._toBool(stack.pop()); stack.push(b && a); break; }
           case 0x11: { const a = this._toBool(stack.pop()); const b = this._toBool(stack.pop()); stack.push(b || a); break; }
           case 0x12: { stack.push(!this._toBool(stack.pop())); break; }
@@ -4907,21 +5479,21 @@
           case 0x31: { stack.push(this._toStr(stack.pop()).length); break; }
           case 0x15:
           case 0x35: {
-            const count = Math.max(0, Math.floor(this._toNum(stack.pop())));
-            const idx = Math.max(1, Math.floor(this._toNum(stack.pop())));
+            const count = Math.max(0, Math.floor(toAvm1Number(stack.pop())));
+            const idx = Math.max(1, Math.floor(toAvm1Number(stack.pop())));
             const s = this._toStr(stack.pop());
             stack.push(s.substr(idx - 1, count));
             break;
           }
-          case 0x18: { stack.push(Math.trunc(this._toNum(stack.pop()))); break; }
+          case 0x18: { stack.push(Math.trunc(toAvm1Number(stack.pop()))); break; }
           case 0x21: { const a = this._toStr(stack.pop()); const b = this._toStr(stack.pop()); stack.push(b + a); break; }
           case 0x29: { const a = this._toStr(stack.pop()); const b = this._toStr(stack.pop()); stack.push(b < a); break; }
           case 0x68: { const a = this._toStr(stack.pop()); const b = this._toStr(stack.pop()); stack.push(b > a); break; }
-          case 0x30: { const max = Math.floor(this._toNum(stack.pop())); stack.push(max > 0 ? Math.floor(Math.random() * max) : 0); break; }
+          case 0x30: { const max = Math.floor(toAvm1Number(stack.pop())); stack.push(max > 0 ? Math.floor(Math.random() * max) : 0); break; }
           case 0x32:
           case 0x36: { const s = this._toStr(stack.pop()); stack.push(s.length > 0 ? s.charCodeAt(0) : 0); break; }
           case 0x33:
-          case 0x37: { stack.push(String.fromCharCode(this._toNum(stack.pop()) & 0xffff)); break; }
+          case 0x37: { stack.push(String.fromCharCode(toAvm1Number(stack.pop()) & 0xffff)); break; }
           case 0x34: { stack.push(Math.round(this._elapsedMs)); break; }
           case 0x47: { // ActionAdd2
             const a = stack.pop();
@@ -4929,7 +5501,7 @@
             if (typeof a === 'string' || typeof b === 'string') {
               stack.push(this._toStr(b) + this._toStr(a));
             } else {
-              stack.push(this._toNum(b) + this._toNum(a));
+              stack.push(toAvm1Number(b) + toAvm1Number(a));
             }
             break;
           }
@@ -4937,14 +5509,14 @@
             const a = stack.pop();
             const b = stack.pop();
             if (typeof a === 'string' && typeof b === 'string') stack.push(b < a);
-            else stack.push(this._toNum(b) < this._toNum(a));
+            else stack.push(toAvm1Number(b) < toAvm1Number(a));
             break;
           }
           case 0x67: { // ActionGreater
             const a = stack.pop();
             const b = stack.pop();
             if (typeof a === 'string' && typeof b === 'string') stack.push(b > a);
-            else stack.push(this._toNum(b) > this._toNum(a));
+            else stack.push(toAvm1Number(b) > toAvm1Number(a));
             break;
           }
           case 0x49: { // ActionEquals2
@@ -4960,16 +5532,16 @@
             stack.push(b === a);
             break;
           }
-          case 0x4A: { stack.push(this._toNum(stack.pop())); break; }
+          case 0x4A: { stack.push(toAvm1Number(stack.pop())); break; }
           case 0x4B: { stack.push(this._toStr(stack.pop())); break; }
-          case 0x50: { stack.push(this._toNum(stack.pop()) + 1); break; }
-          case 0x51: { stack.push(this._toNum(stack.pop()) - 1); break; }
-          case 0x60: { const a = this._toNum(stack.pop()) | 0; const b = this._toNum(stack.pop()) | 0; stack.push(b & a); break; }
-          case 0x61: { const a = this._toNum(stack.pop()) | 0; const b = this._toNum(stack.pop()) | 0; stack.push(b | a); break; }
-          case 0x62: { const a = this._toNum(stack.pop()) | 0; const b = this._toNum(stack.pop()) | 0; stack.push(b ^ a); break; }
-          case 0x63: { const a = this._toNum(stack.pop()) & 31; const b = this._toNum(stack.pop()) | 0; stack.push(b << a); break; }
-          case 0x64: { const a = this._toNum(stack.pop()) & 31; const b = this._toNum(stack.pop()) | 0; stack.push(b >> a); break; }
-          case 0x65: { const a = this._toNum(stack.pop()) & 31; const b = this._toNum(stack.pop()) >>> 0; stack.push(b >>> a); break; }
+          case 0x50: { stack.push(toAvm1Number(stack.pop()) + 1); break; }
+          case 0x51: { stack.push(toAvm1Number(stack.pop()) - 1); break; }
+          case 0x60: { const a = toAvm1Number(stack.pop()) | 0; const b = toAvm1Number(stack.pop()) | 0; stack.push(b & a); break; }
+          case 0x61: { const a = toAvm1Number(stack.pop()) | 0; const b = toAvm1Number(stack.pop()) | 0; stack.push(b | a); break; }
+          case 0x62: { const a = toAvm1Number(stack.pop()) | 0; const b = toAvm1Number(stack.pop()) | 0; stack.push(b ^ a); break; }
+          case 0x63: { const a = toAvm1Number(stack.pop()) & 31; const b = toAvm1Number(stack.pop()) | 0; stack.push(b << a); break; }
+          case 0x64: { const a = toAvm1Number(stack.pop()) & 31; const b = toAvm1Number(stack.pop()) | 0; stack.push(b >> a); break; }
+          case 0x65: { const a = toAvm1Number(stack.pop()) & 31; const b = toAvm1Number(stack.pop()) >>> 0; stack.push(b >>> a); break; }
 
           // --- Variables, Members, Properties, Objects, Arrays ---
           case 0x1C: { // ActionGetVariable
@@ -5198,30 +5770,34 @@
             }
             break;
           }
-          case 0x8F: { // ActionTry (header only; let try block execute normally and skip catch/finally)
-            const flags = bytes[ins.pStart];
-            const trySize = readUI16(bytes, ins.pStart + 1);
-            const catchSize = readUI16(bytes, ins.pStart + 3);
-            const finallySize = readUI16(bytes, ins.pStart + 5);
-            void flags;
-            // Execute try block inline; if it throws, skip to catch/finally safely
-            const tryEnd = ins.end + trySize;
-            const afterAll = tryEnd + catchSize + finallySize;
-            const tryDecoded = decodeBytecodeSlice(bytes, ins.end, tryEnd);
+          case 0x8F: { // ActionTry (memoized decoded try/catch/finally sub-slices)
+            let tm = ins._tryMeta;
+            if (!tm) {
+              const trySize = readUI16(bytes, ins.pStart + 1);
+              const catchSize = readUI16(bytes, ins.pStart + 3);
+              const finallySize = readUI16(bytes, ins.pStart + 5);
+              const tryEnd = ins.end + trySize;
+              const afterAll = tryEnd + catchSize + finallySize;
+              tm = {
+                tryDecoded: decodeBytecodeSlice(bytes, ins.end, tryEnd),
+                catchDecoded: catchSize > 0 ? decodeBytecodeSlice(bytes, tryEnd, tryEnd + catchSize) : null,
+                finDecoded: finallySize > 0 ? decodeBytecodeSlice(bytes, tryEnd + catchSize, afterAll) : null,
+                afterAll,
+              };
+              ins._tryMeta = tm;
+            }
             try {
-              this._runDecoded(tryDecoded, curTarget, thisObj, scopes, regs, constPool);
+              this._runDecoded(tm.tryDecoded, curTarget, thisObj, scopes, regs, constPool);
             } catch (_) {
-              if (catchSize > 0) {
-                const catchDecoded = decodeBytecodeSlice(bytes, tryEnd, tryEnd + catchSize);
-                this._runDecoded(catchDecoded, curTarget, thisObj, scopes, regs, constPool);
+              if (tm.catchDecoded) {
+                this._runDecoded(tm.catchDecoded, curTarget, thisObj, scopes, regs, constPool);
               }
             } finally {
-              if (finallySize > 0) {
-                const finDecoded = decodeBytecodeSlice(bytes, tryEnd + catchSize, afterAll);
-                this._runDecoded(finDecoded, curTarget, thisObj, scopes, regs, constPool);
+              if (tm.finDecoded) {
+                this._runDecoded(tm.finDecoded, curTarget, thisObj, scopes, regs, constPool);
               }
             }
-            pc = resolveJump(afterAll);
+            pc = resolveJump(tm.afterAll);
             break;
           }
           case 0x2A: { // ActionThrow
@@ -5229,93 +5805,114 @@
             throw err;
           }
 
-          // --- Functions & Method Calls ---
+          // --- Functions & Method Calls (memoized decoded bodies) ---
           case 0x9B: { // ActionDefineFunction
-            let p = ins.pStart;
-            const nr = readCString(bytes, p, ins.pEnd);
-            const fnName = nr.value;
-            p = nr.next;
-            const numParams = readUI16(bytes, p);
-            p += 2;
-            const params = [];
-            for (let i = 0; i < numParams && p < ins.pEnd; i++) {
-              const pr = readCString(bytes, p, ins.pEnd);
-              params.push(pr.value);
-              p = pr.next;
+            let fm = ins._fnMeta;
+            if (!fm) {
+              let p = ins.pStart;
+              const nr = readCString(bytes, p, ins.pEnd);
+              const fnName = nr.value;
+              p = nr.next;
+              const numParams = readUI16(bytes, p);
+              p += 2;
+              const params = [];
+              for (let i = 0; i < numParams && p < ins.pEnd; i++) {
+                const pr = readCString(bytes, p, ins.pEnd);
+                params.push(pr.value);
+                p = pr.next;
+              }
+              const codeSize = readUI16(bytes, p);
+              const bodyStart = ins.end;
+              const bodyEnd = Math.min(decoded.end, bodyStart + codeSize);
+              fm = {
+                fnName,
+                params,
+                bodyEnd,
+                bodyDecoded: decodeBytecodeSlice(bytes, bodyStart, bodyEnd),
+              };
+              ins._fnMeta = fm;
             }
-            const codeSize = readUI16(bytes, p);
-            const bodyStart = ins.end;
-            const bodyEnd = Math.min(decoded.end, bodyStart + codeSize);
-            const bodyDecoded = decodeBytecodeSlice(bytes, bodyStart, bodyEnd);
             const vm = this;
             const fnObj = function (...callArgs) {
               return vm._callAvm1Function(fnObj, this, callArgs);
             };
             fnObj._isAvm1Fn = true;
             fnObj._isFn2 = false;
-            fnObj._params = params;
-            fnObj._bodyDecoded = bodyDecoded;
+            fnObj._params = fm.params;
+            fnObj._bodyDecoded = fm.bodyDecoded;
             fnObj._constPool = constPool.slice();
             fnObj._closureScopes = scopes.slice();
             fnObj._defClip = curTarget;
 
-            if (fnName) {
-              this._setVariable(fnName, fnObj, curTarget, scopes, withStack);
+            if (fm.fnName) {
+              this._setVariable(fm.fnName, fnObj, curTarget, scopes, withStack);
             } else {
               stack.push(fnObj);
             }
-            pc = resolveJump(bodyEnd);
+            pc = resolveJump(fm.bodyEnd);
             break;
           }
           case 0x8E: { // ActionDefineFunction2
-            let p = ins.pStart;
-            const nr = readCString(bytes, p, ins.pEnd);
-            const fnName = nr.value;
-            p = nr.next;
-            const numParams = readUI16(bytes, p);
-            p += 2;
-            const regCount = bytes[p++];
-            const flags1 = bytes[p++];
-            const flags2 = bytes[p++];
-            const params = [];
-            for (let i = 0; i < numParams && p < ins.pEnd; i++) {
-              const reg = bytes[p++];
-              const pr = readCString(bytes, p, ins.pEnd);
-              params.push({ reg, name: pr.value });
-              p = pr.next;
+            let fm = ins._fn2Meta;
+            if (!fm) {
+              let p = ins.pStart;
+              const nr = readCString(bytes, p, ins.pEnd);
+              const fnName = nr.value;
+              p = nr.next;
+              const numParams = readUI16(bytes, p);
+              p += 2;
+              const regCount = bytes[p++];
+              const flags1 = bytes[p++];
+              const flags2 = bytes[p++];
+              const params = [];
+              for (let i = 0; i < numParams && p < ins.pEnd; i++) {
+                const reg = bytes[p++];
+                const pr = readCString(bytes, p, ins.pEnd);
+                params.push({ reg, name: pr.value });
+                p = pr.next;
+              }
+              const codeSize = readUI16(bytes, p);
+              const bodyStart = ins.end;
+              const bodyEnd = Math.min(decoded.end, bodyStart + codeSize);
+              fm = {
+                fnName,
+                regCount,
+                flags1,
+                flags2,
+                params,
+                bodyEnd,
+                bodyDecoded: decodeBytecodeSlice(bytes, bodyStart, bodyEnd),
+              };
+              ins._fn2Meta = fm;
             }
-            const codeSize = readUI16(bytes, p);
-            const bodyStart = ins.end;
-            const bodyEnd = Math.min(decoded.end, bodyStart + codeSize);
-            const bodyDecoded = decodeBytecodeSlice(bytes, bodyStart, bodyEnd);
             const vm = this;
             const fnObj = function (...callArgs) {
               return vm._callAvm1Function(fnObj, this, callArgs);
             };
             fnObj._isAvm1Fn = true;
             fnObj._isFn2 = true;
-            fnObj._regCount = regCount;
-            fnObj._preloadParent = (flags1 & 0x80) !== 0;
-            fnObj._preloadRoot = (flags1 & 0x40) !== 0;
-            fnObj._suppressSuper = (flags1 & 0x20) !== 0;
-            fnObj._preloadSuper = (flags1 & 0x10) !== 0;
-            fnObj._suppressArguments = (flags1 & 0x08) !== 0;
-            fnObj._preloadArguments = (flags1 & 0x04) !== 0;
-            fnObj._suppressThis = (flags1 & 0x02) !== 0;
-            fnObj._preloadThis = (flags1 & 0x01) !== 0;
-            fnObj._preloadGlobal = (flags2 & 0x01) !== 0;
-            fnObj._params = params;
-            fnObj._bodyDecoded = bodyDecoded;
+            fnObj._regCount = fm.regCount;
+            fnObj._preloadParent = (fm.flags1 & 0x80) !== 0;
+            fnObj._preloadRoot = (fm.flags1 & 0x40) !== 0;
+            fnObj._suppressSuper = (fm.flags1 & 0x20) !== 0;
+            fnObj._preloadSuper = (fm.flags1 & 0x10) !== 0;
+            fnObj._suppressArguments = (fm.flags1 & 0x08) !== 0;
+            fnObj._preloadArguments = (fm.flags1 & 0x04) !== 0;
+            fnObj._suppressThis = (fm.flags1 & 0x02) !== 0;
+            fnObj._preloadThis = (fm.flags1 & 0x01) !== 0;
+            fnObj._preloadGlobal = (fm.flags2 & 0x01) !== 0;
+            fnObj._params = fm.params;
+            fnObj._bodyDecoded = fm.bodyDecoded;
             fnObj._constPool = constPool.slice();
             fnObj._closureScopes = scopes.slice();
             fnObj._defClip = curTarget;
 
-            if (fnName) {
-              this._setVariable(fnName, fnObj, curTarget, scopes, withStack);
+            if (fm.fnName) {
+              this._setVariable(fm.fnName, fnObj, curTarget, scopes, withStack);
             } else {
               stack.push(fnObj);
             }
-            pc = resolveJump(bodyEnd);
+            pc = resolveJump(fm.bodyEnd);
             break;
           }
           case 0x3E: { // ActionReturn
@@ -5403,6 +6000,9 @@
 
           default:
             // Safely ignore unrecognized/unimplemented opcodes without halting execution
+            if (_isSwfDebugEnabled()) {
+              this._dbgUnhandledOpcodes.add(`0x${code.toString(16).toUpperCase().padStart(2, '0')}`);
+            }
             break;
         }
       }
@@ -5411,11 +6011,46 @@
     }
   }
 
+  ASTAVM1Runtime.toAvm1Number = toAvm1Number;
+
+  function __getSwfDebugReport() {
+    const shared = _getSwfDebugSharedState();
+    if (shared.activeRuntime && typeof shared.activeRuntime.getDebugReport === 'function') {
+      return shared.activeRuntime.getDebugReport();
+    }
+    const imp = shared.importSummary || { totalTagsParsed: 0, cachedDefsShapes: 0, skippedTagIds: [] };
+    return {
+      enabled: _isSwfDebugEnabled(),
+      importSummary: {
+        totalTagsParsed: imp.totalTagsParsed || 0,
+        cachedDefsShapes: imp.cachedDefsShapes || 0,
+        skippedTagIds: Array.isArray(imp.skippedTagIds) ? imp.skippedTagIds.slice() : [],
+      },
+      avm1Faults: {
+        unhandledOpcodes: [],
+        nanProperties: [],
+      },
+      frameTiming: {
+        sampleCount: 0,
+        avgAvm1ExecMs: 0,
+        avgSvgRenderMs: 0,
+        activeDynamicDomNodes: 0,
+      },
+    };
+  }
+
   global.ASTAVM1Runtime = ASTAVM1Runtime;
+  global.toAvm1Number = toAvm1Number;
+  global.__getSwfDebugReport = __getSwfDebugReport;
   if (typeof window !== 'undefined') {
     window.ASTAVM1Runtime = ASTAVM1Runtime;
+    window.toAvm1Number = toAvm1Number;
+    window.__getSwfDebugReport = __getSwfDebugReport;
+    if (typeof window.__SWF_DEBUG__ === 'undefined') {
+      window.__SWF_DEBUG__ = false;
+    }
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ASTAVM1Runtime, AVM1MovieClip, AVM1Button, AVM1TextField };
+    module.exports = { ASTAVM1Runtime, AVM1MovieClip, AVM1Button, AVM1TextField, toAvm1Number, __getSwfDebugReport };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
