@@ -30,7 +30,7 @@ static/player/
 ├── obs-controller.js       # Classroom & OBS studio controller
 ├── player-ui.js            # Scrubber, keyboard shortcuts, mute/volume, print/export controller
 ├── bytecode/               # Pre-compiled 68 .astb binary bytecode packs
-├── cartridges/             # 68 canonical .ast + .svg cartridge pairs (incl. lego-blocks, vector-racing)
+├── cartridges/             # 68 canonical .ast + .svg cartridge pairs (incl. modular-bricks, vector-racing)
 ├── scenes/                 # Streaming scene mirror
 ├── wasm/                   # 7-page (448 KB) fixed linear memory WASM kernels (.wat/.wasm)
 ├── schema/                 # Formal AST Specifications & JSON Schema
@@ -65,7 +65,7 @@ Open the self-contained 4-chapter architectural paper (`static/docs/lumina-archi
 ## Supported URL Parameters
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `preset`  | `fractions` | Preset ID (`fractions`, `solar-system`, `lego-blocks`, `vector-racing`, `pythagoras`, `lumina-architecture`, etc.) |
+| `preset`  | `fractions` | Preset ID (`fractions`, `solar-system`, `modular-bricks`, `vector-racing`, `pythagoras`, `lumina-architecture`, etc.) |
 | `src` / `file` | `—` | External or relative `.ast`, `.ast.svg`, `.svg`, or `.json` asset URL (e.g., `/docs/lumina-architecture.ast`) |
 | `lang`    | `en`    | Operational language code (`en`, `es`, `fr`, `de`, `it`, `pl`, `pt`, `uk`, `ar`, `la`) |
 | `speed`   | `1.0`   | Playback speed multiplier (`0.25`, `0.5`, `1.0`, `1.5`, `2.0`) |

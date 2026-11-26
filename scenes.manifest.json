@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-26T19:14:13.233Z",
+  "generatedAt": "2026-11-26T19:44:13.874Z",
   "totalScenes": 79,
   "inputDirs": [
     "static/cartridges"
@@ -1470,8 +1470,8 @@
       "checkpointCount": 0
     },
     {
-      "id": "lego-blocks",
-      "base": "lego-blocks",
+      "id": "modular-bricks",
+      "base": "modular-bricks",
       "type": "Sim",
       "kind": "lab",
       "isPlayableScene": true,
@@ -1483,16 +1483,16 @@
       "subject": "Computing",
       "has3D": false,
       "nodes3DCount": 0,
-      "svgFile": "cartridges/lego-blocks.svg",
-      "astFile": "cartridges/lego-blocks.ast",
-      "astbFile": "bytecode/lego-blocks.astb",
+      "svgFile": "cartridges/modular-bricks.svg",
+      "astFile": "cartridges/modular-bricks.ast",
+      "astbFile": "bytecode/modular-bricks.astb",
       "video": null,
       "videoFit": "contain",
       "hasVideo": false,
       "isCore": true,
       "featured": false,
       "tier": "core",
-      "mount": "/curriculum/computing/lego-blocks",
+      "mount": "/curriculum/computing/modular-bricks",
       "section": "Computing & Design Technology",
       "keyframeCount": 5,
       "subtitleCount": 4,

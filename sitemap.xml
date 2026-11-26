@@ -253,12 +253,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/?app=lego-blocks</loc>
-    <lastmod>2026-11-18</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/?app=liturgical-calendar</loc>
     <lastmod>2026-11-13</lastmod>
     <changefreq>monthly</changefreq>
@@ -283,6 +277,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/?app=modular-bricks</loc>
+    <lastmod>2026-11-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/?app=mountain-elevation</loc>
     <lastmod>2026-11-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -296,7 +296,7 @@
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/?app=oak-data-algorithms-sequencing</loc>
-    <lastmod>2026-10-27</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
