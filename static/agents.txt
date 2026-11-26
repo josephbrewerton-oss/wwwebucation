@@ -70,6 +70,13 @@ Data-Protection: UK GDPR Art. 25, KCSIE, CAADCA/SOPIPA & DPDP Sec 5(3) Compliant
 #   to carve mechanical apertures and voids into single DOM nodes with zero overdraw,
 #   driven by single-cycle FMA 6-float affine matrix buffers (< 0.1 ms frame execution).
 # - Smartboard Whiteboard Ink: Native in-stage quadratic Bézier vector annotation layer.
+# - Lazy Pure-SVG SWF Runtime (AVM1 & AVM2): Optional on-demand Flash SWF execution via
+#   ast-avm1-vm.js (~69.3 KB gz) and ast-avm2-vm.js (~38.9 KB gz) with 0 KB added to
+#   initial SPA boot or native .astb cartridges. Renders 100% pure W3C SVG DOM (zero
+#   <canvas>, zero WebGL, zero external WASM emulators), procedural Web Audio sound,
+#   authentic Frame-1 preloader self-completion, and decoupled exclusive keyboard/pointer
+#   routing through site-gestures.js—bringing legacy 1998–2015 educational SWFs into the
+#   offline Local Vault with smartboard ink and BSL/Makaton layered on top.
 #
 # SYSTEM 3: THE SOVEREIGN "IN-VISION" BSL / MAKATON VECTOR AVATAR
 # - Zero-Video Architecture: Pure procedural SVG skeletal avatar running at 60 FPS

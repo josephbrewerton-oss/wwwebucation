@@ -20,7 +20,60 @@ export function renderBlogPage(): HTMLElement {
       </p>
     </div>
 
-    <!-- Lead Dispatch: 22 November 2026 (Jacob's Ladder of Prime Bricks & Riemann Hypothesis) -->
+    <!-- Lead Dispatch: 26 November 2026 (Pure-SVG Offline Flash SWF Runtime) -->
+    <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
+      <div style="margin-bottom: 1.25rem;">
+        <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #fae8ff; color: #86198f; margin-bottom: 0.75rem;">
+          ★ ENGINE MILESTONE &bull; 26 NOVEMBER 2026
+        </span>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0 0 0.5rem 0;">
+          Pure-SVG Offline Flash (.swf) Execution: Reviving Two Decades of Educational Media Without Canvas, WebGL, or Heavy Emulators
+        </h2>
+        <p style="color: #64748b; font-size: 0.92rem; margin: 0;">
+          Published 26 November 2026 &bull; By St Joseph's Lumina Vector Engine Team
+        </p>
+      </div>
+
+      <div style="line-height: 1.75; font-size: 1.02rem; color: #334155;">
+        <p style="font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 1.25rem;">
+          Thousands of classic interactive science labs, maths manipulatives, phonics tools, and classroom games authored between 
+          1998 and 2015 were stranded when browser Flash plugins were retired. The Lumina AST Vector Player now executes real, 
+          unmodified <strong>Flash 5&ndash;8 (AVM1)</strong> and core <strong>ActionScript 3 (AVM2)</strong> <code style="background:#f1f5f9; padding:1px 5px; border-radius:4px;">.swf</code> 
+          files directly inside its <strong>100% pure W3C SVG DOM</strong> stage&mdash;with zero <code style="background:#f1f5f9; padding:1px 5px; border-radius:4px;">&lt;canvas&gt;</code>, 
+          zero WebGL, and zero multi-megabyte WebAssembly emulator downloads.
+        </p>
+        <p style="margin-bottom: 1.5rem;">
+          Both micro-VMs (<code style="background:#f1f5f9; padding:1px 5px; border-radius:4px;">ast-avm1-vm.js</code> at 69.3 KB gzipped and 
+          <code style="background:#f1f5f9; padding:1px 5px; border-radius:4px;">ast-avm2-vm.js</code> at 38.9 KB gzipped) are strictly lazy-loaded 
+          on demand only when a teacher imports a <code style="background:#f1f5f9; padding:1px 5px; border-radius:4px;">.swf</code> into the offline 
+          Local Vault&mdash;adding <strong>0 bytes</strong> to the initial portal boot or native <code style="background:#f1f5f9; padding:1px 5px; border-radius:4px;">.astb</code> 
+          curriculum labs.
+        </p>
+
+        <div style="background: #fdf4ff; border-left: 4px solid #a21caf; padding: 1.25rem 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #701a75; margin: 0 0 0.5rem 0;">
+            What This Unlocks for Schools &amp; Low-Connectivity Classrooms
+          </h3>
+          <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; color: #86198f; line-height: 1.6;">
+            <li><strong>Authentic ActionScript Lifecycle:</strong> Supports real-world Frame-1 <code style="background:#f5d0fe; padding:1px 4px; border-radius:4px;">onEnterFrame</code> preloaders, nested sprite timelines, <code style="background:#f5d0fe; padding:1px 4px; border-radius:4px;">DefineButton2</code> hit states, editable text fields, <code style="background:#f5d0fe; padding:1px 4px; border-radius:4px;">attachMovie</code> / <code style="background:#f5d0fe; padding:1px 4px; border-radius:4px;">hitTest</code>, and Web Audio PCM/ADPCM sound synthesis.</li>
+            <li><strong>Decoupled Universal Input Bus:</strong> Imported SWFs subscribe as exclusive keyboard and pointer sinks through <code style="background:#f5d0fe; padding:1px 4px; border-radius:4px;">site-gestures.js</code>&mdash;giving arrow-key and mouse games crisp response while preserving smartboard stylus ink and host controls.</li>
+            <li><strong>Accessibility &amp; Offline Vault Included Free:</strong> Legacy Flash lessons automatically inherit offline IndexedDB caching, high-contrast shell controls, quadratic B&eacute;zier whiteboard inking, and the procedural BSL/Makaton interpreter.</li>
+            <li><strong>Honest Scope &amp; Distillation Path:</strong> Built for vector-first educational SWFs and classic interactive applets; teachers can run archived SWFs immediately offline and optionally distil snapshots into lightweight native <code style="background:#f5d0fe; padding:1px 4px; border-radius:4px;">.astb</code> cartridges.</li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="${base}player" style="padding: 10px 20px; background: #9333ea; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Open Lumina Player &amp; SWF Importer &rarr;
+          </a>
+          <a href="${base}learning-zone" style="padding: 10px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Explore Native Offline Labs &rarr;
+          </a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Dispatch: 22 November 2026 (Jacob's Ladder of Prime Bricks & Riemann Hypothesis) -->
     <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
       <div style="margin-bottom: 1.25rem;">
         <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #dbeafe; color: #1d4ed8; margin-bottom: 0.75rem;">
