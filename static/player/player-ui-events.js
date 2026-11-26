@@ -811,170 +811,195 @@
     // --- Display Presets, Studio Panel & Settings Drawer Event Bindings (delegated to player-ui-display.js) ---
     this.bindDisplayDOMEvents();
 
-    // Keyboard navigation
-    window.addEventListener('keydown', (e) => {
-      // 1. Let text inputs, selects, textareas, and editable fields handle their own keys
-      if (
-        e.target.tagName === 'INPUT' ||
-        e.target.tagName === 'SELECT' ||
-        e.target.tagName === 'TEXTAREA' ||
-        e.target.isContentEditable
-      ) {
-        return;
-      }
-
-      // 1b. Yield immediately if an active media input sink or declarative :key / :key-bindings owns keyboard input
-      if (
-        window.__astGestures &&
-        typeof window.__astGestures.hasActiveMediaInputSink === 'function' &&
-        window.__astGestures.hasActiveMediaInputSink('key-down') &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey
-      ) {
-        return;
-      }
-      const activeKeyBindings = this.engine && this.engine.scene && Array.isArray(this.engine.scene.keyBindings)
-        ? this.engine.scene.keyBindings
-        : null;
-      if (activeKeyBindings && activeKeyBindings.some(b => b && (
-        (b.code && e.code && b.code === e.code) ||
-        (b.key && e.key && (b.key === e.key || (b.key.length === 1 && e.key.length === 1 && b.key.toLowerCase() === e.key.toLowerCase())))
-      ))) {
-        return;
-      }
-      const activeGestures = this.engine && this.engine.scene && Array.isArray(this.engine.scene.gestures)
-        ? this.engine.scene.gestures
-        : null;
-      if (activeGestures && activeGestures.some(g => g && g.type === 'key' && (
-        (g.code && e.code && g.code === e.code) ||
-        (g.key && e.key && (g.key === e.key || (g.key.length === 1 && e.key.length === 1 && g.key.toLowerCase() === e.key.toLowerCase())))
-      ))) {
-        return;
-      }
-
-      // 2. Trap rogue 'Enter' presses so they don't trigger focused buttons or blow out the layout
-      if (e.code === 'Enter' || e.key === 'Enter') {
-        if (e.target.tagName === 'BUTTON') {
-          return; // Allow a genuinely focused button to fire normally if explicitly clicked
+    // Keyboard navigation (idempotent — never stack duplicate window keydown listeners)
+    if (!this._windowKeyDownBound) {
+      this._windowKeyDownBound = true;
+      this._onWindowKeyDown = (e) => {
+        if (!e || e.defaultPrevented) return;
+        // 1. Let text inputs, selects, textareas, and editable fields handle their own keys
+        const targetTag = e.target && typeof e.target.tagName === 'string' ? e.target.tagName.toUpperCase() : '';
+        if (
+          targetTag === 'INPUT' ||
+          targetTag === 'SELECT' ||
+          targetTag === 'TEXTAREA' ||
+          (e.target && e.target.isContentEditable)
+        ) {
+          return;
         }
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
 
-      const isControlOn = (flag) => !window.__astGestures || typeof window.__astGestures._isControlEnabled !== 'function' || window.__astGestures._isControlEnabled(flag);
-
-      // 3. Main player shortcuts
-      if (e.code === 'Space') {
-        if (!isControlOn('space-play')) return;
-        e.preventDefault();
-        if (this.stepMode) {
-          this.stepToNextKeyframe();
-        } else {
-          if (this.engine) {
-            const playing = this.engine.togglePlay();
-            this.updateHeaderPlayUI(playing, true);
-          } else if (el.btnHeaderPlay) {
-            el.btnHeaderPlay.click();
-          } else if (el.btnPlay) {
-            el.btnPlay.click();
+        // Always allow Escape to close an open player overlay/drawer, and Ctrl/Cmd+I for Dev Mode
+        if (e.code === 'KeyI' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          this.toggleDevMode();
+          return;
+        }
+        if (e.code === 'Escape') {
+          if (this.elements.studioControlPanel && !this.elements.studioControlPanel.classList.contains('hidden')) {
+            this.closeStudioPanel();
+            return;
+          } else if (this.elements.questDrawer && !this.elements.questDrawer.classList.contains('hidden')) {
+            this.closeQuestMode();
+            return;
+          } else if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
+            this.minimizeInteractiveCard();
+            return;
+          } else if (this.elements.shortcutsModal && !this.elements.shortcutsModal.classList.contains('hidden')) {
+            this.closeShortcutsModal();
+            return;
+          } else if (this.elements.settingsDrawer && !this.elements.settingsDrawer.classList.contains('hidden')) {
+            this.closeSettingsDrawer();
+            return;
+          } else if (this.elements.devInspectorDrawer && !this.elements.devInspectorDrawer.classList.contains('hidden')) {
+            this.closeInspectorDrawer();
+            return;
+          } else if (this.elements.devStudioDrawer && !this.elements.devStudioDrawer.classList.contains('hidden')) {
+            this.closeDevStudio();
+            return;
+          } else if (this.elements.obsDrawer && !this.elements.obsDrawer.classList.contains('hidden')) {
+            this.closeObsDrawer();
+            return;
           }
         }
-      } else if (e.code === 'ArrowLeft' || e.code === 'PageUp') {
-        if (!isControlOn('arrow-step')) return;
-        e.preventDefault();
+
+        const isControlOn = (flag) => !window.__astGestures || typeof window.__astGestures._isControlEnabled !== 'function' || window.__astGestures._isControlEnabled(flag);
+
+        // 1a. Yield immediately when cartridge opts out of player-level shortcuts via (:controls (:player-keys :off))
+        if (!isControlOn('player-keys')) {
+          return;
+        }
+
+        // 1b. Yield immediately if an active media input sink or declarative :key / :key-bindings owns keyboard input
+        if (
+          window.__astGestures &&
+          typeof window.__astGestures.hasActiveMediaInputSink === 'function' &&
+          window.__astGestures.hasActiveMediaInputSink('key-down') &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey
+        ) {
+          return;
+        }
         const scene = this.engine && this.engine.scene;
-        if (this.stepMode || (scene && scene.keyframes && scene.keyframes.length > 0)) {
-          this.stepToPrevKeyframe();
-        } else {
-          this.engine.step(-0.05);
+        const activeKeyBindings = scene && Array.isArray(scene.keyBindings)
+          ? scene.keyBindings
+          : null;
+        if (activeKeyBindings && activeKeyBindings.some(b => b && (
+          (b.code && e.code && b.code === e.code) ||
+          (b.key && e.key && (b.key === e.key || (b.key.length === 1 && e.key.length === 1 && b.key.toLowerCase() === e.key.toLowerCase())))
+        ))) {
+          return;
         }
-      } else if (e.code === 'ArrowRight' || e.code === 'PageDown') {
-        if (!isControlOn('arrow-step')) return;
-        e.preventDefault();
-        const scene = this.engine && this.engine.scene;
-        if (this.stepMode || (scene && scene.keyframes && scene.keyframes.length > 0)) {
-          this.stepToNextKeyframe();
-        } else {
-          this.engine.step(0.05);
+        const activeGestures = (window.__astGestures && typeof window.__astGestures._getNormalizedSceneGestures === 'function')
+          ? window.__astGestures._getNormalizedSceneGestures(scene)
+          : (scene && Array.isArray(scene.gestures) ? scene.gestures : null);
+        if (activeGestures && activeGestures.some(g => g && g.type === 'key' && (
+          (g.code && e.code && g.code === e.code) ||
+          (g.key && e.key && (g.key === e.key || (g.key.length === 1 && e.key.length === 1 && g.key.toLowerCase() === e.key.toLowerCase())))
+        ))) {
+          return;
         }
-      } else if (e.code === 'KeyQ' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        this.toggleCheckpointView();
-      } else if (e.code === 'KeyL' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        if (el.btnLoop) el.btnLoop.click();
-      } else if (e.code === 'KeyM') {
-        e.preventDefault();
-        if (el.btnVolumeMute) {
-          el.btnVolumeMute.click();
-        } else if (el.btnNarrate) {
-          el.btnNarrate.click();
+
+        // 2. Trap rogue 'Enter' presses so they don't trigger focused buttons or blow out the layout
+        if (e.code === 'Enter' || e.key === 'Enter') {
+          if (targetTag === 'BUTTON') {
+            return; // Allow a genuinely focused button to fire normally if explicitly clicked
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          return;
         }
-      } else if (e.code === 'KeyV' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        this.toggleVoiceCommands();
-      } else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        this.toggleStepMode();
-      } else if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        if (el.btnFullscreen) el.btnFullscreen.click();
-      } else if (e.code === 'KeyO' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        if (el.btn3DOrbit) el.btn3DOrbit.click();
-      } else if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        this.engine.resetCamera();
-        this.showToast('🌐 3D Camera Reset');
-      } else if (e.code === 'KeyP' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        this.togglePictureInPicture();
-      } else if (e.code === 'KeyP' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        if (el.btnPlayMode) el.btnPlayMode.click();
-      } else if ((e.code === 'KeyW' || e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (!isControlOn('whiteboard')) return;
-        e.preventDefault();
-        if (window.__astGestures && typeof window.__astGestures.togglePen === 'function') {
-          window.__astGestures.togglePen();
-        } else {
-          window.postMessage({ type: 'TOGGLE_PEN' }, '*');
+
+        // 3. Main player shortcuts
+        if (e.code === 'Space') {
+          if (!isControlOn('space-play')) return;
+          e.preventDefault();
+          if (this.stepMode) {
+            this.stepToNextKeyframe();
+          } else {
+            if (this.engine) {
+              const playing = this.engine.togglePlay();
+              this.updateHeaderPlayUI(playing, true);
+            } else if (el.btnHeaderPlay) {
+              el.btnHeaderPlay.click();
+            } else if (el.btnPlay) {
+              el.btnPlay.click();
+            }
+          }
+        } else if (e.code === 'ArrowLeft' || e.code === 'PageUp') {
+          if (!isControlOn('arrow-step')) return;
+          e.preventDefault();
+          if (this.stepMode || (scene && scene.keyframes && scene.keyframes.length > 0)) {
+            this.stepToPrevKeyframe();
+          } else {
+            this.engine.step(-0.05);
+          }
+        } else if (e.code === 'ArrowRight' || e.code === 'PageDown') {
+          if (!isControlOn('arrow-step')) return;
+          e.preventDefault();
+          if (this.stepMode || (scene && scene.keyframes && scene.keyframes.length > 0)) {
+            this.stepToNextKeyframe();
+          } else {
+            this.engine.step(0.05);
+          }
+        } else if (e.code === 'KeyQ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (!isControlOn('quiz-keys')) return;
+          e.preventDefault();
+          this.toggleCheckpointView();
+        } else if (e.code === 'KeyL' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          if (el.btnLoop) el.btnLoop.click();
+        } else if (e.code === 'KeyM' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (!isControlOn('audio')) return;
+          e.preventDefault();
+          if (el.btnVolumeMute) {
+            el.btnVolumeMute.click();
+          } else if (el.btnNarrate) {
+            el.btnNarrate.click();
+          }
+        } else if (e.code === 'KeyV' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          this.toggleVoiceCommands();
+        } else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          this.toggleStepMode();
+        } else if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          if (el.btnFullscreen) el.btnFullscreen.click();
+        } else if (e.code === 'KeyO' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          if (el.btn3DOrbit) el.btn3DOrbit.click();
+        } else if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          this.engine.resetCamera();
+          this.showToast('🌐 3D Camera Reset');
+        } else if (e.code === 'KeyP' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          this.togglePictureInPicture();
+        } else if (e.code === 'KeyP' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          if (el.btnPlayMode) el.btnPlayMode.click();
+        } else if ((e.code === 'KeyW' || e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (!isControlOn('whiteboard')) return;
+          e.preventDefault();
+          if (window.__astGestures && typeof window.__astGestures.togglePen === 'function') {
+            window.__astGestures.togglePen();
+          } else {
+            window.postMessage({ type: 'TOGGLE_PEN' }, '*');
+          }
+        } else if (e.code === 'Home' || e.code === 'Digit0' || e.code === 'Numpad0') {
+          if (!isControlOn('arrow-step')) return;
+          e.preventDefault();
+          if (el.btnReset) el.btnReset.click();
+        } else if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
+          e.preventDefault();
+          this.toggleShortcutsModal();
+        } else if ((e.code === 'KeyB' || e.key === 'b' || e.key === 'B') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          this.toggleBsl();
         }
-      } else if (e.code === 'Home' || e.code === 'Digit0' || e.code === 'Numpad0') {
-        if (!isControlOn('arrow-step')) return;
-        e.preventDefault();
-        if (el.btnReset) el.btnReset.click();
-      } else if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
-        e.preventDefault();
-        this.toggleShortcutsModal();
-      } else if ((e.code === 'KeyB' || e.key === 'b' || e.key === 'B') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        this.toggleBsl();
-      } else if (e.code === 'KeyI' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        this.toggleDevMode();
-      } else if (e.code === 'Escape') {
-        if (this.elements.studioControlPanel && !this.elements.studioControlPanel.classList.contains('hidden')) {
-          this.closeStudioPanel();
-        } else if (this.elements.questDrawer && !this.elements.questDrawer.classList.contains('hidden')) {
-          this.closeQuestMode();
-        } else if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
-          this.minimizeInteractiveCard();
-        } else if (this.elements.shortcutsModal && !this.elements.shortcutsModal.classList.contains('hidden')) {
-          this.closeShortcutsModal();
-        } else if (this.elements.settingsDrawer && !this.elements.settingsDrawer.classList.contains('hidden')) {
-          this.closeSettingsDrawer();
-        } else if (this.elements.devInspectorDrawer && !this.elements.devInspectorDrawer.classList.contains('hidden')) {
-          this.closeInspectorDrawer();
-        } else if (this.elements.devStudioDrawer && !this.elements.devStudioDrawer.classList.contains('hidden')) {
-          this.closeDevStudio();
-        } else if (this.elements.obsDrawer && !this.elements.obsDrawer.classList.contains('hidden')) {
-          this.closeObsDrawer();
-        }
-      }
-    });
+      };
+      window.addEventListener('keydown', this._onWindowKeyDown);
+    }
   }
 
   function bindEngineEvents() {

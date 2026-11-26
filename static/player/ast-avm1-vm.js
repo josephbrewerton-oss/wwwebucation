@@ -1294,6 +1294,7 @@
       };
       this._onKeyActivate = (e) => {
         if (!this.enabled || this._removed) return;
+        if (e && e.defaultPrevented) return;
         if (e && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
           if (typeof e.stopPropagation === 'function') e.stopPropagation();
@@ -2034,7 +2035,7 @@
         if ((ca.f & flagMask) === 0) continue;
         if (flagMask === CE_KEY_PRESS && ca.k !== undefined && keyCode !== undefined) {
           const mapped = BTN_KEY_TO_FLASH_CODE[ca.k] || ca.k;
-          if (mapped !== keyCode) continue;
+          if (mapped !== keyCode && !(ca.k >= 97 && ca.k <= 122 && (ca.k - 32) === keyCode)) continue;
         }
         const b64 = this._vm._resolveB64(ca);
         if (b64) {
@@ -4188,10 +4189,27 @@
 
       this._lastPointerMoveMs = 0;
 
-      // Clean up any previous sink registration before rebinding
+      // Clean up any previous sink or standalone window listeners before rebinding
       if (this._boundGestureBus && this._inputSinkId && typeof this._boundGestureBus.unregisterMediaInputSink === 'function') {
         this._boundGestureBus.unregisterMediaInputSink(this._inputSinkId);
         this._boundGestureBus = null;
+      }
+      if (this._standaloneListenersBound) {
+        if (target && typeof target.removeEventListener === 'function') {
+          if (this._onPointerMove) target.removeEventListener('pointermove', this._onPointerMove);
+          if (this._onPointerDown) target.removeEventListener('pointerdown', this._onPointerDown);
+          if (this._onWheel) target.removeEventListener('wheel', this._onWheel);
+        }
+        if (win && typeof win.removeEventListener === 'function') {
+          if (this._onPointerUp) win.removeEventListener('pointerup', this._onPointerUp);
+          if (this._onWindowBlur) {
+            win.removeEventListener('pointercancel', this._onWindowBlur);
+            win.removeEventListener('blur', this._onWindowBlur);
+          }
+          if (this._onKeyDown) win.removeEventListener('keydown', this._onKeyDown);
+          if (this._onKeyUp) win.removeEventListener('keyup', this._onKeyUp);
+        }
+        this._standaloneListenersBound = false;
       }
 
       // Preferred decoupled path: subscribe as an independent sink on the universal gesture route bus.
@@ -4963,12 +4981,15 @@
       this._lastKeyCode = kc;
       this._lastKeyAscii = ascii !== undefined ? ascii : kc;
       this._beginEventBudget();
-      this._broadcastClipEvent(this.rootClip, CE_KEY_DOWN, 'onKeyDown');
+      const notified = new Set();
+      this._broadcastClipEvent(this.rootClip, CE_KEY_DOWN, 'onKeyDown', undefined, notified);
       this._broadcastClipEvent(this.rootClip, CE_KEY_PRESS, null, kc);
       this._liveButtons.forEach((btn) => { if (!this._isOverBudget()) btn._fireKeyPress(kc); });
       for (let i = 0; i < this._keyListeners.length; i++) {
         if (this._isOverBudget()) break;
-        this._invokeListenerMethod(this._keyListeners[i], 'onKeyDown', EMPTY_ARR, true);
+        const listener = this._keyListeners[i];
+        if (listener && notified.has(listener)) continue;
+        this._invokeListenerMethod(listener, 'onKeyDown', EMPTY_ARR, false);
       }
       this._postInteractionCommit(prevFrame, prevPlaying);
     }
@@ -4978,20 +4999,24 @@
       this._keysDown.delete(kc);
       this._lastKeyCode = kc;
       this._beginEventBudget();
-      this._broadcastClipEvent(this.rootClip, CE_KEY_UP, 'onKeyUp');
+      const notified = new Set();
+      this._broadcastClipEvent(this.rootClip, CE_KEY_UP, 'onKeyUp', undefined, notified);
       for (let i = 0; i < this._keyListeners.length; i++) {
         if (this._isOverBudget()) break;
-        this._invokeListenerMethod(this._keyListeners[i], 'onKeyUp', EMPTY_ARR, true);
+        const listener = this._keyListeners[i];
+        if (listener && notified.has(listener)) continue;
+        this._invokeListenerMethod(listener, 'onKeyUp', EMPTY_ARR, false);
       }
     }
 
-    _broadcastClipEvent(clip, flagMask, handlerProp, keyCode) {
+    _broadcastClipEvent(clip, flagMask, handlerProp, keyCode, notifiedSet) {
       if (!clip || clip._removed || this._isOverBudget()) return;
       clip._fireClipEvents(flagMask, keyCode);
       if (clip._removed || this._isOverBudget()) return;
       if (handlerProp) {
         const fn = clip._getEventHandler(handlerProp);
         if (typeof fn === 'function') {
+          if (notifiedSet) notifiedSet.add(clip);
           this._invokeValue(fn, clip, EMPTY_ARR);
         }
       }
@@ -5000,7 +5025,7 @@
       for (let i = 0; i < kids.length; i++) {
         if (this._isOverBudget()) break;
         if (kids[i].obj && kids[i].obj._isMovieClip) {
-          this._broadcastClipEvent(kids[i].obj, flagMask, handlerProp, keyCode);
+          this._broadcastClipEvent(kids[i].obj, flagMask, handlerProp, keyCode, notifiedSet);
         }
       }
     }

@@ -14,6 +14,7 @@
     (:xray       :on)
     (:audio      :on)
     (:param-hud  :on)
+    (:player-keys :on)
     (:media-input :on))
 
   ;; 2. Supported Declarative Gesture Primitives (Extracted from ASTDirectGestureSubsystem)
@@ -31,7 +32,7 @@
   ;; Embedded media runtimes (AVM1, retro emulators, interactive SVG apps) subscribe independently
   ;; to normalized channels; site-gestures.js owns browser DOM listeners & whiteboard/focus gating.
   (:media-routes
-    (:route :event "keydown"       :channel "key-down"     :switch :media-input :gate "focus"      :capture-keys ("Space" "Tab" "ArrowLeft" "ArrowRight" "ArrowUp" "ArrowDown"))
+    (:route :event "keydown"       :channel "key-down"     :switch :media-input :gate "focus"      :capture-keys ("Space" "Tab" "Enter" "Backspace" "PageUp" "PageDown" "Home" "End" "ArrowLeft" "ArrowRight" "ArrowUp" "ArrowDown"))
     (:route :event "keyup"         :channel "key-up"       :switch :media-input)
     (:route :event "pointermove"   :channel "pointer-move" :switch :media-input :gate "whiteboard" :coords "svg" :throttle-ms 15)
     (:route :event "pointerdown"   :channel "pointer-down" :switch :media-input :gate "whiteboard" :coords "svg")

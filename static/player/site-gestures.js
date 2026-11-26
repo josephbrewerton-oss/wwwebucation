@@ -159,10 +159,10 @@
         })
         .catch(() => {});
 
-      // Listen for scene load changes (guard duplicate registration)
+      // Listen for scene load & reset changes (guard duplicate registration)
       if (!this._presetListenerBound && this.engine && typeof this.engine.on === 'function') {
         this._presetListenerBound = true;
-        this.engine.on('presetchange', () => {
+        const resetInteractionState = () => {
           this._releaseAllHeldInputs(false);
           if (this._activeHoverVars) this._activeHoverVars.clear();
           if (this._activePressVars) this._activePressVars.clear();
@@ -174,14 +174,23 @@
           this.hideXRayPopup();
           this._syncCartridgeControls();
           this.enhanceSceneInteractivity();
+        };
+        this.engine.on('presetchange', () => {
+          resetInteractionState();
           setTimeout(() => {
             this._syncCartridgeControls();
             this.enhanceSceneInteractivity();
           }, 50);
         });
+        this.engine.on('simreset', () => {
+          resetInteractionState();
+        });
       }
 
       this._bindTimelineVarSync();
+      if (this.engine && typeof this.engine._onGesturesReady === 'function') {
+        try { this.engine._onGesturesReady(this); } catch (_) {}
+      }
     }
 
     // =========================================================================
@@ -409,18 +418,47 @@
       if (!this._windowListenersBound && typeof window !== 'undefined') {
         this._windowListenersBound = true;
         this._declarativeKeyBound = true;
+        this._onWindowMessage = (ev) => {
+          this._handleWhiteboardMessage(ev);
+        };
         window.addEventListener('pointermove', this.handlePointerMove, { passive: false });
         window.addEventListener('pointerup', this.handlePointerUp);
         window.addEventListener('pointercancel', this.handlePointerCancel);
         window.addEventListener('touchend', this.handleTouchEnd, { passive: true });
-        window.addEventListener('keydown', this.handleKeyDown);
-        window.addEventListener('keyup', this.handleKeyUp);
+        window.addEventListener('keydown', this.handleKeyDown, true);
+        window.addEventListener('keyup', this.handleKeyUp, true);
         window.addEventListener('blur', this.handleWindowBlur);
-
-        window.addEventListener('message', (ev) => {
-          this._handleWhiteboardMessage(ev);
-        });
+        window.addEventListener('message', this._onWindowMessage);
       }
+    }
+
+    destroy() {
+      this._releaseAllHeldInputs(false);
+      if (this._activeHoverVars) this._activeHoverVars.clear();
+      if (this._activePressVars) this._activePressVars.clear();
+      if (this._boundStageSvg) {
+        this._boundStageSvg.removeEventListener('pointerdown', this.handlePointerDown);
+        this._boundStageSvg.removeEventListener('pointerleave', this.handlePointerLeave);
+        this._boundStageSvg.removeEventListener('wheel', this.handleWheel);
+        this._boundStageSvg.removeEventListener('click', this.handleStageClick);
+        this._boundStageSvg = null;
+      }
+      if (this._windowListenersBound && typeof window !== 'undefined') {
+        window.removeEventListener('pointermove', this.handlePointerMove);
+        window.removeEventListener('pointerup', this.handlePointerUp);
+        window.removeEventListener('pointercancel', this.handlePointerCancel);
+        window.removeEventListener('touchend', this.handleTouchEnd);
+        window.removeEventListener('keydown', this.handleKeyDown, true);
+        window.removeEventListener('keyup', this.handleKeyUp, true);
+        window.removeEventListener('blur', this.handleWindowBlur);
+        if (this._onWindowMessage) {
+          window.removeEventListener('message', this._onWindowMessage);
+          this._onWindowMessage = null;
+        }
+        this._windowListenersBound = false;
+        this._declarativeKeyBound = false;
+      }
+      if (this._mediaInputSinks) this._mediaInputSinks.clear();
     }
 
     _handleWhiteboardMessage(ev) {

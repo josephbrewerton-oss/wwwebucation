@@ -1305,6 +1305,7 @@ export function renderPlayerPage(): HTMLElement {
   function updatePreset(presetId: string, skipPostMessage = false, pushHistoryIfOpening = true) {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
     const safePresetId = normalizePresetId(presetId);
+    const prevPresetId = activePreset;
     const wasStageOpen = isStageOpen;
     isStageOpen = true;
     activePreset = safePresetId;
@@ -1325,7 +1326,8 @@ export function renderPlayerPage(): HTMLElement {
     const localCustomCart = getCustomCartridges().find(
       (c) => c.id === safePresetId && c.source !== 'builtin' && Boolean(c.svgMarkup || c.astSource)
     ) || null;
-    stageMediaInputActive = Boolean(
+    const preserveMediaInput = skipPostMessage && safePresetId === prevPresetId && stageMediaInputActive;
+    stageMediaInputActive = preserveMediaInput || Boolean(
       cartridgeNeedsStageKeyForwarding(localCustomCart) ||
       cartridgeNeedsStageKeyForwarding(pendingCustomCartridge) ||
       safePresetId.startsWith('flash-')
@@ -1593,6 +1595,7 @@ export function renderPlayerPage(): HTMLElement {
     } else {
       updatePreset(val);
     }
+    select.blur();
   });
 
   // Open button wiring
@@ -1674,10 +1677,12 @@ export function renderPlayerPage(): HTMLElement {
       postToPlayer({ type: 'SET_VOICE', enabled: nextVoice });
       postToPlayer({ type: 'SET_MUTED', muted });
     }
+    if (isSwfStageInputActive()) focusPlayerStage();
   });
 
   bslBtn?.addEventListener('click', () => {
     toggleBsl();
+    if (isSwfStageInputActive()) focusPlayerStage();
   });
 
   function updateBslUi(enabled: boolean) {
@@ -1738,7 +1743,11 @@ export function renderPlayerPage(): HTMLElement {
         e.code.startsWith('Arrow') ||
         e.code === 'Tab' ||
         e.code === 'Backspace' ||
-        e.code === 'Enter'
+        e.code === 'Enter' ||
+        e.code === 'PageUp' ||
+        e.code === 'PageDown' ||
+        e.code === 'Home' ||
+        e.code === 'End'
       ) {
         e.preventDefault();
       }
@@ -1750,6 +1759,7 @@ export function renderPlayerPage(): HTMLElement {
         key: e.key,
         keyCode: e.keyCode,
         shiftKey: Boolean(e.shiftKey),
+        repeat: Boolean(e.repeat),
       });
       return;
     }
