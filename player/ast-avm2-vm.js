@@ -3079,6 +3079,7 @@
           return nIdx < obj._len ? obj._buf[nIdx] : 0;
         }
       }
+      if (typeof obj !== 'object' && typeof obj !== 'function') return obj[name];
       if (name in obj) return obj[name];
       if (typeof obj.getChildByName === 'function') {
         const ch = obj.getChildByName(name);
