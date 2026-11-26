@@ -393,22 +393,31 @@
       code: typeof data.code === 'string' ? data.code : '',
       key: typeof data.key === 'string' ? data.key : '',
       keyCode: typeof data.keyCode === 'number' ? data.keyCode : 0,
+      shiftKey: Boolean(data && data.shiftKey),
     };
+    if (typeof engine.setKeyBindingState === 'function') {
+      engine.setKeyBindingState(payload.code, payload.key, kind === 'keydown');
+    }
     if (engine.gestures && typeof engine.gestures.dispatchExternalMediaInput === 'function') {
       if (engine.gestures.dispatchExternalMediaInput(channel, payload)) return;
     }
-    if (engine._avm1Vm && typeof engine._avm1Vm.handleForwardedKeyEvent === 'function') {
-      engine._avm1Vm.handleForwardedKeyEvent(kind, payload);
+    const vm = engine._swfVm || engine._avm1Vm;
+    if (vm && typeof vm.handleForwardedKeyEvent === 'function') {
+      vm.handleForwardedKeyEvent(kind, payload);
     }
   };
 
   const dispatchReleaseAll = ({ engine }) => {
     if (!engine) return;
+    if (typeof engine.clearKeyBindingsState === 'function') {
+      engine.clearKeyBindingsState();
+    }
     if (engine.gestures && typeof engine.gestures.dispatchExternalMediaInput === 'function') {
       if (engine.gestures.dispatchExternalMediaInput('release-all', {})) return;
     }
-    if (engine._avm1Vm && typeof engine._avm1Vm.releaseAllInputs === 'function') {
-      engine._avm1Vm.releaseAllInputs();
+    const vm = engine._swfVm || engine._avm1Vm;
+    if (vm && typeof vm.releaseAllInputs === 'function') {
+      vm.releaseAllInputs();
     }
   };
 
