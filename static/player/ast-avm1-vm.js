@@ -557,6 +557,13 @@
       this._password = Boolean(def.pw);
       this._multiline = Boolean(def.ml);
       this._maxChars = def.mx || 0;
+      this._restrict = null;
+      this._textColor = null;
+      this._background = Boolean(def.bd);
+      this._backgroundColor = null;
+      this._border = Boolean(def.bd);
+      this._borderColor = null;
+      this.tabIndex = undefined;
       this._focused = false;
       this._lastRenderedText = null;
       this._lastTransform = '';
@@ -625,6 +632,74 @@
       this._renderTextDisplay();
     }
 
+    _ensureBgRect() {
+      if (this.bgRect) return this.bgRect;
+      const fs = this._fontSize || 14;
+      const def = this.def || {};
+      this.bgRect = createSvgEl(this._vm.doc, 'rect');
+      this.bgRect.setAttribute('x', fmtNum(def.x || 0));
+      this.bgRect.setAttribute('y', fmtNum(def.y || 0));
+      this.bgRect.setAttribute('width', fmtNum(Math.max(24, def.w || 120)));
+      this.bgRect.setAttribute('height', fmtNum(Math.max(fs + 6, def.h || (fs + 8))));
+      this.bgRect.setAttribute('rx', '3');
+      this.bgRect.setAttribute('fill', 'none');
+      this.bgRect.setAttribute('stroke', 'none');
+      this.bgRect.setAttribute('stroke-width', '0');
+      if (this.textEl && this.textEl.parentNode === this.svgEl) {
+        this.svgEl.insertBefore(this.bgRect, this.textEl);
+      } else {
+        this.svgEl.appendChild(this.bgRect);
+      }
+      return this.bgRect;
+    }
+
+    _isCharAllowedByRestrict(ch) {
+      const r = this._restrict;
+      if (r === null || r === undefined) return true;
+      if (r === '') return false;
+      const code = ch.charCodeAt(0);
+      let allowSpecified = false;
+      let allowed = false;
+      let excluded = false;
+      let modeExclude = false;
+      let i = 0;
+      const len = r.length;
+      const readToken = () => {
+        if (i >= len) return null;
+        if (r[i] === '\\' && i + 1 < len) {
+          i += 2;
+          return r.charCodeAt(i - 1);
+        }
+        return r.charCodeAt(i++);
+      };
+      while (i < len) {
+        if (r[i] === '^') {
+          modeExclude = !modeExclude;
+          i++;
+          continue;
+        }
+        const startCode = readToken();
+        if (startCode === null) break;
+        let endCode = startCode;
+        if (i < len && r[i] === '-' && i + 1 < len && r[i + 1] !== '^') {
+          i++; // consume '-'
+          const nextCode = readToken();
+          if (nextCode !== null) endCode = nextCode;
+        }
+        const lo = Math.min(startCode, endCode);
+        const hi = Math.max(startCode, endCode);
+        if (modeExclude) {
+          if (code >= lo && code <= hi) excluded = true;
+        } else {
+          allowSpecified = true;
+          if (code >= lo && code <= hi) allowed = true;
+        }
+      }
+      if (excluded) return false;
+      if (allowSpecified) return allowed;
+      return true;
+    }
+
     _renderTextDisplay() {
       const shown = this._password ? '•'.repeat(this._text.length) : this._text;
       if (this._lastRenderedText !== shown) {
@@ -644,9 +719,21 @@
           this.caretEl.setAttribute('display', 'none');
         }
       }
-      if (this.bgRect && this._editable) {
-        this.bgRect.setAttribute('stroke', this._focused ? '#38bdf8' : (this.def.bd ? '#94a3b8' : 'none'));
-        this.bgRect.setAttribute('stroke-width', this._focused ? '1.5' : (this.def.bd ? '1' : '0'));
+      if (this.bgRect) {
+        const fillVal = this._background
+          ? (this._backgroundColor || (this.def.bd ? 'rgba(15, 23, 42, 0.75)' : '#ffffff'))
+          : (this._editable ? 'rgba(255, 255, 255, 0.001)' : 'none');
+        this.bgRect.setAttribute('fill', fillVal);
+        if (this._focused && this._editable) {
+          this.bgRect.setAttribute('stroke', '#38bdf8');
+          this.bgRect.setAttribute('stroke-width', '1.5');
+        } else if (this._border) {
+          this.bgRect.setAttribute('stroke', this._borderColor || '#94a3b8');
+          this.bgRect.setAttribute('stroke-width', '1');
+        } else {
+          this.bgRect.setAttribute('stroke', 'none');
+          this.bgRect.setAttribute('stroke-width', '0');
+        }
       }
     }
 
@@ -655,8 +742,14 @@
       this._renderTextDisplay();
     }
 
-    handleKeyInput(kc, keyStr) {
+    handleKeyInput(kc, keyStr, shiftKey) {
       if (!this._editable || !this._visible) return false;
+      if (kc === 9) {
+        if (this._vm && typeof this._vm._cycleEditableTextFocus === 'function') {
+          this._vm._cycleEditableTextFocus(shiftKey ? -1 : 1);
+        }
+        return true;
+      }
       let next = this._text;
       if (kc === 8) {
         next = next.slice(0, -1);
@@ -667,16 +760,25 @@
         return true;
       } else if (kc === 13) {
         if (this._multiline) next += '\n';
-      } else if (typeof keyStr === 'string' && keyStr.length === 1) {
-        if (this._maxChars > 0 && next.length >= this._maxChars) return true;
-        next += keyStr;
       } else {
-        return false;
+        let ch = (typeof keyStr === 'string' && keyStr.length === 1) ? keyStr : '';
+        if (!ch) {
+          if (kc >= 96 && kc <= 105) ch = String(kc - 96);
+          else if (kc === 106) ch = '*';
+          else if (kc === 107) ch = '+';
+          else if (kc === 109) ch = '-';
+          else if (kc === 110) ch = '.';
+          else if (kc === 111) ch = '/';
+        }
+        if (!ch) return false;
+        if (!this._isCharAllowedByRestrict(ch)) return true;
+        if (this._maxChars > 0 && next.length >= this._maxChars) return true;
+        next += ch;
       }
       if (next !== this._text) {
         this.text = next;
-        if (this._variable && this._parent && this._parent._vars) {
-          this._parent._vars[this._variable] = next;
+        if (this._variable && this._parent) {
+          this._vm._setVariable(this._variable, next, this._parent, [], []);
         }
         if (typeof this.onChanged === 'function') {
           this._vm._invokeValue(this.onChanged, this, [this]);
@@ -693,6 +795,59 @@
 
     get maxChars() { return this._maxChars || null; }
     set maxChars(v) { this._maxChars = Math.max(0, Number(v) | 0); }
+
+    get restrict() { return this._restrict; }
+    set restrict(v) { this._restrict = (v === null || v === undefined) ? null : String(v); }
+
+    get textColor() {
+      if (this._textColor !== null) return this._textColor;
+      const hex = String(this.def.col || '#ffffff').replace('#', '');
+      const parsed = parseInt(hex, 16);
+      return Number.isNaN(parsed) ? 0xffffff : parsed;
+    }
+    set textColor(v) {
+      const rgb = (toAvm1Number(v) & 0xffffff) >>> 0;
+      this._textColor = rgb;
+      const hex = '#' + rgb.toString(16).padStart(6, '0');
+      this.textEl.setAttribute('fill', hex);
+      if (this.caretEl) this.caretEl.setAttribute('stroke', hex);
+    }
+
+    get background() { return this._background; }
+    set background(v) {
+      this._background = Boolean(v);
+      if (this._background) this._ensureBgRect();
+      this._renderTextDisplay();
+    }
+
+    get backgroundColor() {
+      if (!this._backgroundColor) return 0xffffff;
+      return parseInt(this._backgroundColor.replace('#', ''), 16) || 0xffffff;
+    }
+    set backgroundColor(v) {
+      const rgb = (toAvm1Number(v) & 0xffffff) >>> 0;
+      this._backgroundColor = '#' + rgb.toString(16).padStart(6, '0');
+      this._ensureBgRect();
+      this._renderTextDisplay();
+    }
+
+    get border() { return this._border; }
+    set border(v) {
+      this._border = Boolean(v);
+      if (this._border) this._ensureBgRect();
+      this._renderTextDisplay();
+    }
+
+    get borderColor() {
+      if (!this._borderColor) return 0x000000;
+      return parseInt(this._borderColor.replace('#', ''), 16) || 0x000000;
+    }
+    set borderColor(v) {
+      const rgb = (toAvm1Number(v) & 0xffffff) >>> 0;
+      this._borderColor = '#' + rgb.toString(16).padStart(6, '0');
+      this._ensureBgRect();
+      this._renderTextDisplay();
+    }
 
     get text() { return this._text; }
     set text(v) {
@@ -1069,6 +1224,7 @@
       this._vars = Object.create(null);
       this._childrenByDepth = new Map(); // depth -> { charId, obj, svgWrap, clipDepth, maskId }
       this._removed = false;
+      this._droptarget = '';
       vm._liveClipCount = (vm._liveClipCount || 0) + 1;
 
       // Expand deduplicated "=" hold-frame markers once into shared direct array references (O(F), 0 per-frame GC)
@@ -3384,8 +3540,11 @@
             const kc = self._resolveFlashKeyFromEvent(payload);
             if (!kc) return;
             let consumed = false;
+            const shiftHeld = Boolean(payload.shiftKey || (payload.originalEvent && payload.originalEvent.shiftKey));
             if (self._focusedTarget && self._focusedTarget._isTextField && self._focusedTarget._editable) {
-              self._focusedTarget.handleKeyInput(kc, payload.key || '');
+              self._focusedTarget.handleKeyInput(kc, payload.key || '', shiftHeld);
+              consumed = true;
+            } else if (kc === 9 && self._cycleEditableTextFocus(shiftHeld ? -1 : 1)) {
               consumed = true;
             }
             const ascii = (payload.key && payload.key.length === 1) ? payload.key.charCodeAt(0) : kc;
@@ -3446,7 +3605,9 @@
         if (!kc) return;
         if (this._focusedTarget && this._focusedTarget._isTextField && this._focusedTarget._editable) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
-          this._focusedTarget.handleKeyInput(kc, e.key || '');
+          this._focusedTarget.handleKeyInput(kc, e.key || '', Boolean(e.shiftKey));
+        } else if (kc === 9 && this._cycleEditableTextFocus(e.shiftKey ? -1 : 1)) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
         } else if (kc === 32 || (kc >= 37 && kc <= 40) || kc === 9) {
           if (typeof e.preventDefault === 'function') e.preventDefault();
         }
@@ -3902,16 +4063,19 @@
 
     handleForwardedKeyEvent(kind, payload) {
       if (!this._mounted || !payload) return;
-      if (kind === 'keydown') {
+      if (kind === 'keydown' || kind === 'key-down') {
         this._syncAstKeyState(payload, true);
         const kc = this._resolveFlashKeyFromEvent(payload);
         if (!kc) return;
+        const shiftHeld = Boolean(payload.shiftKey);
         if (this._focusedTarget && this._focusedTarget._isTextField && this._focusedTarget._editable) {
-          this._focusedTarget.handleKeyInput(kc, payload.key || '');
+          this._focusedTarget.handleKeyInput(kc, payload.key || '', shiftHeld);
+        } else if (kc === 9) {
+          this._cycleEditableTextFocus(shiftHeld ? -1 : 1);
         }
         const ascii = (payload.key && payload.key.length === 1) ? payload.key.charCodeAt(0) : kc;
         this.triggerKeyDown(kc, ascii);
-      } else if (kind === 'keyup') {
+      } else if (kind === 'keyup' || kind === 'key-up') {
         this._syncAstKeyState(payload, false);
         const kc = this._resolveFlashKeyFromEvent(payload);
         if (!kc) return;
@@ -4052,6 +4216,73 @@
       mc._y = ny;
       mc._scriptModifiedTransform = true;
       mc.commitSvg();
+      mc._droptarget = this._computeDropTarget(mc);
+    }
+
+    _collectEditableTextFields(clip, out) {
+      if (!clip || clip._removed || !clip._visible) return;
+      if (!clip._childrenByDepth || clip._childrenByDepth.size === 0) return;
+      const entries = Array.from(clip._childrenByDepth.entries()).sort((a, b) => a[0] - b[0]);
+      for (let i = 0; i < entries.length; i++) {
+        const obj = entries[i][1] && entries[i][1].obj;
+        if (!obj || !obj._visible) continue;
+        if (obj._isTextField && obj._editable) {
+          const pMat = clip.getWorldMatrix();
+          const pt = applyMatPt(pMat, (obj._x || 0) + (obj.def.x || 0), (obj._y || 0) + (obj.def.y || 0));
+          out.push({ tf: obj, x: pt.x, y: pt.y });
+        } else if (obj._isMovieClip) {
+          this._collectEditableTextFields(obj, out);
+        }
+      }
+    }
+
+    _cycleEditableTextFocus(dir) {
+      if (!this.rootClip || !this._global || !this._global.Selection) return false;
+      const list = [];
+      this._collectEditableTextFields(this.rootClip, list);
+      if (list.length === 0) return false;
+      list.sort((a, b) => {
+        const ta = typeof a.tf.tabIndex === 'number' ? a.tf.tabIndex : Infinity;
+        const tb = typeof b.tf.tabIndex === 'number' ? b.tf.tabIndex : Infinity;
+        if (ta !== tb) return ta - tb;
+        if (Math.abs(a.y - b.y) > 8) return a.y - b.y;
+        return a.x - b.x;
+      });
+      const curIdx = list.findIndex((it) => it.tf === this._focusedTarget);
+      let nextIdx;
+      if (curIdx === -1) {
+        nextIdx = dir < 0 ? list.length - 1 : 0;
+      } else {
+        nextIdx = (curIdx + (dir < 0 ? -1 : 1) + list.length) % list.length;
+      }
+      this._global.Selection.setFocus(list[nextIdx].tf);
+      return true;
+    }
+
+    _computeDropTarget(draggedClip) {
+      if (!draggedClip || !this.rootClip) return '';
+      const mx = this._mouseX;
+      const my = this._mouseY;
+      const walkTopDown = (clip) => {
+        if (!clip || clip._removed || !clip._visible || clip === draggedClip) return null;
+        if (clip._childrenByDepth && clip._childrenByDepth.size > 0) {
+          const entries = Array.from(clip._childrenByDepth.entries()).sort((a, b) => b[0] - a[0]);
+          for (let i = 0; i < entries.length; i++) {
+            const slot = entries[i][1];
+            if (!slot || !slot.obj) continue;
+            if (slot.obj._isMovieClip) {
+              const hit = walkTopDown(slot.obj);
+              if (hit) return hit;
+            }
+          }
+        }
+        if (clip !== this.rootClip && clip.hitTest(mx, my, true)) {
+          return clip;
+        }
+        return null;
+      };
+      const hitClip = walkTopDown(this.rootClip);
+      return hitClip ? hitClip.getTargetPath() : '';
     }
 
     startDragClip(mc, lockCenter, left, top, right, bottom) {
@@ -4073,6 +4304,9 @@
     }
 
     stopDragClip() {
+      if (this._dragClip && !this._dragClip._removed) {
+        this._dragClip._droptarget = this._computeDropTarget(this._dragClip);
+      }
       this._dragClip = null;
       this._dragOpts = null;
     }
@@ -4820,7 +5054,7 @@
           const local = applyMatPt(invertMat(clip.getWorldMatrix()), this._mouseX, this._mouseY);
           return local.y;
         }
-        case '_droptarget': return '';
+        case '_droptarget': return clip._isMovieClip ? (clip._droptarget || '') : '';
         case '_url': return 'file:///swf';
         case '_quality': return 'HIGH';
         case '_highquality': return 1;
@@ -5143,6 +5377,20 @@
         const tgt = this._resolveTargetPath(targetPart || '/', targetClip);
         if (tgt) this._setMember(tgt, propPart, val);
         return;
+      }
+
+      // Handle dot paths ("_root.answer", "_parent.score", "quiz.ans")
+      if (key.includes('.')) {
+        const parts = key.split('.');
+        let cur = this._getVariable(parts[0], targetClip, scopes, withStack);
+        for (let i = 1; i < parts.length - 1; i++) {
+          if (cur == null) return;
+          cur = this._getMember(cur, parts[i]);
+        }
+        if (cur && typeof cur === 'object') {
+          this._setMember(cur, parts[parts.length - 1], val);
+          return;
+        }
       }
 
       // 1. If variable exists in an active with-object, update it there
@@ -5925,9 +6173,14 @@
             for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
             let res;
             if (fnName === 'eval') {
-              res = this._resolveTargetPath(args[0], curTarget);
-              if (res === undefined && args[0] != null) {
-                res = this._resolveVariablePath(String(args[0]), curTarget);
+              const rawEval = args[0];
+              if (rawEval === undefined || rawEval === null || String(rawEval).trim() === '') {
+                res = undefined;
+              } else {
+                res = this._resolveTargetPath(rawEval, curTarget);
+                if (res === undefined) {
+                  res = this._resolveVariablePath(String(rawEval), curTarget);
+                }
               }
             } else {
               const fn = this._getVariable(fnName, curTarget, scopes, withStack, thisObj);

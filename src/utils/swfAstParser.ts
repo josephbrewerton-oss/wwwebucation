@@ -1640,10 +1640,13 @@ function mapFlashKeyCode(keyCode: number): SwfKeyBindingSpec {
     case 39: return { keyCode, domCode: 'ArrowRight', varName: 'key_right' };
     case 40: return { keyCode, domCode: 'ArrowDown', varName: 'key_down' };
     case 32: return { keyCode, domCode: 'Space', varName: 'key_space' };
+    case 8: return { keyCode, domCode: 'Backspace', varName: 'key_backspace' };
+    case 9: return { keyCode, domCode: 'Tab', varName: 'key_tab' };
     case 13: return { keyCode, domCode: 'Enter', varName: 'key_enter' };
     case 16: return { keyCode, domCode: 'ShiftLeft', varName: 'key_shift' };
     case 17: return { keyCode, domCode: 'ControlLeft', varName: 'key_ctrl' };
     case 27: return { keyCode, domCode: 'Escape', varName: 'key_escape' };
+    case 46: return { keyCode, domCode: 'Delete', varName: 'key_delete' };
     default: {
       if (keyCode >= 65 && keyCode <= 90) {
         const ch = String.fromCharCode(keyCode);
@@ -1667,9 +1670,11 @@ function mapSwfButtonKeyCode(btnKeyCode: number): SwfKeyBindingSpec {
   switch (btnKeyCode) {
     case 1: return mapFlashKeyCode(37); // Left
     case 2: return mapFlashKeyCode(39); // Right
+    case 8: return mapFlashKeyCode(8);  // Backspace
+    case 13: return mapFlashKeyCode(13); // Enter
     case 14: return mapFlashKeyCode(38); // Up
     case 15: return mapFlashKeyCode(40); // Down
-    case 13: return mapFlashKeyCode(13); // Enter
+    case 18: return mapFlashKeyCode(9);  // Tab
     case 19: return mapFlashKeyCode(27); // Escape
     default: return mapFlashKeyCode(btnKeyCode);
   }
@@ -4870,6 +4875,19 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
       }
     });
+
+    // Educational quizzes & math input boxes (editable DefineEditText): auto-register Enter, Backspace & Tab
+    // into declarative (:key-bindings ...) so keyboard quiz entry works seamlessly across host player bindings.
+    let hasEditableText = false;
+    editTexts.forEach((et) => {
+      if (et.editable) hasEditableText = true;
+    });
+    if (hasEditableText) {
+      for (const fk of [13, 8, 9]) {
+        const spec = mapFlashKeyCode(fk);
+        if (spec) registerUsedKeys([spec]);
+      }
+    }
 
     // For dynamic multi-frame SWFs, do NOT dump unplaced library shapes onto the stage (they cover active frames);
     // keep unplaced shapes only for static single-frame SWFs (Sims 1–11 compatibility), referencing cached <defs> symbols.
