@@ -322,14 +322,38 @@
     }
   };
 
+  const canSafelyFocusStage = () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive) {
+        return true;
+      }
+      if (typeof document !== 'undefined') {
+        if (typeof document.hasFocus === 'function' && document.hasFocus()) return true;
+        const policy = document.featurePolicy || document.permissionsPolicy;
+        if (policy && typeof policy.allowsFeature === 'function') {
+          return Boolean(policy.allowsFeature('focus-without-user-activation'));
+        }
+      }
+      if (typeof window !== 'undefined' && window.top !== window) return false;
+    } catch (_) {
+      return false;
+    }
+    return true;
+  };
+
   handlers.FOCUS_STAGE = ({ engine }) => {
+    if (!canSafelyFocusStage()) return;
     const svgEl = typeof engine.getStageSvg === 'function' ? engine.getStageSvg() : null;
-    if (svgEl && typeof svgEl.focus === 'function') {
+    if (svgEl && typeof svgEl.focus === 'function' && document.activeElement !== svgEl) {
       try { svgEl.focus({ preventScroll: true }); } catch (_) {
         try { svgEl.focus(); } catch (_) {}
       }
     }
-    if (typeof window !== 'undefined' && typeof window.focus === 'function') {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.focus === 'function' &&
+      (typeof document === 'undefined' || typeof document.hasFocus !== 'function' || !document.hasFocus())
+    ) {
       try { window.focus(); } catch (_) {}
     }
   };

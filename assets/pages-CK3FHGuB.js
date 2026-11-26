@@ -226,17 +226,45 @@ import{c as e,v as t}from"./cartridge-vault-COg9VH8R.js";function n(){let n=t(),
         </a>
 
         <!-- SlideScript Lesson Studio Card -->
-        <a href="${n}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}player?tool=create" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ✏️
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Create Your Own Lesson</strong>
             <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
-              Write plain-English notes or ask the on-device study assistant to build and remix interactive science and maths activities with no coding required.
+              Author new native pure-SVG (.ast) interactive lessons from plain-English notes or remix existing labs offline—no Flash or coding required.
             </p>
           </div>
           <span style="font-size: 0.84rem; font-weight: 700; color: #047857;">Open Lesson Creator →</span>
+        </a>
+
+        <!-- Upgrade Legacy Flash (.swf) Card -->
+        <a href="${n}player?import=swf" style="background: #ffffff; border: 1.5px solid #fcd34d; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(217,119,6,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+          <div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+              ⚡
+            </div>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Got an Old Flash (.swf) File?</strong>
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
+              Have a retired .swf classroom resource you can no longer run? Drop it in locally to play it in pure SVG (Beta) or upgrade it into an open, bytecode-free .ast offline cartridge.
+            </p>
+          </div>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #b45309;">Upgrade a Legacy .swf →</span>
+        </a>
+
+        <!-- Curriculum & Cartridge Studio Card -->
+        <a href="${n}curriculum-studio" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+          <div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f1f5f9; color: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+              🛠️
+            </div>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Curriculum &amp; Cartridge Studio</strong>
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
+              Package custom native .astb offline cartridges and import overseas or school syllabi (CSV/JSON) for zero-data classroom distribution.
+            </p>
+          </div>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #0f172a;">Open Author Studio →</span>
         </a>
 
         <!-- Teacher Beacon Card -->

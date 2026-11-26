@@ -600,12 +600,17 @@
       return;
     }
 
-    if (this.stageSvg && typeof this.stageSvg.focus === 'function') {
+    if (this.stageSvg && typeof this.stageSvg.focus === 'function' && document.activeElement !== this.stageSvg) {
       try { this.stageSvg.focus({ preventScroll: true }); } catch {
         try { this.stageSvg.focus(); } catch {}
       }
     }
-    if (typeof window !== 'undefined' && typeof window.focus === 'function') {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.focus === 'function' &&
+      (typeof document === 'undefined' || typeof document.hasFocus !== 'function' || !document.hasFocus()) &&
+      (typeof navigator === 'undefined' || !navigator.userActivation || navigator.userActivation.isActive)
+    ) {
       try { window.focus(); } catch {}
     }
 
