@@ -47,12 +47,12 @@
 - `/llms-full.txt` : Comprehensive full-system briefing file for large-context models.
 - `/agents.txt` : Directory of autonomous web agent capabilities, tools, and W3C WebMCP definitions.
 - `/robots.txt` : Web robot and AI bot discovery policy.
-- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all 68 compiled cartridges.
+- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all compiled cartridges.
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/sitemap.ast` : S-Expression sitemap indexing self-mounting cartridges.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of 67 unique production vector simulation scene IDs across 68 compiled cartridge files (v2.6.0).
+- `/player/scenes.manifest.json` : Index of all 79 compiled production vector simulation & storybook cartridges (v2.6.0).
 - `/player/scenes-config.json` : Timeline keyframes, multilingual subtitles (EN/ES/FR/LA/DE/IT), and pause checkpoints.
 - `/player/schema/ast-scene.schema.json` : Formal JSON Schema defining scene graph structure.
 - `/nano-map.ast` : Compact curriculum domain schema parsed by `sexprParser.ts`.
@@ -212,25 +212,33 @@ The player incorporates a world-first zero-video procedural 3D British Sign Lang
 
 ---
 
-## 9. PhET Simulation Ingestion & Transpiler Bridge
+## 9. PhET Distillation & Pure-SVG Offline Flash (.swf) Compatibility Runtime
 
-The portal includes an automated transpiler bridge (`ast-phet-bridge.js` & `src/utils/phetBridge.ts`):
-- **Input Formats**: Ingests monolithic PhET HTML5 bundles (`.html`, `.json`), PhET-iO models, and legacy Macromedia/Adobe Flash SWF files.
-- **AST Distillation**: Strips out megabytes of redundant Scenery/Kite/Dot wrapper code, distilling complex physical simulations down to clean < 4 KB AST S-Expressions (99.8% payload reduction).
-- **Conservation Law Preservation**: Automatically identifies state variables and compiles them into reactive `:bindings` and `:state-machine` nodes, guaranteeing that physical conservation laws (momentum, mass, energy, charge) remain mathematically intact.
+The portal includes both a PhET distillation bridge (`ast-phet-bridge.js` & `src/utils/phetBridge.ts`) and a lazy, pure-SVG offline Flash SWF runtime (`src/utils/swfAstParser.ts`, `static/player/ast-avm1-vm.js`, `static/player/ast-avm2-vm.js`):
+- **PhET Distillation**: Strips megabytes of Scenery/Kite/Dot wrapper overhead from PhET HTML5/PhET-iO models into deterministic `< 4 KB` native AST S-Expressions preserving physical conservation laws.
+- **Lazy Pure-SVG Flash SWF Micro-VMs (Zero Initial Boot Cost)**: `ast-avm1-vm.js` (~69.3 KB gzipped) and `ast-avm2-vm.js` (~38.9 KB gzipped) load strictly on demand via `ASTLazyLoader` ONLY when an imported `.swf` cartridge mounts (`0 KB` added to initial portal boot or native `.astb` labs).
+- **100% Pure W3C SVG DOM**: Renders Flash vector shapes, gradients, bitmap `<pattern>` fills, `<filter>` visual FX, `DefineButton2` states, nested sprites, editable `DefineEditText`, and procedural Web Audio PCM/ADPCM sound synthesis with zero `<canvas>`, zero WebGL, and zero multi-megabyte WebAssembly emulators.
+- **Decoupled Universal Media Input Bus & Authentic Preloader Lifecycle**: SWF runtimes subscribe as generic exclusive keyboard/pointer sinks on `site-gestures.js` (zero duplicate `window` listeners; smartboard ink and host controls remain intact) and let active Frame-1 preloaders (`onEnterFrame`, clip events, multi-frame byte-check loops) self-complete offline before falling back to `entryFrame` with stalled-handler cleanup.
+- **Honest Beta Compatibility Boundaries**:
+  - *Best supported*: Vector-first Flash 5–8 (ActionScript 1/2) educational applets, quizzes, simulations, and classic games.
+  - *Partial / experimental*: ActionScript 3 (AVM2) runs core vector timelines and basic events; complex AS3/Flex frameworks and untested wild SWFs may have edge cases.
+  - *Not supported (by design)*: Stage3D/WebGL, pixel-buffer `BitmapData` / Pixel Bender shaders, streaming FLV video (`NetStream`), camera/mic/sockets, and live external web/high-score APIs (runs strictly offline in pure SVG).
+  - *Run-to-Convert Distillation*: Teachers can optionally capture live SWF screens and promote them into lightweight, bytecode-free native `.astb` cartridges.
 
 ---
 
-## 10. Complete Production Curriculum Cartridge Catalog (68 Cartridges)
+## 10. Complete Production Curriculum Cartridge Catalog (79 Cartridges)
 
 ### 10.1. Mathematics & Quantitative Reasoning
-1. **Calculus: Tangent Slopes & Integrals (`calculus-curves`)**: GCSE/A-Level. Tangent slope $dy/dx$, stationary turning points, and Simpson's 1/3 numerical integrals with interactive curve selection.
-2. **Algebra Balance Scale Lab (`algebra-balance`)**: KS2/KS3. Two-pan balance scale, algebraic equation balancing ($2x + 5 = 15$), and zero-pair cancelations.
-3. **Pythagoras' Geometric Proof (`pythagoras`)**: KS3. Euclidean shear proof, dynamic square slicing, area conservation, and algebraic $a^2 + b^2 = c^2$ verification.
-4. **BODMAS / BIDMAS Forcefield Clamping (`bodmas`)**: KS2/KS3. Visual operation precedence clamps, bracket forcefields, and step-by-step arithmetic evaluations.
-5. **Fraction Wall & Slicing (`fractions`)**: KS2. Visual fraction wall, dynamic denominator slicing, equivalent fractions, and common denominator arithmetic.
-6. **Times Tables 2D Multiplication Array (`times-tables`)**: KS1/KS2. 2× to 12× multiplication arrays, distributive property slicing, and commutative proofs.
-7. **Maths Fishing: Number Bonds to 10/20 (`math-fishing`)**: KS1. Gamified number bond rods, hook physics, and complementary addition calculations.
+1. **Jacob's Ladder of Prime Bricks (`jacobs-ladder-primes`)**: KS2/KS3/GCSE. Hands-on Riemann Hypothesis lab featuring the Critical Strip ($0 < \sigma < 1$), Critical Line ($\sigma = 0.5$), 15 clickable non-trivial zeta-zero rungs ($\gamma_1 = 14.13$ to $\gamma_{15} = 65.11$), and real-time $\pi(x)$ vs $\text{Li}(x)$ harmonic convergence.
+2. **Calculus: Tangent Slopes & Integrals (`calculus-curves`)**: GCSE/A-Level. Tangent slope $dy/dx$, stationary turning points, and Simpson's 1/3 numerical integrals with interactive curve selection.
+3. **Algebra Balance Scale Lab (`algebra-balance`)**: KS2/KS3. Two-pan balance scale, algebraic equation balancing ($2x + 5 = 15$), and zero-pair cancelations.
+4. **Pythagoras' Geometric Proof (`pythagoras`)**: KS3. Euclidean shear proof, dynamic square slicing, area conservation, and algebraic $a^2 + b^2 = c^2$ verification.
+5. **BODMAS / BIDMAS Forcefield Clamping (`bodmas`)**: KS2/KS3. Visual operation precedence clamps, bracket forcefields, and step-by-step arithmetic evaluations.
+6. **Fraction Wall & Slicing (`fractions`)**: KS2. Visual fraction wall, dynamic denominator slicing, equivalent fractions, and common denominator arithmetic.
+7. **Times Tables 2D Multiplication Array (`times-tables`)**: KS1/KS2. 2× to 12× multiplication arrays, distributive property slicing, and commutative proofs.
+8. **Kinematic Domino Multiplication (`domino-multiplication`)**: KS1/KS2. Group arrays, repeated addition, and tactile domino multiplication chains.
+9. **Maths Fishing: Number Bonds to 10/20 (`math-fishing`)**: KS1. Gamified number bond rods, hook physics, and complementary addition calculations.
 
 ### 10.2. Physics, Chemistry & Space Sciences
 8. **Kinetic Gas Theory & Boyle's Law (`kinetic-gas`)**: KS3/KS4. Kinetic molecular theory, Boyle's Law ($PV = \text{constant}$), Gay-Lussac's Law, wall impulse pressure gauge, and phase changes.
@@ -280,6 +288,29 @@ The portal includes an automated transpiler bridge (`ast-phet-bridge.js` & `src/
 44. **Catholic Social Teaching & Gospel Virtues (`cst-virtues`)**: Seven principles of CST (Human Dignity, Subsidiarity, Common Good, Option for the Poor, Solidarity) and theological/cardinal virtues.
 45. **Sample Physics Knowledge Pipeline (`pipeline-sample`)**: Algorithmic physics pipeline and kinetic energy vector calculation testbed.
 46. **Portal Welcome & Simulator Onboarding (`welcome`)**: Guided onboarding tour of the AST vector canvas, camera orbit controls, and smartboard stylus whiteboard tools.
+
+### 10.7. KS4 Chemistry, Biology, Engineering & Interactive Computing
+47. **Rates of Reaction & Collision Theory (`rates-of-reaction`)**: KS4 Chemistry. Activation energy, temperature/concentration collision curves, oscilloscope plotter, and conservation ledger.
+48. **Acid-Alkali Titration & pH Curve (`acid-alkali-titration`)**: KS4 Chemistry. Equivalence point titration curve, burette drip rate, and pH indicator color shifts.
+49. **Enzyme Catalysis & Denaturation (`enzyme-denaturation`)**: KS4 Biology. Active-site lock-and-key kinetics, optimum temperature/pH curves, and thermal denaturation.
+50. **Osmosis & Semi-Permeable Membrane Flux (`osmosis-membrane`)**: KS4 Biology. Water potential gradients, net solvent transport, and turgor/plasmolysis modeling.
+51. **Solderless Breadboard & Ohm's Law Lab (`breadboard-components`)**: KS3/KS4 Engineering. Interactive breadboard wiring, resistors, LEDs, and live current diagnostics.
+52. **BBC Micro Model B: 6502 Computing (`bbc-model-b`)**: Computing History. Acorn MOS 6502 architecture, Mode 7 teletext memory map, and interactive BBC BASIC exploration.
+53. **Inverted Pendulum Dynamical System (`pendulum_dyno`)**: Control Engineering. Cart-pole dynamical system, state feedback stabilization, and real-time phase telemetry.
+54. **Modular Brick Engineering & 3D Spatial Geometry (`lego-blocks`)**: Design & Technology. Snap-grid 3D brick construction, spatial rotation, and structural symmetry.
+55. **Vector Racing (`vector-racing`)**: Physics & Computing. Continuous press-and-hold keyboard steering (`:key` hold loop), velocity vectors, and track kinematics.
+
+### 10.8. Decodable Phonics Storybooks (UK DfE Phases 2–5) & Early Alphabet
+56. **Alphabet Basics: Paired Case & Sound Bridge (`alphabet-basics`)**: EYFS. Uppercase/lowercase grapheme pairing with phonetic audio cues.
+57. **Decodable Book 1: Pat Sat (`reader-pat-sat`)**: Level 1 · Set 1 & 2 (SATPIN). 5-page illustrated interactive storybook powered by `(:use-skill "storybook-reader" :pages 5)`.
+58. **Decodable Book 2: The Red Dog (`reader-red-dog`)**: Level 2 · Phase 2 CVC. 5-page illustrated decodable reader with sound buttons and word-tap speech.
+59. **Decodable Book 3: A Ship in the Rain (`reader-ship-rain`)**: Level 3 · Phase 3 Digraphs. Greedy UK DfE digraph/trigraph sound buttons and interactive spreads.
+60. **Decodable Book 4: The Frog on a Log (`reader-frog-log`)**: Level 4 · Consonant Blends. Illustrated blend-focused decodable storybook.
+61. **Decodable Book 5: The Cake by the Lake (`reader-cake-lake`)**: Level 5 · Split Digraphs & Alternatives. Interactive split-digraph storybook reader.
+
+### 10.9. PhET Distillations & Oak Data-Driven Curriculum Cartridges
+62–66. **PhET Distillations**: `phet-acid-base` (Acid-Base Titration Lab), `phet-balancing-chemical` (Chemical Equations), `phet-faraday` (Faraday's Induction), `phet-ohms-law` (Ohm's Law), `phet-pendulum` (Pendulum Lab).
+67–79. **Oak National Academy Data Cartridges**: `oak-data-algorithms-sequencing`, `oak-data-angles-triangles`, `oak-data-cell-biology`, `oak-data-electric-circuits`, `oak-data-fractions-decimals`, `oak-data-phonics-screening`, `oak-data-re-nicene-creed`, `oak-data-re-sacraments`, `oak-data-seasonal-changes`, `oak-data-spanish-foundations`, `oak-data-states-of-matter` (plus companion curriculum modules indexed in `/player/scenes.manifest.json`).
 
 ---
 
@@ -335,7 +366,7 @@ In accordance with the emerging W3C Web Machine Learning Community Group standar
 1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
 2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via the native micro-router (`src/router.ts`).
 3. `launch_simulation` (Consequential): Programmatically open and render any interactive AST vector cartridge or synchronized educational film on the stage with autoPlay.
-4. `list_ast_simulations` (Read-Only): Enumerate all 68 compiled vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
+4. `list_ast_simulations` (Read-Only): Enumerate all 79 compiled vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
 5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
 
 ---
@@ -415,26 +446,26 @@ When generating AST cartridges, models must adhere strictly to the following syn
 
 ---
 
-## 13. Real-World Thermodynamic & Grid-Scale Footprint (Scope 3 Avoidance)
+## 16. Real-World Thermodynamic & Grid-Scale Footprint (Scope 3 Avoidance)
 
 The architectural discipline of the St Joseph's Engine (sub-35 KB runtime, 448 KB WASM linear memory pool, local neural execution) eliminates the hidden thermodynamic and physical supply-chain costs incurred by cloud-tethered EdTech and remote hyperscaler inference:
 
-### 13.1. Avoided Data-Center Freshwater Evaporation
+### 16.1. Avoided Data-Center Freshwater Evaporation
 - **Cloud LLM Baseline:** Data centers consume an estimated **0.3 to 0.5 mL of potable freshwater per query** via industrial evaporative cooling towers to cool high-density accelerator clusters (H100/TPU racks).
 - **St Joseph's Invariant:** **0.00 mL / query.** All generative Socratic hints, misconception checks, and evaluation steps run purely on-device via local NPU/GPU/CPU silicon (Chromium Prompt API / WebLLM) or deterministic AST rulebooks. Zero municipal water is evaporated across regional watersheds.
 
-### 13.2. Upstream Grid Peak Draw & Peaker-Plant Avoidance
+### 16.2. Upstream Grid Peak Draw & Peaker-Plant Avoidance
 - **Remote Cloud API Toll:** A standard cloud-hosted Socratic interaction typically consumes **0.3 to 2.5 Watt-hours (Wh)** (1,000 to 9,000 Joules) when accounting for server draw, network hops, router switching, and facility Power Usage Effectiveness (PUE).
 - **Synchronized Classroom Spikes:** Concurrent 9:00 AM school starts create instantaneous grid surges that are frequently balanced by fossil-fueled peaker plants supplying remote data halls.
 - **Avoided Grid Overhead:** Sparing ~1.0 Wh per query across a standard trust of **1,000 pupils completing 30 daily interactions** eliminates **~30 kWh/day (~5.7 MWh/school year)** of external grid demand.
 
-### 13.3. Client Battery Chemistry & Silicon Preservation
+### 16.3. Client Battery Chemistry & Silicon Preservation
 - **Unconstrained Canvas Baselines:** Monolithic HTML5/canvas engines (e.g. PhET, commercial LMS widgets) run continuous, unthrottled `requestAnimationFrame` loops consuming 100% of a CPU core, drawing **8 to 15 Watts** on budget laptops and inducing thermal throttling within 20 minutes.
 - **Dirty-State RAF Cancellation:** The AST engine halts animation ticks entirely when the stage reaches equilibrium, dropping incremental processor draw to **< 0.2 Watts (< 0.5% CPU)** while reading or thinking.
 - **Audio Thread Suspension:** The procedural Web Audio synthesizer auto-suspends (`audioCtx.suspend()`) after 300 ms of silence, cutting audio thread drain by up to 15%.
 - **Operational Endurance:** Extends battery runtime from ~2.5–3.0 hours to **6.0–8.0+ hours** on standard 40 Wh Chromebooks, directly halving battery thermal degradation and reducing premature e-waste replacements.
 
-### 13.4. Flash Storage (eMMC) Wear Guard
+### 16.4. Flash Storage (eMMC) Wear Guard
 - **Continuous I/O Thrashing Baseline:** Conventional web platforms continuously write telemetry, caching chunks, and tracking state to disk, rapidly exhausting the limited program-erase (P/E) cycles of low-cost eMMC flash memory in budget educational hardware.
 - **Milestone-Gated Persistence:** The AST engine performs **strictly 0 disk writes/second during active simulation manipulation**. State is maintained in volatile `Float32Array` buffers and only flushed asynchronously to IndexedDB upon discrete pedagogical milestones (e.g., question completion, badge award) with a 500 ms trailing debounce.
 

@@ -852,7 +852,7 @@ export function renderPlayerPage(): HTMLElement {
 
     if (swfMeta?.isActionScript3) {
       showImportStatus(
-        `⚡ Imported "${cart.title}" — Note: this SWF uses ActionScript 3.0 (AVM2/DoABC); vector graphics & timelines render in pure SVG, while interactive scripts require ActionScript 1.0/2.0 (AVM1).`,
+        `⚡ Imported "${cart.title}" (ActionScript 3.0 / AVM2 Beta) — core vector timelines & events run in pure SVG; complex AS3 frameworks, BitmapData shaders, Stage3D, and streaming video are not supported.`,
         'success'
       );
     } else if (mode === 'run-to-convert') {
@@ -1450,7 +1450,7 @@ export function renderPlayerPage(): HTMLElement {
         const isAs3Swf = Array.isArray(cart.invariants) && cart.invariants.some((inv) => inv.includes('ActionScript 3.0'));
         if (isAs3Swf) {
           showImportStatus(
-            `⚡ Imported "${cart.title}" — Note: this SWF uses ActionScript 3.0 (AVM2/DoABC); vector graphics & timelines render in pure SVG, while interactive scripts require ActionScript 1.0/2.0 (AVM1).`,
+            `⚡ Imported "${cart.title}" (ActionScript 3.0 / AVM2 Beta) — core vector timelines & events run in pure SVG; complex AS3 frameworks, BitmapData shaders, Stage3D, and streaming video are not supported.`,
             'success'
           );
         } else {

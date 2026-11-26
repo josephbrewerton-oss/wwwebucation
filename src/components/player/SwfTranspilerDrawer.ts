@@ -590,6 +590,18 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
   });
   root.appendChild(samplesWrap);
 
+  // 2b. Honest Compatibility & Known Limits Notice
+  const limitsBox = document.createElement('div');
+  limitsBox.style.cssText =
+    'padding:10px 12px; border-radius:8px; background:rgba(15, 23, 42, 0.75); border:1px solid #1e293b; font-size:0.74rem; line-height:1.5; color:#cbd5e1; display:flex; flex-direction:column; gap:4px;';
+  limitsBox.innerHTML = `
+    <strong style="color:#f8fafc; font-size:0.76rem;">Compatibility &amp; Known Limits (Pure-SVG Offline Beta)</strong>
+    <span><strong style="color:#86efac;">Works best:</strong> Vector-first Flash 5&ndash;8 (ActionScript 1/2) applets, quizzes, simulations, and classic games with timeline animation, buttons, keyboard/mouse controls, editable text, and embedded PCM/ADPCM sound.</span>
+    <span><strong style="color:#fde68a;">Partial / experimental:</strong> ActionScript 3 (AVM2) runs core vector timelines and basic events, while complex AS3/Flex frameworks and heavy real-world SWFs may have edge cases &mdash; please test each file before a lesson.</span>
+    <span><strong style="color:#fca5a5;">Not supported (by design):</strong> Stage3D/WebGL, pixel-buffer <code style="color:#e2e8f0;">BitmapData</code> shaders, streaming FLV video (<code style="color:#e2e8f0;">NetStream</code>), camera/mic/sockets, and live external web/high-score APIs (runs 100% offline in pure SVG).</span>
+  `;
+  root.appendChild(limitsBox);
+
   // 3. Error state
   if (swfError) {
     const errBox = document.createElement('div');

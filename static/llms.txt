@@ -6,7 +6,7 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 
 ## Core Portal Endpoints
 - [Portal Home](/): Overview, featured live simulation stage, and curriculum learning pathways
-- [Interactive Science, Maths & Faith Labs](/player): 60 FPS AST Vector Media Player with compiled interactive simulations, parameter controls, smartboard ink, procedural sonification, and lazy pure-SVG offline Flash `.swf` (AVM1/AVM2) import with zero `<canvas>` or WebGL
+- [Interactive Science, Maths & Faith Labs](/player): 60 FPS AST Vector Media Player with 79 compiled interactive simulations & books, parameter controls, smartboard ink, procedural sonification, and lazy pure-SVG offline Flash `.swf` import (AVM1 Beta / core AVM2; zero `<canvas>` or WebGL)
 - [Standalone Micro-Vector Player](/player.html): Embeddable zero-dependency vector stage, OBS broadcast link, and live SlideScript / AST Code Studio
 - [Interactive Practice Lab](/practice-lab): Diagnostic curriculum drills with step-by-step hints and misconception checks
 - [GCSE Exam Prep & Flashcards](/revision): AQA, Edexcel, and OCR 6-mark walkthroughs, active-recall flashcards, and audio dictation
@@ -31,9 +31,12 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 - [Acid-Alkali Titration](/player?preset=acid-alkali-titration): Equivalence curve plotting, pH indicator transitions, and burette control
 - [DNA Double Helix & Transcription](/player?preset=dna-helix): 3D base-pair hydrogen bonding and interactive strand unzipping
 - [Photosynthesis & Water Cycle](/player?preset=photosynthesis): Chloroplast light/Calvin reactions alongside Earth hydrology simulations
-- [Inverted Pendulum & BBC Micro 6502](/player?preset=inverted-pendulum-dyno): LQR control systems and historical Acorn MOS 6502 architecture
+- [Jacob's Ladder of Prime Bricks](/player?preset=jacobs-ladder-primes): Interactive Riemann Hypothesis lab with the Critical Line ($\sigma = 0.5$), 15 clickable zeta zeros, and live $\pi(x)$ vs $\text{Li}(x)$ alignment
+- [Modular Brick Engineering & Vector Racing](/player?preset=lego-blocks): 3D spatial geometry construction (`lego-blocks`) and continuous keyboard-driven kinematics (`vector-racing`)
+- [Inverted Pendulum & BBC Micro 6502](/player?preset=pendulum_dyno): Cart-pole control systems (`pendulum_dyno`) and historical Acorn MOS 6502 computing (`bbc-model-b`)
 
 ## Humanities, Literacy & Catholic Sanctuary Cartridges
+- [Decodable Phonics Storybooks (Levels 1–5)](/player?preset=reader-pat-sat): 5 illustrated offline UK DfE phonics books (`reader-pat-sat`, `reader-red-dog`, `reader-ship-rain`, `reader-frog-log`, `reader-cake-lake`) with sound buttons and word-tap TTS
 - [3D BSL Two-Handed Fingerspelling](/player?preset=bsl-fingerspelling): 360-degree Signer and Receiver POV British Sign Language alphabet rig
 - [Sacred Church Architecture 3D Tour](/player?preset=church-tour): Nave, sanctuary, tabernacle, ambo, and baptismal font exploration
 - [High Altar Anatomy](/player?preset=altar-anatomy): Mensa, altar stone, GIRM candle rubrics, tabernacle, and sacred vessels
@@ -43,7 +46,7 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 
 ## Machine Manifests, Governance & Specifications
 - [Autonomous Agent & WebMCP Directory](/agents.txt): W3C WebMCP (`document.modelContext`) client-side tool schemas and capabilities
-- [AST Vector Scene Manifest](/player/scenes.manifest.json): Machine-readable index of all 72 compiled `.ast` / `.astb` curriculum cartridges
+- [AST Vector Scene Manifest](/player/scenes.manifest.json): Machine-readable index of all 79 compiled `.ast` / `.astb` curriculum cartridges
 - [AST Scene JSON Schema](/player/schema/ast-scene.schema.json): Validation schema for declarative S-Expression vector cartridges
 - [Master Curriculum Catalog](/manifests/catalog.json): Oak-aligned UK National Curriculum topic and unit catalog
 - [BSL 3D S-Expression Lexicon](/lexicons/bsl-signs.ast): Declarative 3D British Sign Language sign corpus and non-manual features
@@ -52,5 +55,5 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 - [Privacy & KCSIE Child Safety](/privacy): Zero-cloud student data architecture, UK GDPR Art. 25, and safeguarding policies
 
 ## Optional
-- [Full Technical & Architectural LLM Dossier](/llms-full.txt): Exhaustive engineering specification, complete 72-cartridge directory, and thermodynamic benchmarks
+- [Full Technical & Architectural LLM Dossier](/llms-full.txt): Exhaustive engineering specification, complete 79-cartridge directory, pure-SVG SWF runtime compatibility notes, and thermodynamic benchmarks
 - [Raw System Architecture Slide Deck](/docs/lumina-architecture.ast): Hybrid SVG + S-Expression architecture cartridge source
