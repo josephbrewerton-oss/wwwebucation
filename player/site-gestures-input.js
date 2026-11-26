@@ -189,14 +189,24 @@
     return true;
   }
 
+  function _isEditableEventTarget(target) {
+    if (!target) return false;
+    const tag = typeof target.tagName === 'string' ? target.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+      return true;
+    }
+    if (typeof target.closest === 'function') {
+      try {
+        if (target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) {
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
   function handleKeyDown(e) {
-    if (
-      e.target &&
-      (e.target.tagName === 'INPUT' ||
-        e.target.tagName === 'TEXTAREA' ||
-        e.target.tagName === 'SELECT' ||
-        e.target.isContentEditable)
-    ) {
+    if (_isEditableEventTarget(e && e.target)) {
       return;
     }
 
@@ -212,10 +222,9 @@
     }
 
     const scene = this.engine && this.engine.scene;
-    if (!scene || !this.engine.vars) return;
 
     // Priority 1.4: Sync declarative scene keyboard binding vars (100% media-agnostic)
-    if (typeof this.engine.setKeyBindingState === 'function') {
+    if (scene && this.engine && typeof this.engine.setKeyBindingState === 'function') {
       this.engine.setKeyBindingState(e.code, e.key, true);
     }
 
@@ -227,6 +236,8 @@
         return;
       }
     }
+
+    if (!scene || !this.engine.vars) return;
 
     // Priority 2: Cartridge Explicit (:key ...) Rules
     const gestures = this._getNormalizedSceneGestures(scene);
@@ -281,7 +292,10 @@
       return;
     }
 
-    // Priority 3: Universal Keys from player-gestures.ast (gated by active :controls switches)
+    // Priority 3: Universal Keys from player-gestures.ast (gated by active :controls switches & :player-keys)
+    if (!this._isControlEnabled('player-keys')) {
+      return;
+    }
     const universalMatch = this.playerProfile.universalKeys.find(rule => {
       if (rule.switch && !this._isControlEnabled(rule.switch)) return false;
       return this._gestureMatchesKey(rule, e);

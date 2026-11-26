@@ -644,7 +644,13 @@
       // 7. Handshake with embedding chassis
       if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
         try {
-          window.parent.postMessage({ type: 'PLAYER_READY', preset: preset || engine.activePresetId, isPlaying: Boolean(engine.isPlaying) }, '*');
+          window.parent.postMessage({
+            type: 'PLAYER_READY',
+            preset: preset || engine.activePresetId,
+            isPlaying: Boolean(engine.isPlaying),
+            hasMediaInput: Boolean(engine._avm1Vm || engine._avm1VmPending || (engine.scene && (engine.scene.swfVm || engine.scene.swfVmPayload))),
+            hasKeyBindings: Boolean(engine.scene && Array.isArray(engine.scene.keyBindings) && engine.scene.keyBindings.length > 0),
+          }, '*');
         } catch (_) {}
       }
     })();

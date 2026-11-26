@@ -24,11 +24,12 @@
     'xray': true,
     'audio': true,
     'param-hud': true,
+    'player-keys': true,
     'media-input': true
   };
 
   const DEFAULT_MEDIA_ROUTES = [
-    { event: 'keydown',       channel: 'key-down',     switch: 'media-input', gate: 'focus',      captureKeys: ['Space', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] },
+    { event: 'keydown',       channel: 'key-down',     switch: 'media-input', gate: 'focus',      captureKeys: ['Space', 'Tab', 'Enter', 'Backspace', 'PageUp', 'PageDown', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] },
     { event: 'keyup',         channel: 'key-up',       switch: 'media-input' },
     { event: 'pointermove',   channel: 'pointer-move', switch: 'media-input', gate: 'whiteboard', coords: 'svg', throttleMs: 15 },
     { event: 'pointerdown',   channel: 'pointer-down', switch: 'media-input', gate: 'whiteboard', coords: 'svg' },
@@ -1485,12 +1486,13 @@
     }
 
     // 2. Check pre-parsed scene.controls if engine provides it
+    const explicitOverrides = {};
     if (scene && scene.controls && typeof scene.controls === 'object') {
       Object.entries(scene.controls).forEach(([k, v]) => {
         const key = k.replace(/^:/, '').toLowerCase();
-        if (typeof v === 'boolean') merged[key] = v;
-        else if (v === ':on' || v === 'on' || v === 'true') merged[key] = true;
-        else if (v === ':off' || v === 'off' || v === 'false') merged[key] = false;
+        if (typeof v === 'boolean') explicitOverrides[key] = v;
+        else if (v === ':on' || v === 'on' || v === 'true') explicitOverrides[key] = true;
+        else if (v === ':off' || v === 'off' || v === 'false') explicitOverrides[key] = false;
       });
     }
 
@@ -1499,7 +1501,21 @@
     if (rawAst) {
       const ctrlBlock = this._extractSexpBlock(rawAst, '(:controls');
       if (ctrlBlock) {
-        Object.assign(merged, this._parseControlsBlock(ctrlBlock));
+        Object.assign(explicitOverrides, this._parseControlsBlock(ctrlBlock));
+      }
+    }
+
+    Object.assign(merged, explicitOverrides);
+
+    // 4. Generic single-switch opt-out: (:player-keys :off) disables inherited player navigation shortcuts
+    // unless a cartridge explicitly re-enables an individual switch (:on).
+    if (merged['player-keys'] === false) {
+      const inheritedKeySwitches = ['arrow-step', 'num-jump', 'space-play', 'quiz-keys'];
+      for (let i = 0; i < inheritedKeySwitches.length; i++) {
+        const sw = inheritedKeySwitches[i];
+        if (!(sw in explicitOverrides)) {
+          merged[sw] = false;
+        }
       }
     }
 

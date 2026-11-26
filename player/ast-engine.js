@@ -439,6 +439,18 @@
       }
     }
 
+    _onGesturesReady(gestures) {
+      this.gestures = gestures;
+      const vm = this._swfVm || this._avm1Vm;
+      if (vm && vm._mounted) {
+        if (typeof vm._bindStageInputs === 'function') {
+          vm._bindStageInputs();
+        } else if (typeof vm._attachInputBridge === 'function') {
+          vm._attachInputBridge();
+        }
+      }
+    }
+
     getBuiltinWelcomeScene() {
       if (this._cachedWelcomeScene) return this._cachedWelcomeScene;
       let registryWelcome = null;
