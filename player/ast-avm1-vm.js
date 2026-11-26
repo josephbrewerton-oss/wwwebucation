@@ -102,6 +102,8 @@
   const CE_MOUSE_UP = 0x0020;
   const CE_KEY_DOWN = 0x0040;
   const CE_KEY_UP = 0x0080;
+  const CE_DATA = 0x0100;
+  const CE_INITIALIZE = 0x0200;
   const CE_PRESS = 0x0400;
   const CE_RELEASE = 0x0800;
   const CE_RELEASE_OUTSIDE = 0x1000;
@@ -110,6 +112,7 @@
   const CE_DRAG_OVER = 0x8000;
   const CE_DRAG_OUT = 0x10000;
   const CE_KEY_PRESS = 0x20000;
+  const CE_CONSTRUCT = 0x40000;
 
   // Flash ButtonCondAction flags
   const BTN_IDLE_TO_OVER_UP = 0x0001;
@@ -292,6 +295,47 @@
       }
       return 0;
     });
+    if (returnIndexed) return indices;
+    const copy = indices.map((i) => arr[i]);
+    for (let i = 0; i < copy.length; i++) arr[i] = copy[i];
+    return arr;
+  }
+
+  function _flashArraySort(vm, arr, ...sortArgs) {
+    let cmpFn = null;
+    let flags = 0;
+    if (typeof sortArgs[0] === 'function') {
+      cmpFn = sortArgs[0];
+      if (sortArgs.length > 1) flags = Number(sortArgs[1]) | 0;
+    } else if (sortArgs.length > 0 && sortArgs[0] !== undefined) {
+      flags = Number(sortArgs[0]) | 0;
+    }
+    const ci = (flags & 1) !== 0;
+    const desc = (flags & 2) !== 0;
+    const uniqueSort = (flags & 4) !== 0;
+    const returnIndexed = (flags & 8) !== 0;
+    const numeric = (flags & 16) !== 0;
+    const compareVals = (va, vb) => {
+      let cmp = 0;
+      if (cmpFn) {
+        cmp = Number(vm._invokeValue(cmpFn, null, [va, vb])) || 0;
+      } else if (numeric) {
+        cmp = toAvm1Number(va) - toAvm1Number(vb);
+      } else {
+        let sa = String(va == null ? '' : va);
+        let sb = String(vb == null ? '' : vb);
+        if (ci) { sa = sa.toLowerCase(); sb = sb.toLowerCase(); }
+        cmp = sa < sb ? -1 : (sa > sb ? 1 : 0);
+      }
+      return desc ? -cmp : cmp;
+    };
+    const indices = arr.map((_, i) => i);
+    indices.sort((ia, ib) => compareVals(arr[ia], arr[ib]));
+    if (uniqueSort) {
+      for (let i = 1; i < indices.length; i++) {
+        if (compareVals(arr[indices[i - 1]], arr[indices[i]]) === 0) return 0;
+      }
+    }
     if (returnIndexed) return indices;
     const copy = indices.map((i) => arr[i]);
     for (let i = 0; i < copy.length; i++) arr[i] = copy[i];
@@ -1077,6 +1121,42 @@
         this.svgEl.setAttribute('visibility', vis);
         this.svgEl.setAttribute('display', this._visible ? 'inline' : 'none');
       }
+    }
+
+    removeTextField() {
+      if (this._parent && typeof this._parent._removeSlotAtDepth === 'function') {
+        this._parent._removeSlotAtDepth(this._depth);
+      }
+    }
+
+    setTextFormat(fmt) {
+      const f = arguments.length >= 2 ? arguments[arguments.length - 1] : fmt;
+      if (!f || typeof f !== 'object') return;
+      this._textFormat = f;
+      if (f.color !== undefined && f.color !== null) this.textColor = f.color;
+      if (f.size !== undefined && Number(f.size) > 0) {
+        this._fontSize = Number(f.size);
+        this.textEl.setAttribute('font-size', String(this._fontSize));
+      }
+      if (f.bold !== undefined) {
+        this.textEl.setAttribute('font-weight', f.bold ? '700' : '400');
+      }
+      if (f.font) {
+        this.textEl.setAttribute('font-family', `${String(f.font)}, system-ui, sans-serif`);
+      }
+      if (f.align) {
+        const al = String(f.align).toLowerCase();
+        const anchor = al === 'right' ? 'end' : (al === 'center' ? 'middle' : 'start');
+        this.textEl.setAttribute('text-anchor', anchor);
+      }
+    }
+
+    setNewTextFormat(fmt) {
+      this.setTextFormat(fmt);
+    }
+
+    getTextFormat() {
+      return this._textFormat || { size: this._fontSize || 12, color: this.textColor };
     }
 
     destroy() {
@@ -1901,6 +1981,10 @@
       return '/' + parts.join('/');
     }
 
+    toString() {
+      return this.getTargetPath();
+    }
+
     getChildByName(name) {
       if (!name || this._childrenByDepth.size === 0) return undefined;
       const ci = this._vm.caseInsensitive;
@@ -1919,31 +2003,40 @@
       return this._childNameCache.get(lookupKey);
     }
 
-    resolveFrameNumber(target) {
+    _resolveFrameOrNull(target) {
       if (typeof target === 'number' && Number.isFinite(target)) {
         return Math.max(1, Math.min(this._totalframes, Math.floor(target)));
       }
-      const s = String(target == null ? '' : target).trim();
+      if (target === undefined || target === null) return null;
+      const s = String(target).trim();
+      if (s === '') return null;
       const asNum = Number(s);
-      if (s !== '' && Number.isFinite(asNum)) {
+      if (Number.isFinite(asNum)) {
         return Math.max(1, Math.min(this._totalframes, Math.floor(asNum)));
       }
       const lbl = this._labelMap.get(s.toLowerCase());
       if (lbl !== undefined) return Math.max(1, Math.min(this._totalframes, lbl));
-      return this._currentframe;
+      return null;
+    }
+
+    resolveFrameNumber(target) {
+      const resolved = this._resolveFrameOrNull(target);
+      return resolved !== null ? resolved : this._currentframe;
     }
 
     play() { this._playing = true; }
     stop() { this._playing = false; }
 
     gotoAndPlay(target) {
-      const next = this.resolveFrameNumber(target);
+      const next = this._resolveFrameOrNull(target);
+      if (next === null) return;
       this._playing = true;
       this._jumpToFrame(next);
     }
 
     gotoAndStop(target) {
-      const next = this.resolveFrameNumber(target);
+      const next = this._resolveFrameOrNull(target);
+      if (next === null) return;
       this._playing = false;
       this._jumpToFrame(next);
     }
@@ -2207,7 +2300,10 @@
         mc.reconcileDisplayList(1, true);
         this._vm._applyRegisteredClass(mc);
         if (!this._vm._isOverBudget()) {
-          mc._fireClipEvents(CE_LOAD);
+          mc._fireClipEvents(CE_INITIALIZE | CE_CONSTRUCT);
+          if (!mc._removed && !this._vm._isOverBudget()) {
+            mc._fireClipEvents(CE_LOAD);
+          }
           const loadFn = mc._getEventHandler('onLoad');
           if (!mc._removed && !this._vm._isOverBudget() && typeof loadFn === 'function') {
             this._vm._invokeValue(loadFn, mc, EMPTY_ARR);
@@ -2426,7 +2522,8 @@
       this._removeSlotAtDepth(d);
       const isAscending = this._maxDomDepth !== null && d > this._maxDomDepth;
       const wasEmpty = this._childrenByDepth.size === 0;
-      const slot = this._createSlot(d, charId, null, 1, String(newName || ''), [], true, null);
+      const instName = newName !== undefined && newName !== null ? String(newName) : '';
+      const slot = this._createSlot(d, charId, null, 1, instName, [], true, null);
       if (isAscending || wasEmpty) {
         this._maxDomDepth = d;
       } else {
@@ -2443,7 +2540,8 @@
         this._vm._ensureSpriteInitAction(mc.charId, mc);
         mc.reconcileDisplayList(1, true);
         this._vm._applyRegisteredClass(mc, linkageName);
-        mc._fireClipEvents(CE_LOAD);
+        mc._fireClipEvents(CE_INITIALIZE | CE_CONSTRUCT);
+        if (!mc._removed) mc._fireClipEvents(CE_LOAD);
         const loadFn = mc._getEventHandler('onLoad');
         if (!mc._removed && typeof loadFn === 'function') {
           this._vm._invokeValue(loadFn, mc, EMPTY_ARR);
@@ -2467,12 +2565,13 @@
       this._parent._removeSlotAtDepth(d);
       const isAscending = this._parent._maxDomDepth !== null && d > this._parent._maxDomDepth;
       const wasEmpty = this._parent._childrenByDepth.size === 0;
+      const instName = newName !== undefined && newName !== null ? String(newName) : '';
       const slot = this._parent._createSlot(
         d,
         this.charId,
         this.getLocalMatrix(),
         this._alpha / 100,
-        String(newName || ''),
+        instName,
         this._clipActions.slice(),
         true,
         null
@@ -2501,7 +2600,8 @@
         this._vm._ensureSpriteInitAction(dup.charId, dup);
         dup.reconcileDisplayList(1, true);
         this._vm._applyRegisteredClass(dup);
-        dup._fireClipEvents(CE_LOAD);
+        dup._fireClipEvents(CE_INITIALIZE | CE_CONSTRUCT);
+        if (!dup._removed) dup._fireClipEvents(CE_LOAD);
         const loadFn = dup._getEventHandler('onLoad');
         if (!dup._removed && typeof loadFn === 'function') {
           this._vm._invokeValue(loadFn, dup, EMPTY_ARR);
@@ -2524,7 +2624,8 @@
       this._removeSlotAtDepth(d);
       const isAscending = this._maxDomDepth !== null && d > this._maxDomDepth;
       const wasEmpty = this._childrenByDepth.size === 0;
-      const mc = new AVM1MovieClip(this._vm, 0, { fc: 1, l: [], fr: [[]], ac: [] }, this, d, String(newName || ''), []);
+      const instName = newName !== undefined && newName !== null ? String(newName) : '';
+      const mc = new AVM1MovieClip(this._vm, 0, { fc: 1, l: [], fr: [[]], ac: [] }, this, d, instName, []);
       mc._justSpawned = false;
       const slot = {
         depth: d,
@@ -2589,6 +2690,68 @@
         if (asD >= maxAs) maxAs = asD + 1;
       });
       return maxAs;
+    }
+
+    createTextField(instanceName, depth, x, y, width, height) {
+      const d = Math.floor(Number(depth) || 0) + AS_DEPTH_OFFSET;
+      if (!this._childrenByDepth.has(d)) {
+        if ((this._vm._liveClipCount || 0) >= MAX_LIVE_CLIPS || this._childrenByDepth.size >= MAX_CHILDREN_PER_CLIP) {
+          return undefined;
+        }
+      }
+      this._removeSlotAtDepth(d);
+      const isAscending = this._maxDomDepth !== null && d > this._maxDomDepth;
+      const wasEmpty = this._childrenByDepth.size === 0;
+      const instName = instanceName !== undefined && instanceName !== null ? String(instanceName) : '';
+      const def = {
+        x: 0,
+        y: 0,
+        w: Math.max(1, Number(width) || 100),
+        h: Math.max(1, Number(height) || 20),
+        fs: 12,
+        col: '#ffffff',
+        t: '',
+        v: '',
+        al: 0,
+        bd: false,
+        ed: false,
+        pw: false,
+        ml: false,
+        mx: 0,
+      };
+      const tf = new AVM1TextField(this._vm, 0, def, this, d, instName);
+      tf._x = Number(x) || 0;
+      tf._y = Number(y) || 0;
+      tf._scriptModifiedTransform = true;
+      tf.commitSvg();
+      const slot = {
+        depth: d,
+        charId: 0,
+        isDynamic: true,
+        obj: tf,
+        svgEl: tf.svgEl,
+        svgOuter: tf.svgEl,
+        matrix: null,
+        bbox: null,
+        maskId: null,
+      };
+      this._childrenByDepth.set(d, slot);
+      this._childrenDirty = true;
+      this._vm._treeVersion++;
+      const hostEl = this._dynamicLayerEl || this.svgEl;
+      hostEl.appendChild(tf.svgEl);
+      if (isAscending || wasEmpty) {
+        this._maxDomDepth = d;
+      } else {
+        this._reorderSvgChildren();
+      }
+      return tf;
+    }
+
+    getInstanceAtDepth(depth) {
+      const d = Math.floor(Number(depth) || 0) + AS_DEPTH_OFFSET;
+      const slot = this._childrenByDepth.get(d);
+      return slot && slot.obj ? slot.obj : undefined;
     }
 
     getDepth() {
@@ -3020,6 +3183,8 @@
       this._dbgBufIdx = 0;
       this._dbgBufCount = 0;
       this._dbgActiveDynamicNodes = 0;
+      this._dbgRuntimeErrors = [];
+      this._dbgRuntimeErrorSet = new Set();
       this._dbgImportSummary = {
         totalTagsParsed: (this.program.dbg && this.program.dbg.tt) || 0,
         cachedDefsShapes: (this.program.dbg && this.program.dbg.ds) || 0,
@@ -3030,6 +3195,8 @@
       // Build export linkage lookup (exact + case-insensitive)
       this._exportByCharId = new Map();
       this._registeredClasses = new Map();
+      this._accessors = new WeakMap();
+      this._hasAnyAccessors = false;
       this._mcProto = Object.create(null);
       const exps = this.program.exp || {};
       for (const k of Object.keys(exps)) {
@@ -3251,6 +3418,7 @@
         this._startMs = -1;
         this._isPlaying = false;
         this._durationMs = 0;
+        this._playGen = 0;
       }
       Object.defineProperty(FlashSound.prototype, 'duration', {
         get() { return this._durationMs || 0; },
@@ -3275,11 +3443,13 @@
       };
       FlashSound.prototype.start = function (secondOffset, loops) {
         const self = this;
+        const gen = ++this._playGen;
         const loopsN = Math.max(1, Number(loops) || 1);
         const offsetMs = Math.max(0, Number(secondOffset) || 0) * 1000;
         this._startMs = Math.max(0, vm._elapsedMs - offsetMs);
         this._isPlaying = true;
         const onComplete = () => {
+          if (self._playGen !== gen) return;
           self._isPlaying = false;
           const cb = vm._getMember(self, 'onSoundComplete');
           if (typeof cb === 'function') {
@@ -3299,6 +3469,7 @@
         });
       };
       FlashSound.prototype.stop = function (linkageId) {
+        this._playGen++;
         this._isPlaying = false;
         if (linkageId) {
           const resolved = vm._lookupExport(String(linkageId));
@@ -3424,6 +3595,43 @@
       };
       FlashMovieClipLoader.prototype.unloadClip = function () { return true; };
 
+      function FlashArray(...args) {
+        if (args.length === 1 && typeof args[0] === 'number' && Number.isFinite(args[0]) && args[0] >= 0 && Math.floor(args[0]) === args[0]) {
+          return new Array(args[0]);
+        }
+        return args.slice();
+      }
+      FlashArray.prototype = Array.prototype;
+      FlashArray.CASEINSENSITIVE = 1;
+      FlashArray.DESCENDING = 2;
+      FlashArray.UNIQUESORT = 4;
+      FlashArray.RETURNINDEXEDARRAY = 8;
+      FlashArray.NUMERIC = 16;
+
+      function FlashNumber(v) {
+        if (new.target) return new Number(arguments.length === 0 ? 0 : toAvm1Number(v));
+        return arguments.length === 0 ? 0 : toAvm1Number(v);
+      }
+      FlashNumber.prototype = Number.prototype;
+      FlashNumber.MAX_VALUE = Number.MAX_VALUE;
+      FlashNumber.MIN_VALUE = Number.MIN_VALUE;
+      FlashNumber.NaN = NaN;
+      FlashNumber.NEGATIVE_INFINITY = -Infinity;
+      FlashNumber.POSITIVE_INFINITY = Infinity;
+
+      function FlashString(v) {
+        if (new.target) return new String(arguments.length === 0 ? '' : vm._toStr(v));
+        return arguments.length === 0 ? '' : vm._toStr(v);
+      }
+      FlashString.prototype = String.prototype;
+      FlashString.fromCharCode = String.fromCharCode;
+
+      function FlashBoolean(v) {
+        if (new.target) return new Boolean(arguments.length === 0 ? false : vm._toBool(v));
+        return arguments.length === 0 ? false : vm._toBool(v);
+      }
+      FlashBoolean.prototype = Boolean.prototype;
+
       g.Math = Math;
       g.Key = KeyObj;
       g.Mouse = MouseObj;
@@ -3435,14 +3643,27 @@
       g.Color = FlashColor;
       g.Sound = FlashSound;
       g.SharedObject = SharedObjectObj;
-      g.Array = Array;
+      g.Array = FlashArray;
       g.Object = FlashObject;
-      g.String = String;
-      g.Number = Number;
-      g.Boolean = Boolean;
+      g.String = FlashString;
+      g.Number = FlashNumber;
+      g.Boolean = FlashBoolean;
       g.Date = Date;
+      function FlashTextFormat(font, size, color, bold, italic, underline, url, target, align) {
+        if (font !== undefined) this.font = font;
+        if (size !== undefined) this.size = size;
+        if (color !== undefined) this.color = color;
+        if (bold !== undefined) this.bold = bold;
+        if (italic !== undefined) this.italic = italic;
+        if (underline !== undefined) this.underline = underline;
+        if (url !== undefined) this.url = url;
+        if (target !== undefined) this.target = target;
+        if (align !== undefined) this.align = align;
+      }
+
       g.MovieClip = FlashMovieClip;
       g.TextField = AVM1TextField;
+      g.TextFormat = FlashTextFormat;
       g.NaN = NaN;
       g.Infinity = Infinity;
       g.isNaN = isNaN;
@@ -4692,9 +4913,10 @@
         fn: onComplete,
         thisObj: this.rootClip,
         args: EMPTY_ARR,
-        ms: Math.max(50, Math.min(5000, Number(delayMs) || 250)),
+        ms: Math.max(50, Math.min(8000, Number(delayMs) || 250)),
         acc: 0,
         once: true,
+        isSoundComplete: true,
       });
       return id;
     }
@@ -4703,7 +4925,7 @@
       const def = this.program.sn && this.program.sn[soundId];
       const loops = Math.max(1, Number(opts.loops) || 1);
       const estDurationMs = (def && def.sc && def.rate)
-        ? Math.max(120, Math.min(4800, Math.round((def.sc / def.rate) * 1000 * Math.min(loops, 4))))
+        ? Math.max(120, Math.min(7500, Math.round((def.sc / def.rate) * 1000 * Math.min(loops, 4))))
         : 250;
       let completeFired = false;
       let fallbackTimerId = null;
@@ -4716,8 +4938,13 @@
         }
         if (typeof opts.onComplete === 'function') opts.onComplete();
       };
-      const armFallback = (ms) => {
-        if (typeof opts.onComplete !== 'function' || completeFired || fallbackTimerId !== null) return;
+      const armFallback = (ms, replaceExisting = false) => {
+        if (typeof opts.onComplete !== 'function' || completeFired) return;
+        if (fallbackTimerId !== null) {
+          if (!replaceExisting) return;
+          this._intervals.delete(fallbackTimerId);
+          fallbackTimerId = null;
+        }
         fallbackTimerId = this._scheduleSoundComplete(ms, fireCompleteOnce);
       };
 
@@ -4786,10 +5013,10 @@
           }
           // Safety fallback in case browser autoplay policy keeps AudioContext suspended
           if (loops < 100) {
-            armFallback(Math.round(durSec * 1000) + 250);
+            armFallback(Math.round(durSec * 1000) + 250, true);
           }
         } catch (_) {
-          armFallback(Math.min(400, estDurationMs));
+          armFallback(Math.min(400, estDurationMs), true);
         }
       };
 
@@ -4801,6 +5028,8 @@
 
       const bytes = decodeBase64ToBytes(def.b64);
       if (def.fmt === 2 && typeof ctx.decodeAudioData === 'function') {
+        // Arm safety completion timer BEFORE async decodeAudioData so suspended/stalled audio never hangs onSoundComplete
+        if (loops < 100) armFallback(estDurationMs + 250);
         // MP3: skip 2-byte SWF seekSamples prefix
         const mp3Slice = bytes.length > 2 ? bytes.slice(2) : bytes.slice();
         ctx.decodeAudioData(mp3Slice.buffer)
@@ -4809,7 +5038,7 @@
             startBuffer(buf);
           })
           .catch(() => {
-            armFallback(Math.min(400, estDurationMs));
+            armFallback(Math.min(400, estDurationMs), true);
           });
         return true;
       }
@@ -5180,14 +5409,15 @@
           this._skipBgScriptsThisTick = false;
         }
 
-        // Run setInterval timers (respect runaway-script throttle & per-tick budget)
-        if (!this._skipBgScriptsThisTick && this._intervals.size > 0) {
+        // Run setInterval timers (sound completion timers always advance even under script throttle)
+        if (this._intervals.size > 0) {
           const dtMs = dt * 1000;
           const entries = Array.from(this._intervals.entries());
           for (let i = 0; i < entries.length; i++) {
             if (this._isOverBudget()) break;
             const [id, rec] = entries[i];
             if (!this._intervals.has(id)) continue;
+            if (this._skipBgScriptsThisTick && !rec.isSoundComplete) continue;
             rec.acc += dtMs;
             if (rec.acc >= rec.ms) {
               rec.acc %= rec.ms;
@@ -5320,6 +5550,49 @@
       const skippedTagIds = this._dbgImportSummary.skippedTagIds.length > 0
         ? this._dbgImportSummary.skippedTagIds.slice()
         : (Array.isArray(sharedImport.skippedTagIds) ? sharedImport.skippedTagIds.slice() : []);
+      const root = this.rootClip;
+      const rootVarsPreview = {};
+      const rootVarKeys = root && root._vars ? Object.keys(root._vars) : [];
+      for (let i = 0; i < rootVarKeys.length && i < 40; i++) {
+        const k = rootVarKeys[i];
+        const v = root._vars[k];
+        if (typeof v === 'number' || typeof v === 'boolean' || v === null || v === undefined) {
+          rootVarsPreview[k] = v;
+        } else if (typeof v === 'string') {
+          rootVarsPreview[k] = v.length > 60 ? `${v.slice(0, 57)}...` : v;
+        } else if (Array.isArray(v)) {
+          rootVarsPreview[k] = `[Array(${v.length})]`;
+        } else if (v && v._isMovieClip) {
+          rootVarsPreview[k] = `[MovieClip ${v.getTargetPath()}]`;
+        } else if (typeof v === 'function') {
+          rootVarsPreview[k] = '[Function]';
+        } else {
+          rootVarsPreview[k] = '[Object]';
+        }
+      }
+      const childClips = [];
+      if (root && root._childrenByDepth) {
+        const kids = root._getChildrenSnapshot();
+        for (let i = 0; i < kids.length && childClips.length < 40; i++) {
+          const s = kids[i];
+          const o = s && s.obj;
+          if (!o || !o._isMovieClip) continue;
+          childClips.push({
+            name: o._name || '',
+            charId: o.charId,
+            depth: s.depth - AS_DEPTH_OFFSET,
+            frame: o._currentframe,
+            totalFrames: o._totalframes,
+            playing: Boolean(o._playing),
+            visible: Boolean(o._visible),
+            x: Math.round((o._x || 0) * 10) / 10,
+            y: Math.round((o._y || 0) * 10) / 10,
+            hasEnterFrame: Boolean(o._getEventHandler('onEnterFrame') || (o._clipActions && o._clipActions.some((ca) => (ca.f & CE_ENTER_FRAME) !== 0))),
+            clipActions: o._clipActions ? o._clipActions.length : 0,
+            children: o._childrenByDepth ? o._childrenByDepth.size : 0,
+          });
+        }
+      }
       return {
         enabled: _isSwfDebugEnabled(),
         importSummary: {
@@ -5330,12 +5603,36 @@
         avm1Faults: {
           unhandledOpcodes: Array.from(this._dbgUnhandledOpcodes).sort(),
           nanProperties: Array.from(this._dbgNanMap.values()),
+          runtimeErrors: this._dbgRuntimeErrors ? this._dbgRuntimeErrors.slice() : [],
         },
         frameTiming: {
           sampleCount: n,
           avgAvm1ExecMs: n > 0 ? round3(sumAvm1 / n) : 0,
           avgSvgRenderMs: n > 0 ? round3(sumSvg / n) : 0,
-          activeDynamicDomNodes: this._dbgActiveDynamicNodes || _countSubtreeElements(this._dynamicLayerEl || (this.rootClip && this.rootClip.svgEl)),
+          activeDynamicDomNodes: this._dbgActiveDynamicNodes || _countSubtreeElements(this._dynamicLayerEl || (root && root.svgEl)),
+        },
+        runtimeSnapshot: {
+          swfVer: this.swfVer,
+          fps: this.fps,
+          rootFrame: root ? root._currentframe : 0,
+          totalFrames: root ? root._totalframes : 0,
+          playing: root ? Boolean(root._playing) : false,
+          entryFrame: Number(this.program.ef) || 1,
+          tickCount: this._tickCount,
+          elapsedMs: Math.round(this._elapsedMs),
+          liveClips: this._liveClipCount || 0,
+          scriptThrottled: Boolean(this._scriptThrottled),
+          budgetExceeded: Boolean(this._budgetExceededThisTick),
+          activeIntervals: this._intervals ? this._intervals.size : 0,
+          keyListeners: this._keyListeners ? this._keyListeners.length : 0,
+          mouseListeners: this._mouseListeners ? this._mouseListeners.length : 0,
+          registeredClasses: this._registeredClasses ? Array.from(this._registeredClasses.keys()).slice(0, 30) : [],
+          exports: this.program && this.program.exp ? Object.keys(this.program.exp).slice(0, 40) : [],
+          rootVars: rootVarsPreview,
+          rootVarCount: rootVarKeys.length,
+          childClips,
+          recentSounds: this._soundLog ? this._soundLog.slice(-10) : [],
+          recentTraces: this._traces ? this._traces.slice(-20) : [],
         },
       };
     }
@@ -5792,26 +6089,37 @@
         return cached.res;
       }
 
-      // Normalize slash paths (/a/b, ../foo) and dot paths (_root.a.b)
+      // Normalize slash paths (/a/b, ../foo, ..) and dot paths (_root.a.b) without breaking ".."
       let cur = base;
       let work = s;
       if (work.startsWith('/')) {
         cur = this.rootClip;
         work = work.slice(1);
       }
-      const parts = work.split(/[./]+/).filter(Boolean);
-      for (let i = 0; i < parts.length; i++) {
+      const slashParts = work.split('/');
+      for (let si = 0; si < slashParts.length; si++) {
         if (!cur) return undefined;
-        const p = parts[i];
-        const pl = p.toLowerCase();
-        if (pl === '_root' || pl === '_level0') {
-          cur = this.rootClip;
-        } else if (pl === '_parent' || p === '..') {
+        const sp = slashParts[si];
+        if (!sp || sp === '.') continue;
+        if (sp === '..') {
           cur = cur._parent || this.rootClip;
-        } else if (pl === 'this') {
           continue;
-        } else {
-          cur = this._getMember(cur, p);
+        }
+        const dotParts = sp.split('.');
+        for (let di = 0; di < dotParts.length; di++) {
+          if (!cur) return undefined;
+          const p = dotParts[di];
+          if (!p) continue;
+          const pl = p.toLowerCase();
+          if (pl === '_root' || pl === '_level0') {
+            cur = this.rootClip;
+          } else if (pl === '_parent') {
+            cur = cur._parent || this.rootClip;
+          } else if (pl === 'this') {
+            continue;
+          } else {
+            cur = this._getMember(cur, p);
+          }
         }
       }
       if (cur && (cur._isMovieClip || cur._isTextField || cur._isButton)) {
@@ -5839,7 +6147,7 @@
       };
       const colonIdx = s.indexOf(':');
       if (colonIdx !== -1) {
-        const target = this._resolveTargetPath(s.slice(0, colonIdx) || '/', baseClip);
+        const target = this._resolveTargetPath(s.slice(0, colonIdx), baseClip);
         return checkOnClip(target, s.slice(colonIdx + 1));
       }
       if (s.includes('.')) {
@@ -5862,8 +6170,11 @@
       if (colonIdx !== -1) {
         const targetPart = s.slice(0, colonIdx);
         const propPart = s.slice(colonIdx + 1);
-        const target = this._resolveTargetPath(targetPart || '/', baseClip);
+        const target = this._resolveTargetPath(targetPart, baseClip);
         return target ? this._getMember(target, propPart) : undefined;
+      }
+      if (s.includes('/') || s === '..') {
+        return this._resolveTargetPath(s, baseClip);
       }
       if (s.includes('.')) {
         const parts = s.split('.');
@@ -5978,13 +6289,16 @@
         case 'attachMovie': return (lnk, nm, d, init) => clip.attachMovie(lnk, nm, d, init);
         case 'duplicateMovieClip': return (nm, d, init) => clip.duplicateMovieClip(nm, d, init);
         case 'createEmptyMovieClip': return (nm, d) => clip.createEmptyMovieClip(nm, d);
+        case 'createTextField': return (nm, d, x, y, w, h) => clip.createTextField(nm, d, x, y, w, h);
         case 'removeMovieClip': return () => clip.removeMovieClip();
         case 'unloadMovie': return () => clip.removeMovieClip();
         case 'loadMovie': return () => {};
         case 'loadVariables': return () => {};
         case 'swapDepths': return (t) => clip.swapDepths(t);
         case 'getNextHighestDepth': return () => clip.getNextHighestDepth();
+        case 'getInstanceAtDepth': return (d) => clip.getInstanceAtDepth(d);
         case 'getDepth': return () => clip.getDepth();
+        case 'getSWFVersion': return () => vm.swfVer || 8;
         case 'hitTest': return (a, b, c) => clip.hitTest(a, b, c);
         case 'getBounds': return (s) => clip.getBounds(s);
         case 'localToGlobal': return (p) => clip.localToGlobal(p);
@@ -6005,6 +6319,71 @@
       }
     }
 
+    _addProperty(target, propName, getter, setter) {
+      if (!target || (typeof target !== 'object' && typeof target !== 'function')) return false;
+      const name = String(propName || '');
+      if (!name || typeof getter !== 'function') return false;
+      let map = this._accessors.get(target);
+      if (!map) {
+        map = new Map();
+        this._accessors.set(target, map);
+      }
+      const key = this.caseInsensitive ? name.toLowerCase() : name;
+      map.set(key, {
+        get: getter,
+        set: typeof setter === 'function' ? setter : null,
+        name,
+      });
+      this._hasAnyAccessors = true;
+      return true;
+    }
+
+    _findAccessor(obj, key) {
+      if (!this._hasAnyAccessors || !obj || (typeof obj !== 'object' && typeof obj !== 'function')) return null;
+      const lookup = this.caseInsensitive ? key.toLowerCase() : key;
+      const checkMap = (holder) => {
+        const m = holder ? this._accessors.get(holder) : null;
+        return m ? (m.get(lookup) || null) : null;
+      };
+      const own = checkMap(obj);
+      if (own) return own;
+      if (obj._isMovieClip) {
+        let p = obj._proto;
+        let guard = 0;
+        while (p && guard++ < 16) {
+          const hit = checkMap(p);
+          if (hit) return hit;
+          p = Object.getPrototypeOf(p);
+        }
+        return checkMap(this._mcProto);
+      }
+      let p = Object.getPrototypeOf(obj);
+      let guard = 0;
+      while (p && guard++ < 16) {
+        const hit = checkMap(p);
+        if (hit) return hit;
+        p = Object.getPrototypeOf(p);
+      }
+      return null;
+    }
+
+    _isInstanceOf(obj, ctor) {
+      if (typeof ctor !== 'function' || obj == null) return false;
+      if (obj._isMovieClip) {
+        if (ctor === this._global.MovieClip || ctor === this._global.Object) return true;
+        if (ctor.prototype && obj._proto) {
+          return obj._proto === ctor.prototype || ctor.prototype.isPrototypeOf(obj._proto);
+        }
+        return false;
+      }
+      if (obj._isTextField && (ctor === this._global.TextField || ctor === this._global.Object)) return true;
+      try {
+        return obj instanceof ctor;
+      } catch (_) {
+        return false;
+      }
+    }
+
     _getMember(obj, propName) {
       if (obj === null || obj === undefined) return undefined;
       const key = String(propName);
@@ -6013,12 +6392,19 @@
         if (key === '__proto__' || (this.caseInsensitive && key.toLowerCase() === '__proto__')) {
           return obj._proto || this._mcProto;
         }
+        if (key === 'addProperty' || (this.caseInsensitive && key.toLowerCase() === 'addproperty')) {
+          return (p, g, s) => this._addProperty(obj, p, g, s);
+        }
         if (key.startsWith('_')) {
           const special = this._getClipProp(obj, key);
           if (special !== undefined) return special;
         }
         if (key === 'enabled') return obj.enabled;
         if (key === 'useHandCursor') return obj.useHandCursor;
+        if (this._hasAnyAccessors) {
+          const acc = this._findAccessor(obj, key);
+          if (acc && acc.get) return this._invokeValue(acc.get, obj, EMPTY_ARR);
+        }
         // Own defined variables first (never let an uninitialized `var foo;` = undefined shadow a named child clip)
         if (key in obj._vars && obj._vars[key] !== undefined) return obj._vars[key];
         if (this.caseInsensitive) {
@@ -6037,8 +6423,8 @@
           const kl = key.toLowerCase();
           const mcMethods = [
             'play', 'stop', 'gotoAndPlay', 'gotoAndStop', 'nextFrame', 'prevFrame',
-            'attachMovie', 'duplicateMovieClip', 'createEmptyMovieClip', 'removeMovieClip',
-            'unloadMovie', 'swapDepths', 'getNextHighestDepth', 'getDepth', 'hitTest',
+            'attachMovie', 'duplicateMovieClip', 'createEmptyMovieClip', 'createTextField', 'removeMovieClip',
+            'unloadMovie', 'swapDepths', 'getNextHighestDepth', 'getInstanceAtDepth', 'getDepth', 'getSWFVersion', 'hitTest',
             'getBounds', 'localToGlobal', 'globalToLocal', 'startDrag', 'stopDrag',
             'getBytesLoaded', 'getBytesTotal', 'clear', 'lineStyle', 'beginFill', 'endFill',
             'moveTo', 'lineTo', 'curveTo', 'setMask'
@@ -6101,10 +6487,31 @@
         return undefined;
       }
 
-      // Flash Array.prototype.sortOn shim (without mutating global Array.prototype)
-      if (Array.isArray(obj) && (key === 'sortOn' || (this.caseInsensitive && key.toLowerCase() === 'sorton'))) {
-        if (key in obj) return obj[key];
-        return (fields, options) => _flashArraySortOn(obj, fields, options);
+      if (obj._isAvm1Super) {
+        return obj._proto ? this._getMember(obj._proto, key) : undefined;
+      }
+
+      // VM-isolated Object.prototype.addProperty (supports AS1/AS2 getters/setters without mutating JS Object.prototype)
+      if ((key === 'addProperty' || (this.caseInsensitive && key.toLowerCase() === 'addproperty')) && !Object.prototype.hasOwnProperty.call(obj, key)) {
+        return (p, g, s) => this._addProperty(obj, p, g, s);
+      }
+
+      if (this._hasAnyAccessors) {
+        const acc = this._findAccessor(obj, key);
+        if (acc && acc.get) return this._invokeValue(acc.get, obj, EMPTY_ARR);
+      }
+
+      // Flash Array.prototype.sort / sortOn shims (without mutating global Array.prototype)
+      if (Array.isArray(obj)) {
+        const kl = this.caseInsensitive ? key.toLowerCase() : key;
+        if (kl === 'sortOn' || (this.caseInsensitive && kl === 'sorton')) {
+          if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+          return (fields, options) => _flashArraySortOn(obj, fields, options);
+        }
+        if (kl === 'sort') {
+          if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+          return (...sortArgs) => _flashArraySort(this, obj, ...sortArgs);
+        }
       }
 
       // Standard JS Array / Object / Math / Function / Date
@@ -6156,6 +6563,13 @@
           obj.useHandCursor = this._toBool(val);
           obj._syncPointerEvents();
           return;
+        }
+        if (this._hasAnyAccessors) {
+          const acc = this._findAccessor(obj, key);
+          if (acc) {
+            if (acc.set) this._invokeValue(acc.set, obj, [val]);
+            return;
+          }
         }
         const isPtrHandler = (
           kl === 'onpress' ||
@@ -6210,6 +6624,13 @@
       }
 
       if (typeof obj === 'object' || typeof obj === 'function') {
+        if (this._hasAnyAccessors) {
+          const acc = this._findAccessor(obj, key);
+          if (acc) {
+            if (acc.set) this._invokeValue(acc.set, obj, [val]);
+            return;
+          }
+        }
         if (this.caseInsensitive && !Array.isArray(obj)) {
           const kl = key.toLowerCase();
           const keys = Object.keys(obj);
@@ -6231,6 +6652,11 @@
 
       if (key.includes(':')) {
         return { value: this._resolveVariablePath(key, targetClip, scopes, withStack, thisObj), receiver: fallbackReceiver };
+      }
+
+      if (key.includes('/') || key === '..') {
+        const resolved = this._resolveTargetPath(key, targetClip);
+        return { value: resolved, receiver: (resolved && resolved._parent) || fallbackReceiver };
       }
 
       const kl = key.toLowerCase();
@@ -6262,7 +6688,7 @@
       }
 
       // 3. Active non-MovieClip thisObj members (AS2 class/listener methods)
-      if (thisObj && thisObj !== targetClip && typeof thisObj === 'object') {
+      if (thisObj && !thisObj._isMovieClip && !thisObj._isButton && thisObj !== targetClip && typeof thisObj === 'object') {
         const tv = this._getMember(thisObj, key);
         if (tv !== undefined) return { value: tv, receiver: thisObj };
       }
@@ -6303,14 +6729,26 @@
       const key = String(name || '');
       if (!key) return;
 
-      // Handle colon paths ("/:score", "../:hp")
+      // Handle colon paths ("/:score", "../:hp", ":localVar")
       const colonIdx = key.indexOf(':');
       if (colonIdx !== -1) {
         const targetPart = key.slice(0, colonIdx);
         const propPart = key.slice(colonIdx + 1);
-        const tgt = this._resolveTargetPath(targetPart || '/', targetClip);
+        const tgt = this._resolveTargetPath(targetPart, targetClip);
         if (tgt) this._setMember(tgt, propPart, val);
         return;
+      }
+
+      // Handle Flash 4/5 slash variable paths ("/score", "../ready")
+      if (key.includes('/')) {
+        const lastSlash = key.lastIndexOf('/');
+        const targetPart = key.slice(0, lastSlash) || '/';
+        const propPart = key.slice(lastSlash + 1);
+        if (propPart) {
+          const tgt = this._resolveTargetPath(targetPart, targetClip);
+          if (tgt) this._setMember(tgt, propPart, val);
+          return;
+        }
       }
 
       // Handle dot paths ("_root.answer", "_parent.score", "quiz.ans")
@@ -6345,7 +6783,7 @@
           const sc = scopes[i];
           if (key in sc) {
             if (typeof val === 'number' && isNaN(val) && _isSwfDebugEnabled()) {
-              this._recordDebugNaN(targetClip, key);
+              this._recordDbgNanFault(targetClip, key);
             }
             sc[key] = val;
             return;
@@ -6354,7 +6792,7 @@
             for (const k in sc) {
               if (k.toLowerCase() === kl) {
                 if (typeof val === 'number' && isNaN(val) && _isSwfDebugEnabled()) {
-                  this._recordDebugNaN(targetClip, k);
+                  this._recordDbgNanFault(targetClip, k);
                 }
                 sc[k] = val;
                 return;
@@ -6365,7 +6803,7 @@
       }
 
       // 3. If variable already exists on active non-MovieClip thisObj (AS2 class instance), update it there
-      if (thisObj && thisObj !== targetClip && typeof thisObj === 'object' && this._getMember(thisObj, key) !== undefined) {
+      if (thisObj && !thisObj._isMovieClip && !thisObj._isButton && thisObj !== targetClip && typeof thisObj === 'object' && this._getMember(thisObj, key) !== undefined) {
         this._setMember(thisObj, key, val);
         return;
       }
@@ -6375,16 +6813,35 @@
       this._setMember(targetClip || this.rootClip, key, val);
     }
 
-    _invokeValue(fn, thisObj, args) {
+    _recordRuntimeError(err) {
+      const msg = err && err.message ? String(err.message) : String(err);
+      if (this._dbgRuntimeErrors && !this._dbgRuntimeErrorSet.has(msg)) {
+        this._dbgRuntimeErrorSet.add(msg);
+        if (this._dbgRuntimeErrors.length < 16) this._dbgRuntimeErrors.push(msg);
+        if (this._dbgRuntimeErrors.length <= 3) {
+          console.warn('[AST AVM1] Non-fatal call fault:', err);
+        }
+      }
+    }
+
+    _invokeValue(fn, thisObj, args, superBaseProto) {
+      if (fn && fn._isAvm1Super) {
+        const sProto = fn._proto;
+        const sThis = fn._thisObj || thisObj || this.rootClip;
+        const superCtor = sProto && typeof sProto.constructor === 'function' ? sProto.constructor : null;
+        if (!superCtor) return undefined;
+        return this._invokeValue(superCtor, sThis, args, sProto);
+      }
       if (typeof fn !== 'function') return undefined;
       if (this._callDepth >= MAX_CALL_DEPTH) return undefined;
       this._callDepth++;
       try {
         if (fn._isAvm1Fn) {
-          return this._callAvm1Function(fn, thisObj, args);
+          return this._callAvm1Function(fn, thisObj, args, superBaseProto);
         }
         return fn.apply(thisObj, args);
-      } catch (_) {
+      } catch (err) {
+        this._recordRuntimeError(err);
         return undefined;
       } finally {
         this._callDepth--;
@@ -6406,12 +6863,30 @@
       }
     }
 
-    _callAvm1Function(fn, thisObj, args) {
-      const targetClip = (thisObj && thisObj._isMovieClip)
-        ? thisObj
-        : (thisObj && thisObj._isButton && thisObj._parent)
-        ? thisObj._parent
-        : (fn._defClip || this.rootClip);
+    _createSuperObj(thisObj, superBaseProto) {
+      if (!thisObj || typeof thisObj !== 'object') return undefined;
+      let ownProto = superBaseProto;
+      if (!ownProto) {
+        ownProto = thisObj._isMovieClip ? (thisObj._proto || this._mcProto) : Object.getPrototypeOf(thisObj);
+      }
+      const nextProto = ownProto ? Object.getPrototypeOf(ownProto) : null;
+      return {
+        _isAvm1Super: true,
+        _thisObj: thisObj,
+        _proto: nextProto || null,
+      };
+    }
+
+    _callAvm1Function(fn, thisObj, args, superBaseProto) {
+      // Flash AVM1 spec: base_clip (targetClip) is the MovieClip where the function was defined,
+      // while `this` is `thisObj`. Fallback to thisObj/rootClip only if _defClip is absent or removed.
+      const targetClip = (fn._defClip && !fn._defClip._removed)
+        ? fn._defClip
+        : ((thisObj && thisObj._isMovieClip && !thisObj._removed)
+          ? thisObj
+          : (thisObj && thisObj._isButton && thisObj._parent && !thisObj._parent._removed)
+          ? thisObj._parent
+          : this.rootClip);
       const localScope = Object.create(null);
       const regLen = Math.max(4, fn._regCount || 4);
       const regs = this._acquireRegs(regLen);
@@ -6430,9 +6905,9 @@
         if (fn._preloadArguments) regs[r++] = argsObj;
         else if (!fn._suppressArguments) localScope.arguments = argsObj;
         if (fn._preloadSuper) {
-          regs[r++] = (thisObj && typeof thisObj === 'object')
-            ? (thisObj._isMovieClip ? (thisObj._proto || this._mcProto) : Object.getPrototypeOf(thisObj))
-            : undefined;
+          regs[r++] = this._createSuperObj(thisObj, superBaseProto);
+        } else if (!fn._suppressSuper) {
+          localScope.super = this._createSuperObj(thisObj, superBaseProto);
         }
         if (fn._preloadRoot) regs[r++] = this.rootClip;
         if (fn._preloadParent) regs[r++] = targetClip ? targetClip._parent : undefined;
@@ -6447,6 +6922,7 @@
         }
       } else {
         localScope.arguments = argsObj;
+        localScope.super = this._createSuperObj(thisObj, superBaseProto);
         const params = fn._params;
         for (let i = 0; i < params.length; i++) {
           const pName = params[i];
@@ -6470,11 +6946,23 @@
           thisObj || targetClip,
           nextScopes,
           regs,
-          fn._constPool || EMPTY_ARR
+          fn._constPool || EMPTY_ARR,
+          null,
+          fn._closureWith || null
         );
       } finally {
         this._releaseRegs(regs);
       }
+    }
+
+    _avm1Equals2(b, a) {
+      if (this.swfVer <= 5) {
+        if ((b === undefined || b === null) && (a === undefined || a === null)) return true;
+        if (b === undefined || b === null) return a === 0 || a === '' || a === false;
+        if (a === undefined || a === null) return b === 0 || b === '' || b === false;
+      }
+      // eslint-disable-next-line eqeqeq
+      return b == a;
     }
 
     // =========================================================================
@@ -6492,7 +6980,7 @@
       const regs = this._acquireRegs(4);
       const tgt = targetClip || this.rootClip;
       try {
-        return this._runDecoded(decoded, tgt, tgt, EMPTY_ARR, regs, EMPTY_ARR);
+        return this._runDecoded(decoded, tgt, tgt, EMPTY_ARR, regs, EMPTY_ARR, null, null);
       } catch (err) {
         if (!this._warnedExecErr) {
           this._warnedExecErr = true;
@@ -6504,15 +6992,27 @@
       }
     }
 
-    _runDecoded(decoded, initialTarget, thisObj, scopes, regs, initialConstPool) {
+    _runDecoded(decoded, initialTarget, thisObj, scopes, regs, initialConstPool, retOut, initialWith) {
       const { bytes, instrs, offsetToIdx } = decoded;
       const fPool = this._execFramePool;
       const frame = fPool.length > 0 ? fPool.pop() : { stack: [], withStack: [], withEndOffsets: [] };
       const stack = frame.stack;
       const withStack = frame.withStack;
       const withEndOffsets = frame.withEndOffsets;
+      if (initialWith && initialWith.length > 0) {
+        for (let wi = 0; wi < initialWith.length; wi++) {
+          withStack.push(initialWith[wi]);
+          withEndOffsets.push(Infinity);
+        }
+      }
       let constPool = initialConstPool || EMPTY_ARR;
       let curTarget = initialTarget || this.rootClip;
+      const getTimelineTarget = () => {
+        for (let wi = withStack.length - 1; wi >= 0; wi--) {
+          if (withStack[wi] && withStack[wi]._isMovieClip) return withStack[wi];
+        }
+        return curTarget;
+      };
       let pc = 0;
       let ops = 0;
       const total = instrs.length;
@@ -6539,19 +7039,27 @@
         pc++;
 
         switch (code) {
-          // --- Timeline & Target Control ---
-          case 0x04: // ActionNextFrame
-            if (curTarget && curTarget._isMovieClip) curTarget.nextFrame();
+          // --- Timeline & Target Control (respect active ActionWith MovieClip scope) ---
+          case 0x04: { // ActionNextFrame
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) tlTgt.nextFrame();
             break;
-          case 0x05: // ActionPreviousFrame
-            if (curTarget && curTarget._isMovieClip) curTarget.prevFrame();
+          }
+          case 0x05: { // ActionPreviousFrame
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) tlTgt.prevFrame();
             break;
-          case 0x06: // ActionPlay
-            if (curTarget && curTarget._isMovieClip) curTarget.play();
+          }
+          case 0x06: { // ActionPlay
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) tlTgt.play();
             break;
-          case 0x07: // ActionStop
-            if (curTarget && curTarget._isMovieClip) curTarget.stop();
+          }
+          case 0x07: { // ActionStop
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) tlTgt.stop();
             break;
+          }
           case 0x08: // ActionToggleQuality
             break;
           case 0x09: // ActionStopSounds
@@ -6561,9 +7069,10 @@
             const frame0 = readUI16(bytes, ins.pStart);
             const fusePlay = pc < total && instrs[pc].code === 0x06;
             if (fusePlay) pc++;
-            if (curTarget && curTarget._isMovieClip) {
-              if (fusePlay) curTarget.gotoAndPlay(frame0 + 1);
-              else curTarget.gotoAndStop(frame0 + 1);
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) {
+              if (fusePlay) tlTgt.gotoAndPlay(frame0 + 1);
+              else tlTgt.gotoAndStop(frame0 + 1);
             }
             break;
           }
@@ -6571,9 +7080,10 @@
             const lbl = readCString(bytes, ins.pStart, ins.pEnd).value;
             const fusePlay = pc < total && instrs[pc].code === 0x06;
             if (fusePlay) pc++;
-            if (curTarget && curTarget._isMovieClip) {
-              if (fusePlay) curTarget.gotoAndPlay(lbl);
-              else curTarget.gotoAndStop(lbl);
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) {
+              if (fusePlay) tlTgt.gotoAndPlay(lbl);
+              else tlTgt.gotoAndStop(lbl);
             }
             break;
           }
@@ -6583,12 +7093,13 @@
             const hasBias = (flags & 0x02) !== 0;
             const bias = hasBias ? readUI16(bytes, ins.pStart + 1) : 0;
             const frameArg = stack.pop();
-            if (curTarget && curTarget._isMovieClip) {
+            const tlTgt = getTimelineTarget();
+            if (tlTgt && tlTgt._isMovieClip) {
               const target = (typeof frameArg === 'number' || (typeof frameArg === 'string' && /^\d+$/.test(frameArg.trim())))
                 ? (Number(frameArg) + bias)
                 : frameArg;
-              if (playFlag) curTarget.gotoAndPlay(target);
-              else curTarget.gotoAndStop(target);
+              if (playFlag) tlTgt.gotoAndPlay(target);
+              else tlTgt.gotoAndStop(target);
             }
             break;
           }
@@ -6620,19 +7131,20 @@
             break;
           case 0x9E: { // ActionCall (execute actions on specified frame without moving playhead; supports target:frame)
             const frameVal = stack.pop();
-            let callTarget = curTarget;
+            const baseTl = getTimelineTarget();
+            let callTarget = baseTl;
             let frameSpec = frameVal;
             if (typeof frameVal === 'string') {
               const colonIdx = frameVal.indexOf(':');
               if (colonIdx !== -1) {
                 const targetPart = frameVal.slice(0, colonIdx);
                 frameSpec = frameVal.slice(colonIdx + 1);
-                callTarget = this._resolveTargetPath(targetPart || '/', curTarget);
+                callTarget = this._resolveTargetPath(targetPart, baseTl);
               }
             }
             if (callTarget && callTarget._isMovieClip) {
-              const fNum = callTarget.resolveFrameNumber(frameSpec);
-              callTarget.runFrameActions(fNum);
+              const fNum = callTarget._resolveFrameOrNull(frameSpec);
+              if (fNum !== null) callTarget.runFrameActions(fNum);
             }
             break;
           }
@@ -6778,8 +7290,7 @@
           case 0x49: { // ActionEquals2
             const a = stack.pop();
             const b = stack.pop();
-            // eslint-disable-next-line eqeqeq
-            stack.push(b == a);
+            stack.push(this._avm1Equals2(b, a));
             break;
           }
           case 0x66: { // ActionStrictEquals
@@ -6858,7 +7369,7 @@
           case 0x22: { // ActionGetProperty
             const idx = Math.floor(this._toNum(stack.pop()));
             const tgtVal = stack.pop();
-            const tgt = this._resolveTargetPath(tgtVal, curTarget);
+            const tgt = this._resolveTargetPath(tgtVal, getTimelineTarget());
             const propName = PROP_BY_INDEX[idx];
             stack.push(tgt && propName ? this._getClipProp(tgt, propName) : undefined);
             break;
@@ -6867,7 +7378,7 @@
             const val = stack.pop();
             const idx = Math.floor(this._toNum(stack.pop()));
             const tgtVal = stack.pop();
-            const tgt = this._resolveTargetPath(tgtVal, curTarget);
+            const tgt = this._resolveTargetPath(tgtVal, getTimelineTarget());
             const propName = PROP_BY_INDEX[idx];
             if (tgt && propName) this._setClipProp(tgt, propName, val);
             break;
@@ -6986,7 +7497,29 @@
           case 0x3B: { // ActionDelete2
             const name = this._toStr(stack.pop());
             let ok = false;
-            if (scopes.length > 0) {
+            if (withStack && withStack.length > 0) {
+              for (let wi = withStack.length - 1; wi >= 0 && !ok; wi--) {
+                const wObj = withStack[wi];
+                if (wObj && wObj._isMovieClip) {
+                  if (name in wObj._vars) { ok = delete wObj._vars[name]; }
+                  else if (this.caseInsensitive) {
+                    const nl = name.toLowerCase();
+                    for (const k in wObj._vars) {
+                      if (k.toLowerCase() === nl) { ok = delete wObj._vars[k]; break; }
+                    }
+                  }
+                } else if (wObj && typeof wObj === 'object') {
+                  if (name in wObj) { ok = delete wObj[name]; }
+                  else if (this.caseInsensitive) {
+                    const nl = name.toLowerCase();
+                    for (const k in wObj) {
+                      if (k.toLowerCase() === nl) { ok = delete wObj[k]; break; }
+                    }
+                  }
+                }
+              }
+            }
+            if (!ok && scopes.length > 0) {
               const local = scopes[scopes.length - 1];
               if (name in local) {
                 ok = delete local[name];
@@ -7013,19 +7546,7 @@
           case 0x54: { // ActionInstanceOf
             const ctor = stack.pop();
             const obj = stack.pop();
-            let isInst = false;
-            if (typeof ctor === 'function' && obj != null) {
-              if (obj._isMovieClip) {
-                if (ctor === this._global.MovieClip || ctor === this._global.Object) {
-                  isInst = true;
-                } else if (ctor.prototype && obj._proto) {
-                  isInst = obj._proto === ctor.prototype || ctor.prototype.isPrototypeOf(obj._proto);
-                }
-              } else {
-                isInst = obj instanceof ctor;
-              }
-            }
-            stack.push(isInst);
+            stack.push(this._isInstanceOf(obj, ctor));
             break;
           }
           case 0x69: { // ActionExtends
@@ -7040,7 +7561,7 @@
           case 0x2B: { // ActionCastOp
             const ctor = stack.pop();
             const obj = stack.pop();
-            stack.push(typeof ctor === 'function' && (obj instanceof ctor) ? obj : null);
+            stack.push(this._isInstanceOf(obj, ctor) ? obj : null);
             break;
           }
           case 0x2C: { // ActionImplementsOp
@@ -7057,13 +7578,13 @@
             const asDepth = rawDepth >= AS_DEPTH_OFFSET ? (rawDepth - AS_DEPTH_OFFSET) : rawDepth;
             const newName = this._toStr(stack.pop());
             const srcVal = stack.pop();
-            const src = this._resolveTargetPath(srcVal, curTarget);
+            const src = this._resolveTargetPath(srcVal, getTimelineTarget());
             if (src && src._isMovieClip) src.duplicateMovieClip(newName, asDepth);
             break;
           }
           case 0x25: { // ActionRemoveSprite
             const tgtVal = stack.pop();
-            const tgt = this._resolveTargetPath(tgtVal, curTarget);
+            const tgt = this._resolveTargetPath(tgtVal, getTimelineTarget());
             if (tgt && tgt._isMovieClip) tgt.removeMovieClip();
             break;
           }
@@ -7082,7 +7603,7 @@
               top = this._toNum(stack.pop());
               left = this._toNum(stack.pop());
             }
-            const tgt = this._resolveTargetPath(tgtVal, curTarget);
+            const tgt = this._resolveTargetPath(tgtVal, getTimelineTarget());
             if (tgt && tgt._isMovieClip) {
               this.startDragClip(tgt, lockCenter, left, top, right, bottom);
             }
@@ -7125,33 +7646,74 @@
             }
             break;
           }
-          case 0x8F: { // ActionTry (memoized decoded try/catch/finally sub-slices)
+          case 0x8F: { // ActionTry (memoized decoded try/catch/finally sub-slices with catch var/reg binding & return propagation)
             let tm = ins._tryMeta;
             if (!tm) {
+              const flags = bytes[ins.pStart] || 0;
+              const hasCatch = (flags & 0x01) !== 0;
+              const hasFinally = (flags & 0x02) !== 0;
+              const catchInReg = (flags & 0x04) !== 0;
               const trySize = readUI16(bytes, ins.pStart + 1);
               const catchSize = readUI16(bytes, ins.pStart + 3);
               const finallySize = readUI16(bytes, ins.pStart + 5);
+              let catchReg = -1;
+              let catchName = '';
+              if (catchInReg) {
+                catchReg = bytes[ins.pStart + 7] || 0;
+              } else {
+                catchName = readCString(bytes, ins.pStart + 7, ins.pEnd).value;
+              }
               const tryEnd = ins.end + trySize;
               const afterAll = tryEnd + catchSize + finallySize;
               tm = {
+                hasCatch,
+                hasFinally,
+                catchInReg,
+                catchReg,
+                catchName,
                 tryDecoded: decodeBytecodeSlice(bytes, ins.end, tryEnd),
-                catchDecoded: catchSize > 0 ? decodeBytecodeSlice(bytes, tryEnd, tryEnd + catchSize) : null,
-                finDecoded: finallySize > 0 ? decodeBytecodeSlice(bytes, tryEnd + catchSize, afterAll) : null,
+                catchDecoded: (hasCatch && catchSize > 0) ? decodeBytecodeSlice(bytes, tryEnd, tryEnd + catchSize) : null,
+                finDecoded: (hasFinally && finallySize > 0) ? decodeBytecodeSlice(bytes, tryEnd + catchSize, afterAll) : null,
                 afterAll,
               };
               ins._tryMeta = tm;
             }
+            const subRet = { returned: false, value: undefined };
+            const subWith = withStack.length > 0 ? withStack.slice() : null;
+            let caughtErr = null;
+            let hasUncaught = false;
             try {
-              this._runDecoded(tm.tryDecoded, curTarget, thisObj, scopes, regs, constPool);
-            } catch (_) {
-              if (tm.catchDecoded) {
-                this._runDecoded(tm.catchDecoded, curTarget, thisObj, scopes, regs, constPool);
+              this._runDecoded(tm.tryDecoded, curTarget, thisObj, scopes, regs, constPool, subRet, subWith);
+            } catch (err) {
+              if (tm.hasCatch) {
+                if (tm.catchDecoded) {
+                  let catchScopes = scopes;
+                  if (tm.catchInReg) {
+                    regs[tm.catchReg] = err;
+                  } else if (tm.catchName) {
+                    const catchLocal = Object.create(null);
+                    catchLocal[tm.catchName] = err;
+                    catchScopes = scopes.length > 0 ? scopes.concat([catchLocal]) : [catchLocal];
+                  }
+                  this._runDecoded(tm.catchDecoded, curTarget, thisObj, catchScopes, regs, constPool, subRet, subWith);
+                }
+              } else {
+                caughtErr = err;
+                hasUncaught = true;
               }
             } finally {
               if (tm.finDecoded) {
-                this._runDecoded(tm.finDecoded, curTarget, thisObj, scopes, regs, constPool);
+                this._runDecoded(tm.finDecoded, curTarget, thisObj, scopes, regs, constPool, subRet, subWith);
               }
             }
+            if (subRet.returned) {
+              if (retOut) {
+                retOut.returned = true;
+                retOut.value = subRet.value;
+              }
+              return subRet.value;
+            }
+            if (hasUncaught) throw caughtErr;
             pc = _resolveJump(offsetToIdx, instrs, total, tm.afterAll);
             break;
           }
@@ -7197,6 +7759,7 @@
             fnObj._bodyDecoded = fm.bodyDecoded;
             fnObj._constPool = constPool;
             fnObj._closureScopes = scopes.length > 0 ? scopes.slice() : EMPTY_ARR;
+            fnObj._closureWith = withStack.length > 0 ? withStack.slice() : EMPTY_ARR;
             fnObj._defClip = curTarget;
 
             if (fm.fnName) {
@@ -7260,6 +7823,7 @@
             fnObj._bodyDecoded = fm.bodyDecoded;
             fnObj._constPool = constPool;
             fnObj._closureScopes = scopes.length > 0 ? scopes.slice() : EMPTY_ARR;
+            fnObj._closureWith = withStack.length > 0 ? withStack.slice() : EMPTY_ARR;
             fnObj._defClip = curTarget;
 
             if (fm.fnName) {
@@ -7271,7 +7835,12 @@
             break;
           }
           case 0x3E: { // ActionReturn
-            return stack.pop();
+            const retVal = stack.pop();
+            if (retOut) {
+              retOut.returned = true;
+              retOut.value = retVal;
+            }
+            return retVal;
           }
           case 0x3D: { // ActionCallFunction
             const fnName = this._toStr(stack.pop());
@@ -7286,12 +7855,17 @@
             try {
               if (fnName === 'eval' || (this.caseInsensitive && fnName.toLowerCase() === 'eval')) {
                 const rawEval = args[0];
-                if (rawEval === undefined || rawEval === null || String(rawEval).trim() === '') {
+                const rawStr = rawEval === undefined || rawEval === null ? '' : String(rawEval).trim();
+                if (!rawStr) {
                   res = undefined;
+                } else if (rawStr.includes(':')) {
+                  res = this._resolveVariablePath(rawStr, curTarget, scopes, withStack, thisObj);
+                } else if (rawStr.includes('/') || rawStr === '..') {
+                  res = this._resolveTargetPath(rawStr, curTarget);
                 } else {
-                  res = this._resolveTargetPath(rawEval, curTarget);
+                  res = this._resolveVariablePath(rawStr, curTarget, scopes, withStack, thisObj);
                   if (res === undefined) {
-                    res = this._resolveVariablePath(String(rawEval), curTarget, scopes, withStack, thisObj);
+                    res = this._resolveTargetPath(rawStr, curTarget);
                   }
                 }
               } else {
@@ -7319,7 +7893,17 @@
             }
             let res;
             try {
-              if (methodName === undefined || methodName === null || methodName === '') {
+              if (obj && obj._isAvm1Super) {
+                const sProto = obj._proto;
+                const sThis = obj._thisObj || thisObj || curTarget;
+                if (methodName === undefined || methodName === null || methodName === '') {
+                  const superCtor = sProto && typeof sProto.constructor === 'function' ? sProto.constructor : null;
+                  if (superCtor) res = this._invokeValue(superCtor, sThis, args, sProto);
+                } else if (sProto) {
+                  const fn = this._getMember(sProto, String(methodName));
+                  res = this._invokeValue(fn, sThis, args, sProto);
+                }
+              } else if (methodName === undefined || methodName === null || methodName === '') {
                 if (typeof obj === 'function') {
                   res = this._invokeValue(obj, curTarget, args);
                 } else if (obj && typeof obj === 'object' && typeof obj.constructor === 'function' && obj.constructor._isAvm1Fn) {
@@ -7407,8 +7991,8 @@
           }
 
           default:
-            // Safely ignore unrecognized/unimplemented opcodes without halting execution
-            if (_isSwfDebugEnabled()) {
+            // Always record unrecognized opcodes (zero cost on handled opcodes, capped at 64)
+            if (this._dbgUnhandledOpcodes.size < 64) {
               this._dbgUnhandledOpcodes.add(`0x${code.toString(16).toUpperCase().padStart(2, '0')}`);
             }
             break;
