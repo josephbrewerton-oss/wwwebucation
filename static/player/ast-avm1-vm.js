@@ -18,14 +18,14 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const AS_DEPTH_OFFSET = 16384;
-  const MAX_OPS_PER_EXEC = 350000;
-  const TICK_OPS_BUDGET = 150000;
-  const BOOT_OPS_BUDGET = 600000;
-  const TICK_TIME_BUDGET_MS = 25;
-  const BOOT_TIME_BUDGET_MS = 200;
-  const MAX_CALL_DEPTH = 64;
-  const MAX_LIVE_CLIPS = 3000;
-  const MAX_CHILDREN_PER_CLIP = 2048;
+  const MAX_OPS_PER_EXEC = 1500000;
+  const TICK_OPS_BUDGET = 600000;
+  const BOOT_OPS_BUDGET = 2500000;
+  const TICK_TIME_BUDGET_MS = 100;
+  const BOOT_TIME_BUDGET_MS = 1000;
+  const MAX_CALL_DEPTH = 128;
+  const MAX_LIVE_CLIPS = 4000;
+  const MAX_CHILDREN_PER_CLIP = 2500;
   const MAX_DRAW_PATHS = 1024;
   const MAX_TRACES = 200;
 
@@ -229,6 +229,74 @@
   const EMPTY_ARR = Object.freeze([]);
   const IDENTITY_MAT = Object.freeze([1, 0, 0, 1, 0, 0]);
   const _invMatScratch = new Float64Array(6);
+
+  // Built-in immutable prototype lowercase lookup caches (for SWF <= 6 case-insensitive access without mutating globals)
+  const _BUILTIN_PROTOS = new Set([
+    String.prototype,
+    Number.prototype,
+    Boolean.prototype,
+    Array.prototype,
+    Date.prototype,
+    Object.prototype,
+  ]);
+  const _PROTO_CI_CACHE = new WeakMap();
+  function _getBuiltinProtoCiMap(proto) {
+    if (!proto || !_BUILTIN_PROTOS.has(proto)) return null;
+    let map = _PROTO_CI_CACHE.get(proto);
+    if (map) return map;
+    map = Object.create(null);
+    const names = Object.getOwnPropertyNames(proto);
+    for (let i = 0; i < names.length; i++) {
+      const n = names[i];
+      const nl = n.toLowerCase();
+      if (!(nl in map)) map[nl] = n;
+    }
+    if (proto !== Object.prototype) {
+      const objNames = Object.getOwnPropertyNames(Object.prototype);
+      for (let i = 0; i < objNames.length; i++) {
+        const n = objNames[i];
+        const nl = n.toLowerCase();
+        if (!(nl in map)) map[nl] = n;
+      }
+    }
+    _PROTO_CI_CACHE.set(proto, map);
+    return map;
+  }
+
+  function _flashArraySortOn(arr, fields, options) {
+    const fieldList = Array.isArray(fields) ? fields : [fields];
+    const optList = Array.isArray(options) ? options : fieldList.map(() => (Number(options) || 0));
+    const returnIndexed = (Number(optList[0]) & 8) !== 0;
+    const indices = arr.map((_, i) => i);
+    indices.sort((ia, ib) => {
+      const a = arr[ia];
+      const b = arr[ib];
+      for (let i = 0; i < fieldList.length; i++) {
+        const f = String(fieldList[i]);
+        const opt = Number(optList[i]) || 0;
+        const ci = (opt & 1) !== 0;
+        const desc = (opt & 2) !== 0;
+        const numeric = (opt & 16) !== 0;
+        const va = a && typeof a === 'object' ? a[f] : undefined;
+        const vb = b && typeof b === 'object' ? b[f] : undefined;
+        let cmp = 0;
+        if (numeric) {
+          cmp = toAvm1Number(va) - toAvm1Number(vb);
+        } else {
+          let sa = String(va == null ? '' : va);
+          let sb = String(vb == null ? '' : vb);
+          if (ci) { sa = sa.toLowerCase(); sb = sb.toLowerCase(); }
+          cmp = sa < sb ? -1 : (sa > sb ? 1 : 0);
+        }
+        if (cmp !== 0) return desc ? -cmp : cmp;
+      }
+      return 0;
+    });
+    if (returnIndexed) return indices;
+    const copy = indices.map((i) => arr[i]);
+    for (let i = 0; i < copy.length; i++) arr[i] = copy[i];
+    return arr;
+  }
 
   // Matrix math: [a, b, c, d, tx, ty]
   function mulMat(m1, m2) {
@@ -1414,6 +1482,9 @@
       this._childrenByDepth = new Map(); // depth -> { charId, obj, svgWrap, clipDepth, maskId }
       this._childrenSnapshot = EMPTY_ARR;
       this._childrenDirty = false;
+      this._maxDomDepth = null;
+      this._childNameCache = null;
+      this._childNameVersion = -1;
       this._localMatBuf = new Float64Array(6);
       this._worldMatBuf = new Float64Array(6);
       this._localBBoxBuf = { x: 0, y: 0, w: 0, h: 0 };
@@ -1819,19 +1890,21 @@
     }
 
     getChildByName(name) {
-      if (!name) return undefined;
+      if (!name || this._childrenByDepth.size === 0) return undefined;
       const ci = this._vm.caseInsensitive;
-      const lower = ci ? String(name).toLowerCase() : null;
-      let found;
-      this._childrenByDepth.forEach((slot) => {
-        if (found !== undefined) return;
-        const obj = slot.obj;
-        if (!obj || !obj._name) return;
-        if (obj._name === name || (ci && obj._name.toLowerCase() === lower)) {
-          found = obj;
-        }
-      });
-      return found;
+      const lookupKey = ci ? String(name).toLowerCase() : String(name);
+      if (this._childNameVersion !== this._vm._treeVersion || !this._childNameCache) {
+        const map = this._childNameCache || (this._childNameCache = new Map());
+        map.clear();
+        this._childrenByDepth.forEach((slot) => {
+          const obj = slot.obj;
+          if (!obj || !obj._name) return;
+          const k = ci ? obj._name.toLowerCase() : obj._name;
+          if (!map.has(k)) map.set(k, obj);
+        });
+        this._childNameVersion = this._vm._treeVersion;
+      }
+      return this._childNameCache.get(lookupKey);
     }
 
     resolveFrameNumber(target) {
@@ -1880,9 +1953,12 @@
     _jumpToFrame(nextFrame) {
       if (nextFrame === this._currentframe && !this._justSpawned) return;
       const depth = (this._jumpDepth || 0);
-      if (depth >= 12) return;
+      if (depth >= 32) return;
       this._jumpDepth = depth + 1;
       try {
+        if (this === this._vm.rootClip) {
+          this._vm._grantFrameTransitionBudget();
+        }
         this._currentframe = nextFrame;
         this._frameChangedThisTick = true;
         this.reconcileDisplayList(this._currentframe, true);
@@ -2197,7 +2273,15 @@
       };
       this._childrenByDepth.set(depth, slot);
       this._childrenDirty = true;
+      const prevTreeVer = this._vm._treeVersion;
       this._vm._treeVersion++;
+      if (this._childNameCache && this._childNameVersion === prevTreeVer) {
+        if (obj && obj._name) {
+          const nk = this._vm.caseInsensitive ? obj._name.toLowerCase() : obj._name;
+          if (!this._childNameCache.has(nk)) this._childNameCache.set(nk, obj);
+        }
+        this._childNameVersion = this._vm._treeVersion;
+      }
       const hostEl = this._dynamicLayerEl || this.svgEl;
       hostEl.appendChild(svgOuter);
       return slot;
@@ -2208,6 +2292,7 @@
       if (!slot) return;
       this._childrenByDepth.delete(depth);
       this._childrenDirty = true;
+      if (this._maxDomDepth !== null && depth >= this._maxDomDepth) this._maxDomDepth = null;
       this._vm._treeVersion++;
       if (slot.maskEl && slot.maskEl.parentNode) {
         slot.maskEl.parentNode.removeChild(slot.maskEl);
@@ -2231,6 +2316,7 @@
         if (!s.clipDepth && s.svgOuter) sorted.push(s);
       }
       if (sorted.length > 1) sorted.sort((a, b) => a.depth - b.depth);
+      this._maxDomDepth = sorted.length > 0 ? sorted[sorted.length - 1].depth : null;
       let prev = null;
       for (let i = sorted.length - 1; i >= 0; i--) {
         const el = sorted[i].svgOuter;
@@ -2275,6 +2361,9 @@
       // 1. Advance timeline if playing and multi-frame
       if (this._playing && this._totalframes > 1) {
         const next = this._currentframe >= this._totalframes ? 1 : this._currentframe + 1;
+        if (this === this._vm.rootClip && next !== this._currentframe) {
+          this._vm._grantFrameTransitionBudget();
+        }
         this._currentframe = next;
         this.reconcileDisplayList(this._currentframe);
         if (!this._vm._isOverBudget()) {
@@ -2323,8 +2412,14 @@
         }
       }
       this._removeSlotAtDepth(d);
+      const isAscending = this._maxDomDepth !== null && d > this._maxDomDepth;
+      const wasEmpty = this._childrenByDepth.size === 0;
       const slot = this._createSlot(d, charId, null, 1, String(newName || ''), [], true, null);
-      this._reorderSvgChildren();
+      if (isAscending || wasEmpty) {
+        this._maxDomDepth = d;
+      } else {
+        this._reorderSvgChildren();
+      }
       const mc = slot && slot.obj;
       if (mc && mc._isMovieClip) {
         if (initObj && typeof initObj === 'object') {
@@ -2358,6 +2453,8 @@
         }
       }
       this._parent._removeSlotAtDepth(d);
+      const isAscending = this._parent._maxDomDepth !== null && d > this._parent._maxDomDepth;
+      const wasEmpty = this._parent._childrenByDepth.size === 0;
       const slot = this._parent._createSlot(
         d,
         this.charId,
@@ -2368,7 +2465,11 @@
         true,
         null
       );
-      this._parent._reorderSvgChildren();
+      if (isAscending || wasEmpty) {
+        this._parent._maxDomDepth = d;
+      } else {
+        this._parent._reorderSvgChildren();
+      }
       const dup = slot && slot.obj;
       if (dup && dup._isMovieClip) {
         dup._x = this._x;
@@ -2409,6 +2510,8 @@
         }
       }
       this._removeSlotAtDepth(d);
+      const isAscending = this._maxDomDepth !== null && d > this._maxDomDepth;
+      const wasEmpty = this._childrenByDepth.size === 0;
       const mc = new AVM1MovieClip(this._vm, 0, { fc: 1, l: [], fr: [[]], ac: [] }, this, d, String(newName || ''), []);
       mc._justSpawned = false;
       const slot = {
@@ -2427,7 +2530,11 @@
       this._vm._treeVersion++;
       const hostEl = this._dynamicLayerEl || this.svgEl;
       hostEl.appendChild(mc.svgEl);
-      this._reorderSvgChildren();
+      if (isAscending || wasEmpty) {
+        this._maxDomDepth = d;
+      } else {
+        this._reorderSvgChildren();
+      }
       return mc;
     }
 
@@ -2550,62 +2657,82 @@
       if (bb.w === 0 && bb.h === 0) return false;
       const inBBox = px >= bb.x && px <= bb.x + bb.w && py >= bb.y && py <= bb.y + bb.h;
       if (!inBBox) return false;
-      // Shape-accurate W3C SVG vector hit-test when shapeFlag is true in browser DOM (including <use> defs & hidden hit layers)
-      if (shapeFlag && this._vm.stageSvg && typeof this._vm.stageSvg.createSVGPoint === 'function' && typeof this.svgEl.querySelectorAll === 'function') {
+      // Zero-reflow shape-accurate W3C SVG vector hit-test (pure JS affine math + cached <defs> geometry, zero getScreenCTM)
+      if (shapeFlag && this._vm.stageSvg && typeof this._vm.stageSvg.createSVGPoint === 'function') {
         try {
-          const rootCtm = typeof this._vm.stageSvg.getScreenCTM === 'function' ? this._vm.stageSvg.getScreenCTM() : null;
-          const screenPt = rootCtm ? (() => {
-            const p = this._vm.stageSvg.createSVGPoint();
-            p.x = px;
-            p.y = py;
-            return p.matrixTransform(rootCtm);
-          })() : null;
-          const invThisWorld = invertMat(this.getWorldMatrix());
-          const fallbackLocal = this._vm.stageSvg.createSVGPoint();
-          fallbackLocal.x = invThisWorld[0] * px + invThisWorld[2] * py + invThisWorld[4];
-          fallbackLocal.y = invThisWorld[1] * px + invThisWorld[3] * py + invThisWorld[5];
+          const vm = this._vm;
+          const pt = vm._svgPtScratch || (vm._svgPtScratch = vm.stageSvg.createSVGPoint());
+          let testedAny = false;
 
-          const testGeom = (geomEl, localPt) => {
+          const testGeom = (geomEl, x, y) => {
             if (!geomEl || typeof geomEl.isPointInFill !== 'function') return false;
+            testedAny = true;
             const fillAttr = typeof geomEl.getAttribute === 'function' ? geomEl.getAttribute('fill') : null;
             const strokeAttr = typeof geomEl.getAttribute === 'function' ? geomEl.getAttribute('stroke') : null;
             const hasFill = fillAttr !== 'none';
             const hasStroke = Boolean(strokeAttr && strokeAttr !== 'none');
-            if (hasFill && geomEl.isPointInFill(localPt)) return true;
-            if (hasStroke && typeof geomEl.isPointInStroke === 'function' && geomEl.isPointInStroke(localPt)) return true;
+            pt.x = x;
+            pt.y = y;
+            if (hasFill && geomEl.isPointInFill(pt)) return true;
+            if (hasStroke && typeof geomEl.isPointInStroke === 'function' && geomEl.isPointInStroke(pt)) return true;
             return false;
           };
 
-          const shapes = this.svgEl.querySelectorAll('path, circle, ellipse, rect, polygon, use');
-          if (shapes && shapes.length > 0) {
-            let testedAny = false;
-            for (let i = 0; i < shapes.length; i++) {
-              const s = shapes[i];
-              const tag = (s.nodeName || s.tagName || '').toLowerCase();
-              let localPt = null;
-              if (screenPt && typeof s.getScreenCTM === 'function') {
-                const sCtm = s.getScreenCTM();
-                if (sCtm) localPt = screenPt.matrixTransform(sCtm.inverse());
-              }
-              if (!localPt) localPt = fallbackLocal;
-              if (tag === 'use') {
-                const defG = this._vm._resolveShapeUseTarget(s);
-                if (defG) {
-                  const subShapes = typeof defG.querySelectorAll === 'function'
-                    ? defG.querySelectorAll('path, circle, ellipse, rect, polygon')
-                    : (defG.children || []);
-                  for (let j = 0; j < subShapes.length; j++) {
-                    testedAny = true;
-                    if (testGeom(subShapes[j], localPt)) return true;
-                  }
-                }
-              } else {
-                testedAny = true;
-                if (testGeom(s, localPt)) return true;
+          const getGeoms = (el) => {
+            if (!el) return EMPTY_ARR;
+            if (el._hitGeomCache) return el._hitGeomCache;
+            const list = typeof el.querySelectorAll === 'function'
+              ? Array.from(el.querySelectorAll('path, circle, ellipse, rect, polygon'))
+              : [];
+            el._hitGeomCache = list;
+            return list;
+          };
+
+          const testClip = (clip, depth) => {
+            if (!clip || clip._removed || depth > 16) return false;
+            if (clip !== this) {
+              const cbb = clip.getWorldBBox(true);
+              if ((cbb.w === 0 && cbb.h === 0) || px < cbb.x || px > cbb.x + cbb.w || py < cbb.y || py > cbb.y + cbb.h) {
+                return false;
               }
             }
-            if (testedAny) return false;
-          }
+            const inv = invertMat(clip.getWorldMatrix());
+            const lx = inv[0] * px + inv[2] * py + inv[4];
+            const ly = inv[1] * px + inv[3] * py + inv[5];
+
+            if (clip._drawGroup && clip._drawGroup.children) {
+              const dKids = clip._drawGroup.children;
+              for (let i = 0; i < dKids.length; i++) {
+                if (testGeom(dKids[i], lx, ly)) return true;
+              }
+            }
+
+            const kids = clip._getChildrenSnapshot();
+            for (let i = 0; i < kids.length; i++) {
+              const slot = kids[i];
+              if (!slot || slot.clipDepth) continue;
+              if (slot.obj && slot.obj._isMovieClip) {
+                if (testClip(slot.obj, depth + 1)) return true;
+              } else if (!slot.obj) {
+                let sx = lx;
+                let sy = ly;
+                if (slot.matrix) {
+                  const invS = invertMat(slot.matrix);
+                  sx = invS[0] * lx + invS[2] * ly + invS[4];
+                  sy = invS[1] * lx + invS[3] * ly + invS[5];
+                }
+                const defG = vm._shapeDefsMap.get(slot.charId);
+                const geoms = defG ? getGeoms(defG) : getGeoms(slot.svgEl);
+                for (let j = 0; j < geoms.length; j++) {
+                  if (testGeom(geoms[j], sx, sy)) return true;
+                }
+              }
+            }
+            return false;
+          };
+
+          if (testClip(this, 0)) return true;
+          if (testedAny) return false;
         } catch (_) {}
       }
       return true;
@@ -3313,6 +3440,32 @@
       g.ASSetPropFlags = () => {};
       g.fscommand = () => {};
       g.getURL = () => {};
+      g.stopAllSounds = () => { vm.stopAllSounds(); };
+      g.duplicateMovieClip = function (target, newName, depth) {
+        const src = vm._resolveTargetPath(target, (this && this._isMovieClip) ? this : vm.rootClip);
+        if (src && src._isMovieClip) return src.duplicateMovieClip(vm._toStr(newName), Math.floor(vm._toNum(depth)));
+        return undefined;
+      };
+      g.removeMovieClip = function (target) {
+        const tgt = vm._resolveTargetPath(target, (this && this._isMovieClip) ? this : vm.rootClip);
+        if (tgt && tgt._isMovieClip) tgt.removeMovieClip();
+      };
+      g.getProperty = function (target, prop) {
+        const tgt = vm._resolveTargetPath(target, (this && this._isMovieClip) ? this : vm.rootClip);
+        if (!tgt) return undefined;
+        const pName = typeof prop === 'number' ? PROP_BY_INDEX[Math.floor(prop)] : String(prop || '');
+        return pName ? vm._getClipProp(tgt, pName) : undefined;
+      };
+      g.setProperty = function (target, prop, val) {
+        const tgt = vm._resolveTargetPath(target, (this && this._isMovieClip) ? this : vm.rootClip);
+        if (!tgt) return;
+        const pName = typeof prop === 'number' ? PROP_BY_INDEX[Math.floor(prop)] : String(prop || '');
+        if (pName) vm._setClipProp(tgt, pName, val);
+      };
+      g.targetPath = function (target) {
+        const tgt = vm._resolveTargetPath(target, (this && this._isMovieClip) ? this : vm.rootClip);
+        return tgt && tgt._isMovieClip ? tgt.getTargetPath() : undefined;
+      };
       g.setInterval = function (...args) {
         const id = vm._nextIntervalId++;
         if (typeof args[0] === 'function') {
@@ -3357,6 +3510,13 @@
       this._consecutiveBudgetExceeds = 0;
       this._skipBgScriptsThisTick = false;
       this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
+    }
+
+    _grantFrameTransitionBudget() {
+      const targetDeadline = _nowMs() + BOOT_TIME_BUDGET_MS;
+      if (this._tickOpsRemaining < BOOT_OPS_BUDGET) this._tickOpsRemaining = BOOT_OPS_BUDGET;
+      if (this._tickDeadlineMs < targetDeadline) this._tickDeadlineMs = targetDeadline;
+      this._budgetExceededThisTick = false;
     }
 
     _isOverBudget() {
@@ -5881,13 +6041,49 @@
         return undefined;
       }
 
-      // Standard JS Array / String / Object / Math
+      // Primitives (string, number, boolean): NEVER use `in` operator on JS primitives!
+      const objType = typeof obj;
+      if (objType !== 'object' && objType !== 'function') {
+        const direct = obj[key];
+        if (direct !== undefined) return direct;
+        if (this.caseInsensitive) {
+          const kl = key.toLowerCase();
+          if (objType === 'string' && kl === 'length') return obj.length;
+          const proto = objType === 'string'
+            ? String.prototype
+            : (objType === 'number' ? Number.prototype : (objType === 'boolean' ? Boolean.prototype : null));
+          const ciMap = _getBuiltinProtoCiMap(proto);
+          if (ciMap && kl in ciMap) return obj[ciMap[kl]];
+        }
+        return undefined;
+      }
+
+      // Flash Array.prototype.sortOn shim (without mutating global Array.prototype)
+      if (Array.isArray(obj) && (key === 'sortOn' || (this.caseInsensitive && key.toLowerCase() === 'sorton'))) {
+        if (key in obj) return obj[key];
+        return (fields, options) => _flashArraySortOn(obj, fields, options);
+      }
+
+      // Standard JS Array / Object / Math / Function / Date
       if (key in obj) return obj[key];
-      if (this.caseInsensitive && typeof obj === 'object') {
+      if (this.caseInsensitive) {
         const kl = key.toLowerCase();
-        const keys = Object.keys(obj);
-        for (let i = 0; i < keys.length; i++) {
-          if (keys[i].toLowerCase() === kl) return obj[keys[i]];
+        const ownNames = Object.getOwnPropertyNames(obj);
+        for (let i = 0; i < ownNames.length; i++) {
+          if (ownNames[i].toLowerCase() === kl) return obj[ownNames[i]];
+        }
+        let proto = Object.getPrototypeOf(obj);
+        while (proto) {
+          const ciMap = _getBuiltinProtoCiMap(proto);
+          if (ciMap) {
+            if (kl in ciMap) return obj[ciMap[kl]];
+            break;
+          }
+          const pNames = Object.getOwnPropertyNames(proto);
+          for (let i = 0; i < pNames.length; i++) {
+            if (pNames[i].toLowerCase() === kl) return obj[pNames[i]];
+          }
+          proto = Object.getPrototypeOf(proto);
         }
       }
       return obj[key];
@@ -6254,6 +6450,12 @@
       const tgt = targetClip || this.rootClip;
       try {
         return this._runDecoded(decoded, tgt, tgt, EMPTY_ARR, regs, EMPTY_ARR);
+      } catch (err) {
+        if (!this._warnedExecErr) {
+          this._warnedExecErr = true;
+          console.warn('[AST AVM1] Non-fatal script execution fault:', err);
+        }
+        return undefined;
       } finally {
         this._releaseRegs(regs);
       }
@@ -6480,10 +6682,10 @@
           case 0x31: { stack.push(this._toStr(stack.pop()).length); break; }
           case 0x15:
           case 0x35: {
-            const count = Math.max(0, Math.floor(toAvm1Number(stack.pop())));
+            const rawCount = Math.floor(toAvm1Number(stack.pop()));
             const idx = Math.max(1, Math.floor(toAvm1Number(stack.pop())));
             const s = this._toStr(stack.pop());
-            stack.push(s.substr(idx - 1, count));
+            stack.push(rawCount < 0 ? s.slice(idx - 1) : s.substr(idx - 1, rawCount));
             break;
           }
           case 0x18: { stack.push(Math.trunc(toAvm1Number(stack.pop()))); break; }
@@ -6563,10 +6765,28 @@
             else this._setMember(curTarget, name, val);
             break;
           }
-          case 0x41: { // ActionDefineLocal2
+          case 0x41: { // ActionDefineLocal2 (declare without clobbering existing var/param)
             const name = this._toStr(stack.pop());
-            if (scopes.length > 0) scopes[scopes.length - 1][name] = undefined;
-            else this._setMember(curTarget, name, undefined);
+            if (scopes.length > 0) {
+              const local = scopes[scopes.length - 1];
+              let exists = name in local;
+              if (!exists && this.caseInsensitive) {
+                const nl = name.toLowerCase();
+                for (const k in local) {
+                  if (k.toLowerCase() === nl) { exists = true; break; }
+                }
+              }
+              if (!exists) local[name] = undefined;
+            } else if (curTarget && curTarget._isMovieClip) {
+              let exists = name in curTarget._vars;
+              if (!exists && this.caseInsensitive) {
+                const nl = name.toLowerCase();
+                for (const k in curTarget._vars) {
+                  if (k.toLowerCase() === nl) { exists = true; break; }
+                }
+              }
+              if (!exists) curTarget._vars[name] = undefined;
+            }
             break;
           }
           case 0x4E: { // ActionGetMember
@@ -6965,7 +7185,7 @@
             }
             let res;
             try {
-              if (fnName === 'eval') {
+              if (fnName === 'eval' || (this.caseInsensitive && fnName.toLowerCase() === 'eval')) {
                 const rawEval = args[0];
                 if (rawEval === undefined || rawEval === null || String(rawEval).trim() === '') {
                   res = undefined;
@@ -7001,7 +7221,11 @@
             let res;
             try {
               if (methodName === undefined || methodName === null || methodName === '') {
-                res = this._invokeValue(obj, curTarget, args);
+                if (typeof obj === 'function') {
+                  res = this._invokeValue(obj, curTarget, args);
+                } else if (obj && typeof obj === 'object' && typeof obj.constructor === 'function' && obj.constructor._isAvm1Fn) {
+                  res = this._invokeValue(obj.constructor, thisObj || curTarget, args);
+                }
               } else {
                 const fn = this._getMember(obj, String(methodName));
                 res = this._invokeValue(fn, obj, args);

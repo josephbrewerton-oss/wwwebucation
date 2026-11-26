@@ -4370,7 +4370,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       // :Sim-First SWF Compiler:
       // 1. Detect & STRIP leading Flash network preloader frames at compile time so the :Sim boots straight into live content.
       // 2. Pace multi-frame animations continuously via sim_dt at the SWF's native FPS (refresh-rate independent).
-      const PRELOADER_LABEL_RE = /^(pre-?load(?:er)?|load(?:ing|er)?|init|boot|splash|buffer)$/i;
+      const PRELOADER_LABEL_RE = /^(pre-?load(?:er)?|load(?:ing|er)?|buffer)$/i;
       const spriteUsesPreloader = (charId: number, visited = new Set<number>()): boolean => {
         if (visited.has(charId)) return false;
         visited.add(charId);
