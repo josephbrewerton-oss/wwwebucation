@@ -264,6 +264,7 @@ export function renderPlayerShellHtml(params: PlayerShellTemplateParams): string
           <input
             type="search"
             id="cartridge-search-input"
+            aria-label="Search interactive labs and lessons"
             placeholder="Search by title, topic, stage, or ID (e.g. titration, altar, ks2)..."
             style="padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:260px; outline:none; color:#0f172a; background:#ffffff;"
           />
@@ -280,8 +281,8 @@ export function renderPlayerShellHtml(params: PlayerShellTemplateParams): string
           <button type="button" id="launcher-btn-phet-import" aria-expanded="false" style="padding:7px 12px; border-radius:8px; border:1px solid #0284c7; background:#e0f2fe; color:#0369a1; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Distill &amp; import full PhET HTML5, PhET-iO JSON, or Legacy Flash simulations into ~3.5 KB offline cartridges">
             ⚛️ Import PhET
           </button>
-          <button type="button" id="launcher-btn-swf-import" aria-expanded="false" style="padding:7px 12px; border-radius:8px; border:1px solid #d97706; background:#fffbeb; color:#b45309; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Import &amp; decompile historic Adobe Flash (.swf) files into 60 FPS native SVG + AST cartridges">
-            ⚡ Import Flash (.swf)
+          <button type="button" id="launcher-btn-swf-import" aria-expanded="false" style="padding:7px 12px; border-radius:8px; border:1px solid #d97706; background:#fffbeb; color:#b45309; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Got an old Adobe Flash (.swf) file you can no longer run? Play it locally in pure SVG or upgrade it into a bytecode-free offline .ast cartridge">
+            ⚡ Upgrade Flash (.swf)
           </button>
           <button type="button" id="btn-clear-catalog-filters" style="display:none; padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">
             Reset Filters

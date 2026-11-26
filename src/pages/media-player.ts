@@ -95,8 +95,13 @@ export function renderPlayerPage(): HTMLElement {
   let pendingExternalSwfUrl: string | null = !requestedPresetParam && isSwfExternalUrl(initialSrcParam) ? initialSrcParam : null;
   let initialExternalSrc = requestedPresetParam || pendingExternalSwfUrl ? null : initialSrcParam;
   let pendingAutoEppBench = params.get('epp-bench') === '1' || params.get('epp-bench') === 'true';
+  const toolParam = (params.get('tool') || params.get('drawer') || '').toLowerCase();
+  let pendingAutoOpenStudio = toolParam === 'create' || toolParam === 'creator' || toolParam === 'studio';
+  const autoOpenLabDrawer = toolParam === 'lab';
   // Launcher-First Grid: keep player iframe unloaded (0 KB engine download, 0% CPU) until a lab is selected or deep-linked
-  let isStageOpen = Boolean(requestedPresetParam || initialSrcParam || pendingAutoEppBench);
+  let isStageOpen = Boolean(
+    requestedPresetParam || initialSrcParam || pendingAutoEppBench || pendingAutoOpenStudio || autoOpenLabDrawer
+  );
   let pendingCustomCartridge: CartridgeDefinition | null = null;
   let stageMediaInputActive = false;
   let lastMountedCustomPresetId: string | null = null;
@@ -348,6 +353,9 @@ export function renderPlayerPage(): HTMLElement {
     window.removeEventListener('keyup', onKeyUp, true);
     window.removeEventListener('blur', onWindowBlur);
     window.removeEventListener('popstate', onPopState);
+    window.removeEventListener('message', onWindowMessage);
+    window.removeEventListener('app-setting-changed', onAppSettingChanged);
+    window.removeEventListener('cartridges_updated', onCartridgesUpdated);
   };
 
   window.addEventListener('pagehide', cleanupPlayerLifecycle, { once: true });
@@ -385,12 +393,18 @@ export function renderPlayerPage(): HTMLElement {
   };
 
   function focusPlayerStage() {
+    if (pageDisposed || !isStageOpen || !iframe?.isConnected) return;
+    // Never steal focus without active user gesture (prevents Chrome focus-without-user-activation violations in iframes)
+    const userActivation = (navigator as Navigator & { userActivation?: { isActive?: boolean } }).userActivation;
+    if (userActivation && !userActivation.isActive) return;
     try {
       if (document.activeElement instanceof HTMLElement && document.activeElement !== iframe) {
         document.activeElement.blur();
       }
       iframe?.focus({ preventScroll: true });
-      iframe?.contentWindow?.focus();
+      if (iframe?.contentWindow && !iframe.contentWindow.document?.hasFocus?.()) {
+        iframe.contentWindow.focus();
+      }
     } catch (_) {}
     postToPlayer({ type: 'FOCUS_STAGE' });
   }
@@ -412,10 +426,14 @@ export function renderPlayerPage(): HTMLElement {
     }
   }
 
-  let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | 'diagnostics' | 'swf' | 'phet' | null = null;
-  const importParam = params.get('import');
+  let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | 'diagnostics' | 'swf' | 'phet' | null = autoOpenLabDrawer ? 'lab' : null;
+  const importParam = (params.get('import') || '').toLowerCase();
   let launcherImportPanel: 'swf' | 'phet' | null =
-    !isStageOpen && (importParam === 'swf' || importParam === 'phet') ? importParam : null;
+    !isStageOpen && (importParam === 'swf' || toolParam === 'swf')
+      ? 'swf'
+      : !isStageOpen && (importParam === 'phet' || toolParam === 'phet')
+        ? 'phet'
+        : null;
   let swfResult: any = null;
   let swfFileName = 'imported-swf';
   let swfSelectedMode: 'run' | 'run-to-convert' | 'quick-transform' = 'run-to-convert';
@@ -1325,6 +1343,9 @@ export function renderPlayerPage(): HTMLElement {
   if (launcherImportPanel) {
     renderLauncherImportPanel();
   }
+  if (activeDrawer) {
+    renderActiveDrawer();
+  }
 
   function updatePreset(presetId: string, skipPostMessage = false, pushHistoryIfOpening = true) {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
@@ -1817,8 +1838,10 @@ export function renderPlayerPage(): HTMLElement {
   window.addEventListener('keyup', onKeyUp, true);
   window.addEventListener('blur', onWindowBlur);
 
-  window.addEventListener('message', (e) => {
+  const onWindowMessage = (e: MessageEvent) => {
+    if (pageDisposed || !container.isConnected) return;
     if (!e.data || typeof e.data !== 'object') return;
+    if (e.source && iframe?.contentWindow && e.source !== iframe.contentWindow) return;
     if (e.data.requestId && pendingRequests.has(e.data.requestId)) {
       const pending = pendingRequests.get(e.data.requestId)!;
       if (e.data.type === pending.expectedType) {
@@ -1852,11 +1875,15 @@ export function renderPlayerPage(): HTMLElement {
           (c) => c.id === activePreset && c.source !== 'builtin' && Boolean(c.svgMarkup || c.astSource)
         );
         if (activeCustomCart) {
-          stageMediaInputActive = cartridgeNeedsStageKeyForwarding(activeCustomCart);
-          lastMountedCustomPresetId = activeCustomCart.id;
-          lastMountedCustomAt = Date.now();
-          postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: activeCustomCart, play: true });
-          focusPlayerStage();
+          const recentlyMountedSame =
+            lastMountedCustomPresetId === activeCustomCart.id && Date.now() - lastMountedCustomAt < 4000;
+          if (!recentlyMountedSame) {
+            stageMediaInputActive = cartridgeNeedsStageKeyForwarding(activeCustomCart);
+            lastMountedCustomPresetId = activeCustomCart.id;
+            lastMountedCustomAt = Date.now();
+            postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: activeCustomCart, play: true });
+            focusPlayerStage();
+          }
         } else {
           postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
         }
@@ -1877,6 +1904,15 @@ export function renderPlayerPage(): HTMLElement {
             void captureCurrentSwfState(true);
           }
         }, 550);
+      }
+
+      if (pendingAutoOpenStudio && (!e.data.preset || e.data.preset === activePreset)) {
+        pendingAutoOpenStudio = false;
+        setTimeout(() => {
+          if (!container.isConnected || pageDisposed) return;
+          postToPlayer({ type: 'OPEN_STUDIO', tab: 'ast' });
+          focusPlayerStage();
+        }, 120);
       }
 
       if (pendingAutoEppBench && (!e.data.preset || e.data.preset === activePreset)) {
@@ -2152,9 +2188,11 @@ export function renderPlayerPage(): HTMLElement {
           });
         });
     }
-  });
+  };
+  window.addEventListener('message', onWindowMessage);
 
-  window.addEventListener('app-setting-changed', (e: any) => {
+  const onAppSettingChanged = (e: any) => {
+    if (pageDisposed || !container.isConnected) return;
     if (e.detail && (e.detail.key === 'app_perf_hud_enabled' || e.detail.key === 'app_hud_verbosity' || e.detail.key === 'app_frame_budget_alert')) {
       postToPlayer({
         type: 'SET_PERF_HUD',
@@ -2166,12 +2204,15 @@ export function renderPlayerPage(): HTMLElement {
         renderActiveDrawer();
       }
     }
-  });
+  };
+  window.addEventListener('app-setting-changed', onAppSettingChanged);
 
-  window.addEventListener('cartridges_updated', () => {
+  const onCartridgesUpdated = () => {
+    if (pageDisposed || !container.isConnected) return;
     refreshDropdown();
     renderGrid();
-  });
+  };
+  window.addEventListener('cartridges_updated', onCartridgesUpdated);
 
   // Drawer toggles
   aiTutorBtn?.addEventListener('click', () => {

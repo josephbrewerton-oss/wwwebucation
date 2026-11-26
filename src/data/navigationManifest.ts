@@ -39,6 +39,7 @@ export const CURRICULUM_LAB_ITEMS: NavRouteItem[] = [
   { id: 'languages', path: 'languages', label: 'Languages & MFL', icon: '🌍', description: 'Polyglot verb wheels & pronunciation' },
   { id: 'phonics', path: 'phonics', label: 'EYFS / KS1 Phonics', icon: '🔤', description: 'Sound mats & synthetic phonics drills' },
   { id: 'shakespeare', path: 'shakespeare', label: 'Shakespeare Theatre', icon: '🎭', description: 'Interactive drama & textual analysis' },
+  { id: 'upgrade-swf', path: 'player?import=swf', label: 'Upgrade Legacy Flash (.swf)', icon: '⚡', description: 'Convert retired .swf resources into open pure-SVG .ast offline cartridges' },
   { id: 'overseas-curriculums', path: 'curriculum-studio?tab=overseas', label: 'Overseas Curriculums', icon: '🌍', description: 'Import Kenya, India, Ghana, Philippines, CSV & JSON syllabi' },
 ];
 

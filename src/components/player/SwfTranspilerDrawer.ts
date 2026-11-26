@@ -444,8 +444,8 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       'display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;';
     topBar.innerHTML = `
       <div>
-        <strong style="font-size:0.94rem; color:var(--stj-text, #f8fafc); display:block;">Adobe Flash (.swf) Player &amp; Native AST Distiller</strong>
-        <span style="font-size:0.75rem; color:var(--stj-text-muted, #94a3b8);">Run legacy Flash in pure SVG or distill live states into ultra-light, bytecode-free native curriculum cartridges.</span>
+        <strong style="font-size:0.94rem; color:var(--stj-text, #f8fafc); display:block;">Legacy Flash (.swf) Upgrade &amp; Rescue Route</strong>
+        <span style="font-size:0.75rem; color:var(--stj-text-muted, #94a3b8);">Got an old .swf lesson you can no longer run? Play it locally in pure SVG (Beta) or distill its views into an open, bytecode-free .ast offline cartridge.</span>
       </div>
     `;
     const closeBtn = document.createElement('button');
