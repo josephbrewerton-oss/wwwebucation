@@ -962,11 +962,18 @@
     // Synchronize initial play button state immediately with the engine's real current state
     this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
 
+    this._lastHudSyncMs = 0;
     this.engine.on('timeupdate', () => {
-      // Skip duplicate renderCurrentVector() here because ASTVectorPlayerEngine.tick() executes applyBindings() right after timeupdate
-      this.updateView(true);
-      this.checkInteractiveCheckpoints();
-      this.updateGoalCheckpointProgress();
+      // Keep requestAnimationFrame unblocked while throttling external HUD/inspector/BSL sync to ~10 Hz (100ms)
+      const now = (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
+      const shouldSyncHud = !this.engine.isPlaying || (now - this._lastHudSyncMs >= 100);
+      if (shouldSyncHud) {
+        this._lastHudSyncMs = now;
+        // Skip duplicate renderCurrentVector() here because ASTVectorPlayerEngine.tick() executes applyBindings() right after timeupdate
+        this.updateView(true);
+        this.checkInteractiveCheckpoints();
+        this.updateGoalCheckpointProgress();
+      }
 
       // If stepping towards a target stop in Step Mode, stop when reached
       if (this.targetStop !== null && this.engine.progress >= this.targetStop - 0.008) {
@@ -975,6 +982,7 @@
         this.engine.seek(reached);
         this.engine.pause();
         this.updateHeaderPlayUI(false);
+        this.updateView(true);
         this.onStopReached(reached);
       }
 

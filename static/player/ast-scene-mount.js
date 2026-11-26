@@ -161,6 +161,9 @@
       if (container) {
         this.ensureMasterDefs(container);
       }
+      if (typeof this.initKeyBindings === 'function') {
+        this.initKeyBindings(scene);
+      }
       this.activeBindings = [];
       this.activeVarBindings = [];
       this.active3DNodes = [];

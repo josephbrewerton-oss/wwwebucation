@@ -1474,6 +1474,10 @@
         const rateStr = extractSlot.call(null, bodyText, /:rate\s+([\d\.\-]+)/i);
         const rate = rateStr !== null ? parseFloat(rateStr) : undefined;
         const attr = extractSlot.call(null, bodyText, /:attr\s+"([^"]+)"/i);
+        const flashKeyRaw = extractSlotValue(bodyText, 'flash-key');
+        const keyCodeRaw = flashKeyRaw !== undefined ? flashKeyRaw : extractSlotValue(bodyText, 'key-code');
+        const flashKey = typeof keyCodeRaw === 'number' ? keyCodeRaw : undefined;
+        const labelStr = extractQuoted(bodyText, 'label');
 
         if ((isKey && (code || key)) || target) {
           let gestureType = 'draggable';
@@ -1541,7 +1545,9 @@
             seek,
             delta,
             rate,
-            attr
+            attr,
+            ...(flashKey !== undefined ? { flashKey, keyCode: flashKey } : {}),
+            ...(labelStr ? { label: labelStr } : {})
           };
           if (steps.length > 0) {
             gObj.steps = steps;
@@ -1550,6 +1556,90 @@
         }
       });
     }
+
+    // Declarative Keyboard Binding Map (:key-bindings ((:bind :code "ArrowLeft" :key "ArrowLeft" :flash-key 37 :var "key_left") ...))
+    const keyBindings = [];
+    const seenKeyBindings = new Set();
+    const kbBlocks = [
+      ...extractKeywordBlocks(astContent, ':key-bindings'),
+      ...extractKeywordBlocks(astContent, ':keyboard')
+    ];
+    kbBlocks.forEach(kbText => {
+      const entries = [
+        ...extractSexprBlocks(kbText, ':bind'),
+        ...extractSexprBlocks(kbText, ':key'),
+        ...extractSexprBlocks(kbText, ':on-key')
+      ];
+      entries.forEach(entry => {
+        const kbCode = extractSlot.call(null, entry, /:code\s+"([^"]+)"/i) || extractSlot.call(null, entry, /:code\s+([^\s\)]+)/i);
+        const kbKey = extractSlot.call(null, entry, /:key\s+"([^"]+)"/i) || extractSlot.call(null, entry, /:key\s+([^\s\)]+)/i);
+        if (!kbCode && !kbKey) return;
+        const fkRaw = extractSlotValue(entry, 'flash-key');
+        const kcRaw = fkRaw !== undefined ? fkRaw : extractSlotValue(entry, 'key-code');
+        const flashKey = typeof kcRaw === 'number' ? kcRaw : undefined;
+        const kbVar = extractQuoted(entry, 'var') || extractQuoted(entry, 'hold-var') || extractQuoted(entry, 'set-var') || null;
+        const kbAction = extractQuoted(entry, 'action') || null;
+        const kbLabel = extractQuoted(entry, 'label') || null;
+        const kbVal = extractSlotValue(entry, 'val');
+        const kbReleaseVal = extractSlotValue(entry, 'release-val');
+        const sig = `${kbCode || ''}|${kbKey || ''}|${kbVar || ''}|${flashKey ?? ''}`;
+        if (seenKeyBindings.has(sig)) return;
+        seenKeyBindings.add(sig);
+        const bindingObj = {
+          code: kbCode || null,
+          key: kbKey || null,
+          ...(flashKey !== undefined ? { flashKey, keyCode: flashKey } : {}),
+          var: kbVar,
+          action: kbAction,
+          label: kbLabel,
+          val: kbVal !== undefined ? kbVal : 1,
+          releaseVal: kbReleaseVal !== undefined ? kbReleaseVal : 0
+        };
+        keyBindings.push(bindingObj);
+
+        // Auto-wire reactive :key gesture if not already declared in (:gestures ...)
+        if (kbVar || kbAction) {
+          const alreadyGesture = gestures.some(
+            g => g.type === 'key' && ((kbCode && g.code === kbCode) || (kbKey && g.key === kbKey)) && ((kbVar && (g.holdVar === kbVar || g.var === kbVar || g.setVar === kbVar)) || (kbAction && g.action === kbAction))
+          );
+          if (!alreadyGesture) {
+            gestures.push({
+              type: 'key',
+              target: null,
+              code: kbCode || null,
+              key: kbKey || null,
+              holdVar: kbVar || null,
+              var: kbVar || null,
+              action: kbAction,
+              val: bindingObj.val,
+              releaseVal: bindingObj.releaseVal,
+              hold: Boolean(kbVar),
+              ...(flashKey !== undefined ? { flashKey, keyCode: flashKey } : {}),
+              ...(kbLabel ? { label: kbLabel } : {})
+            });
+          }
+        }
+      });
+    });
+
+    // Mirror explicit (:gestures (:key ...)) entries into scene.keyBindings for unified runtime introspection
+    gestures.forEach(g => {
+      if (!g || g.type !== 'key') return;
+      const gVar = g.holdVar || g.var || g.setVar || g.stepVar || g.toggleVar || null;
+      const sig = `${g.code || ''}|${g.key || ''}|${gVar || ''}|${g.flashKey ?? ''}`;
+      if (seenKeyBindings.has(sig)) return;
+      seenKeyBindings.add(sig);
+      keyBindings.push({
+        code: g.code || null,
+        key: g.key || null,
+        ...(g.flashKey !== undefined ? { flashKey: g.flashKey, keyCode: g.flashKey } : {}),
+        var: gVar,
+        action: g.action || null,
+        label: g.label || null,
+        val: g.val !== undefined ? g.val : 1,
+        releaseVal: g.releaseVal !== undefined ? g.releaseVal : 0
+      });
+    });
 
     // Static Layer Primitives (:static ((:element :target "#bg" :cache true) ...))
     const staticElements = [];
@@ -2011,6 +2101,7 @@
       staticElements,
       actors,
       gestures,
+      keyBindings,
       skills,
       ...(definedSkills ? { definedSkills } : {}),
       controls,

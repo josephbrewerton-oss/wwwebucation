@@ -82,6 +82,11 @@ export interface SwfMetadata {
   labels: { frame: number; name: string }[];
   stateMachines?: { id: string; initial: string; states: string[]; transitionsCount: number }[];
   variables?: { name: string; value: any }[];
+  importDebugSummary?: {
+    totalTagsParsed: number;
+    cachedDefsShapes: number;
+    skippedTagIds: number[];
+  };
 }
 
 export interface SwfColorTransform {
@@ -451,8 +456,9 @@ interface SwfDirectedEdge {
 }
 
 function fmtTwipsPx(twips: number): string {
-  const px = twips / 20;
-  return (Math.abs(px) < 1e-6 ? 0 : px).toFixed(1);
+  const px = Math.round((twips / 20) * 100) / 100;
+  const clean = Math.abs(px) < 1e-6 ? 0 : px;
+  return Number.isInteger(clean * 10) ? clean.toFixed(1) : clean.toFixed(2);
 }
 
 function formatEdgeCommand(edge: SwfDirectedEdge): string {
@@ -3358,6 +3364,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     let totalAbcBytes = 0;
 
     let currentFrame = 1;
+    let totalTagsParsed = 0;
+    const skippedTagIdSet = new Set<number>();
 
     const effectiveFileLength = Math.max(1024, fileLength || payload.length);
 
@@ -3375,7 +3383,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
       if (tagType === 0) {
         break;
-      } else if (tagType === 9) {
+      }
+      totalTagsParsed++;
+      if (tagType === 9) {
         backgroundColor = reader.readRGBA(false);
       } else if (tagType === 14) {
         // DefineSound (Tag 14): PCM / SWF IMA ADPCM / MP3 audio asset
@@ -3659,6 +3669,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             staticTextCount++;
           }
         } catch {}
+      } else {
+        skippedTagIdSet.add(tagType);
       }
 
       if (nextTagOffset <= tagStartOffset) break;
@@ -3942,12 +3954,23 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
     // Extracts SVG geometry primitives allowed inside <clipPath>, preserving nested <g transform="..."> chains
     const extractSvgClipPrimitives = (innerSvg: string, matrix?: SwfMatrix | null): string => {
+      const expandedSvg = innerSvg.replace(
+        /<use\b([^>]*?)\bhref="#swf-shape-(\d+)"([^>]*?)\/?>/gi,
+        (_m, pre: string, idStr: string, post: string) => {
+          const cid = parseInt(idStr, 10);
+          const sh = shapeByCharId.get(cid);
+          if (!sh || !sh.svg) return '';
+          const combined = `${pre} ${post}`;
+          const tm = combined.match(/\btransform="([^"]*)"/i);
+          return tm && tm[1] ? `<g transform="${tm[1]}">${sh.svg}</g>` : sh.svg;
+        }
+      );
       const rootMat = matrix ? formatMatrixAttr(matrix) : '';
       const transformStack: string[] = rootMat ? [rootMat] : [];
       const out: string[] = [];
       const tokenRe = /<(\/?)(g|path|rect|circle|ellipse|polygon|polyline)\b([^>]*?)(\/?)>/gi;
       let match: RegExpExecArray | null;
-      while ((match = tokenRe.exec(innerSvg)) !== null) {
+      while ((match = tokenRe.exec(expandedSvg)) !== null) {
         const isClose = match[1] === '/';
         const tagName = match[2].toLowerCase();
         const attrs = match[3] || '';
@@ -3979,6 +4002,15 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     let legacySvgChars = 0;
     const MAX_LEGACY_SVG_CHARS = 350000;
 
+    const cachedShapeDefIds = new Set<number>();
+    const shapeDefsEntries: string[] = [];
+    for (const sh of shapes) {
+      if (sh.id === `swf-shape-${sh.charId}` && !cachedShapeDefIds.has(sh.charId)) {
+        cachedShapeDefIds.add(sh.charId);
+        shapeDefsEntries.push(`    ${sh.svg}`);
+      }
+    }
+
     const renderCharacterSvg = (
       charId: number,
       instanceDomPrefix: string,
@@ -3993,9 +4025,11 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         usedCharIds.add(charId);
         const c = (charRenderCount.get(charId) || 0) + 1;
         charRenderCount.set(charId, c);
-        const out = c > 1
-          ? shape.svg.replace(`id="${shape.id}"`, `id="${instanceDomPrefix}-${shape.id}"`)
-          : shape.svg;
+        const out = cachedShapeDefIds.has(charId)
+          ? `<use href="#swf-shape-${charId}" />`
+          : (c > 1
+            ? shape.svg.replace(`id="${shape.id}"`, `id="${instanceDomPrefix}-${shape.id}"`)
+            : shape.svg);
         legacySvgChars += out.length;
         return out;
       }
@@ -4298,8 +4332,10 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           continue;
         }
 
-        let innerSvg = targetItem.svg;
-        if (count > 1) {
+        let innerSvg = cachedShapeDefIds.has(entry.characterId)
+          ? `<use href="#swf-shape-${entry.characterId}" />`
+          : targetItem.svg;
+        if (!cachedShapeDefIds.has(entry.characterId) && count > 1) {
           innerSvg = innerSvg.replace(`id="${targetItem.id}"`, `id="${targetItem.id}-d${entry.depth}"`);
         }
 
@@ -4799,38 +4835,89 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       } // end !isComplexVmSwf
     }
 
+    // Collect keyboard bindings across ALL SWFs (including complex VM SWFs, sprites, buttons, and clipActions)
+    for (const ab of actionBlocks) {
+      registerUsedKeys(ab.usedKeys);
+    }
+    sprites.forEach((sp) => {
+      for (const ab of sp.actions) registerUsedKeys(ab.usedKeys);
+      for (const snap of sp.frames) {
+        snap.entries.forEach((e) => {
+          if (e.clipActions) {
+            for (const ca of e.clipActions) registerUsedKeys(ca.actionRecord?.usedKeys);
+          }
+        });
+      }
+    });
+    for (const snap of timelineFrames) {
+      snap.entries.forEach((e) => {
+        if (e.clipActions) {
+          for (const ca of e.clipActions) registerUsedKeys(ca.actionRecord?.usedKeys);
+        }
+      });
+    }
+    buttons.forEach((btn) => {
+      for (const ba of btn.actions) {
+        registerUsedKeys(ba.actionRecord?.usedKeys);
+        if (ba.keyCode && ba.keyCode > 0) {
+          const btnKeyToFlash: Record<number, number> = {
+            1: 37, 2: 39, 3: 36, 4: 35, 5: 45, 6: 46,
+            8: 8, 13: 13, 14: 38, 15: 40, 16: 33, 17: 34, 18: 9, 19: 27,
+          };
+          const fk = btnKeyToFlash[ba.keyCode] || ba.keyCode;
+          const spec = mapFlashKeyCode(fk);
+          if (spec) registerUsedKeys([spec]);
+        }
+      }
+    });
+
     // For dynamic multi-frame SWFs, do NOT dump unplaced library shapes onto the stage (they cover active frames);
-    // keep unplaced shapes only for static single-frame SWFs (Sims 1–11 compatibility).
+    // keep unplaced shapes only for static single-frame SWFs (Sims 1–11 compatibility), referencing cached <defs> symbols.
     const unplacedSvgElements = !isDynamicSwf
       ? [
-          ...shapes.filter((s) => !usedCharIds.has(s.charId)).map((s) => s.svg),
+          ...shapes
+            .filter((s) => !usedCharIds.has(s.charId))
+            .map((s) => (cachedShapeDefIds.has(s.charId) ? `<use href="#swf-shape-${s.charId}" />` : s.svg)),
           ...morphShapes.filter((m) => !usedCharIds.has(m.shapeId)).map((m) => m.svg),
         ]
       : [];
 
     const allSvgElements = [...placedSvgElements, ...unplacedSvgElements];
-    let finalSvgInner = allSvgElements.join('\n    ');
-    if (!finalSvgInner.trim()) {
-      finalSvgInner = `
-    <!-- Imported SWF Visual Content -->
-    <g id="swf-content" transform="translate(40, 40)">
-      <rect id="swf-bg-card" width="${width - 80}" height="${height - 80}" rx="16" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
-      <text id="swf-title" x="${(width - 80) / 2}" y="80" text-anchor="middle" fill="#ffffff" font-size="20" font-family="system-ui" font-weight="bold">Imported Flash Asset: ${sceneId}</text>
-      <circle id="swf-orbiter" cx="${(width - 80) / 2}" cy="${(height - 80) / 2 + 30}" r="32" fill="#6366f1" />
-      <text id="swf-caption" x="${(width - 80) / 2}" y="${height - 120}" text-anchor="middle" fill="#94a3b8" font-size="13">Converted from legacy ${sig} v${version} &bull; ${frameCount} Frames &bull; ${(frameRate).toFixed(0)} FPS</text>
-    </g>`;
+    let staticLayerInner = '';
+    let dynamicLayerInner = '';
+    if (!isDynamicSwf) {
+      staticLayerInner = allSvgElements.join('\n      ');
+    } else {
+      dynamicLayerInner = allSvgElements.join('\n      ');
+    }
+    if (!staticLayerInner.trim() && !dynamicLayerInner.trim()) {
+      staticLayerInner = `<!-- Imported SWF Visual Content -->
+      <g id="swf-content" transform="translate(40, 40)">
+        <rect id="swf-bg-card" width="${width - 80}" height="${height - 80}" rx="16" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+        <text id="swf-title" x="${(width - 80) / 2}" y="80" text-anchor="middle" fill="#ffffff" font-size="20" font-family="system-ui" font-weight="bold">Imported Flash Asset: ${sceneId}</text>
+        <circle id="swf-orbiter" cx="${(width - 80) / 2}" cy="${(height - 80) / 2 + 30}" r="32" fill="#6366f1" />
+        <text id="swf-caption" x="${(width - 80) / 2}" y="${height - 120}" text-anchor="middle" fill="#94a3b8" font-size="13">Converted from legacy ${sig} v${version} &bull; ${frameCount} Frames &bull; ${(frameRate).toFixed(0)} FPS</text>
+      </g>`;
     }
 
+    const shapeDefsXml = shapeDefsEntries.length > 0 ? `\n${shapeDefsEntries.join('\n')}` : '';
     const maskDefsXml = maskClipDefs.length > 0 ? `\n${maskClipDefs.join('\n')}` : '';
+    const staticLayerXml = staticLayerInner.trim()
+      ? `<g id="stage-static-layer" data-static="true">\n      ${staticLayerInner}\n    </g>`
+      : `<g id="stage-static-layer" data-static="true" />`;
+    const dynamicLayerXml = dynamicLayerInner.trim()
+      ? `<g id="stage-dynamic-layer">\n      ${dynamicLayerInner}\n    </g>`
+      : `<g id="stage-dynamic-layer" />`;
     const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">
   <defs>
     <clipPath id="swf-stage-clip">
       <rect x="0" y="0" width="${width}" height="${height}" />
-    </clipPath>${maskDefsXml}
+    </clipPath>${shapeDefsXml}${maskDefsXml}
   </defs>
   <rect id="bg" width="${width}" height="${height}" fill="${backgroundColor}" />
   <g id="scene-root" clip-path="url(#swf-stage-clip)">
-    ${finalSvgInner}
+    ${staticLayerXml}
+    ${dynamicLayerXml}
   </g>
 </svg>`;
 
@@ -4864,6 +4951,12 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
     const rulesAst = dynamicRules.length > 0
       ? `\n  (:rules (\n${dynamicRules.join('\n')}\n  ))\n`
+      : '';
+
+    const keyBindingsAst = allUsedKeys.size > 0
+      ? `\n  (:key-bindings (\n${Array.from(allUsedKeys.values())
+          .map((spec) => `    (:bind :code "${spec.domCode}" :key "${spec.domCode}" :flash-key ${spec.keyCode} :var "${spec.varName}")`)
+          .join('\n')}\n  ))\n`
       : '';
 
     const gesturesAst = dynamicGestures.length > 0
@@ -5250,6 +5343,20 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       }
       if (fillDefsCollector.gradients.length > 0) vmProgram.gr = fillDefsCollector.gradients;
       if (fillDefsCollector.patterns.length > 0) vmProgram.bp = fillDefsCollector.patterns;
+      const skippedTagIdsList = Array.from(skippedTagIdSet).sort((a, b) => a - b);
+      vmProgram.dbg = {
+        tt: totalTagsParsed,
+        ds: cachedShapeDefIds.size,
+        sk: skippedTagIdsList,
+      };
+      if (allUsedKeys.size > 0) {
+        vmProgram.kb = Array.from(allUsedKeys.values()).map((spec) => ({
+          code: spec.domCode,
+          key: spec.domCode,
+          fk: spec.keyCode,
+          v: spec.varName,
+        }));
+      }
       if (documentClass) vmProgram.dc = documentClass;
       if (Object.keys(symbolClassMap).length > 0) vmProgram.sym = symbolClassMap;
       if (abcBlocks.length > 0) vmProgram.abc = abcBlocks;
@@ -5280,7 +5387,7 @@ ${actorsAst}
   ))
 ${stateMachinesAst}
 ${bindingsAst}
-${rulesAst}${gesturesAst}
+${rulesAst}${keyBindingsAst}${gesturesAst}
   :keyframes (
 ${keyframesAst}
   )
@@ -5293,6 +5400,43 @@ ${keyframesAst}
     ))
   )
 )`;
+
+    const skippedTagIds = Array.from(skippedTagIdSet).sort((a, b) => a - b);
+    const importDebugSummary = {
+      totalTagsParsed,
+      cachedDefsShapes: cachedShapeDefIds.size,
+      skippedTagIds,
+    };
+
+    // Update opt-in global diagnostic import summary without adding per-frame overhead
+    try {
+      const g: any = typeof window !== 'undefined' ? window : globalThis;
+      if (typeof g.__SWF_DEBUG__ === 'undefined') g.__SWF_DEBUG__ = false;
+      if (!g.__SWF_DEBUG_STATE__) {
+        g.__SWF_DEBUG_STATE__ = { importSummary: importDebugSummary, activeRuntime: null };
+      } else {
+        g.__SWF_DEBUG_STATE__.importSummary = importDebugSummary;
+      }
+      if (typeof g.__getSwfDebugReport !== 'function') {
+        g.__getSwfDebugReport = () => {
+          const st = g.__SWF_DEBUG_STATE__;
+          if (st?.activeRuntime && typeof st.activeRuntime.getDebugReport === 'function') {
+            return st.activeRuntime.getDebugReport();
+          }
+          const imp = st?.importSummary || { totalTagsParsed: 0, cachedDefsShapes: 0, skippedTagIds: [] };
+          return {
+            enabled: g.__SWF_DEBUG__ === true,
+            importSummary: {
+              totalTagsParsed: imp.totalTagsParsed || 0,
+              cachedDefsShapes: imp.cachedDefsShapes || 0,
+              skippedTagIds: Array.isArray(imp.skippedTagIds) ? imp.skippedTagIds.slice() : [],
+            },
+            avm1Faults: { unhandledOpcodes: [], nanProperties: [] },
+            frameTiming: { sampleCount: 0, avgAvm1ExecMs: 0, avgSvgRenderMs: 0, activeDynamicDomNodes: 0 },
+          };
+        };
+      }
+    } catch {}
 
     const totalPoolSlots = poolSlotsCreated.reduce((acc, p) => acc + p.count, 0);
     const metadata: SwfMetadata = {
@@ -5326,6 +5470,7 @@ ${keyframesAst}
       labels,
       stateMachines: smMeta,
       variables: Array.from(varMap.entries()).map(([k, v]) => ({ name: k, value: v.val })),
+      importDebugSummary,
     };
 
     return {

@@ -444,6 +444,97 @@
     }
   }
 
+  initKeyBindings(scene) {
+    const list = [];
+    const byCode = new Map();
+    const byKey = new Map();
+    const raw = (scene && Array.isArray(scene.keyBindings)) ? scene.keyBindings : [];
+    for (let i = 0; i < raw.length; i++) {
+      const b = raw[i];
+      if (!b || (!b.code && !b.key)) continue;
+      const entry = {
+        code: b.code ? String(b.code) : '',
+        key: b.key ? String(b.key) : '',
+        flashKey: b.flashKey ?? b.keyCode ?? null,
+        varName: b.var ? String(b.var) : '',
+        action: b.action ? String(b.action) : '',
+        label: b.label ? String(b.label) : '',
+        val: b.val !== undefined ? b.val : 1,
+        releaseVal: b.releaseVal !== undefined ? b.releaseVal : 0
+      };
+      list.push(entry);
+      if (entry.code) {
+        if (!byCode.has(entry.code)) byCode.set(entry.code, []);
+        byCode.get(entry.code).push(entry);
+      }
+      if (entry.key) {
+        if (!byKey.has(entry.key)) byKey.set(entry.key, []);
+        byKey.get(entry.key).push(entry);
+        const low = entry.key.length === 1 ? entry.key.toLowerCase() : '';
+        if (low && low !== entry.key) {
+          if (!byKey.has(low)) byKey.set(low, []);
+          byKey.get(low).push(entry);
+        }
+      }
+      if (entry.varName && this.vars && !(entry.varName in this.vars)) {
+        this.vars[entry.varName] = entry.releaseVal;
+      }
+    }
+    this._keyBindingsList = list;
+    this._keyBindingsByCode = byCode;
+    this._keyBindingsByKey = byKey;
+    return list;
+  }
+
+  getKeyBindings() {
+    return Array.isArray(this._keyBindingsList) ? this._keyBindingsList.slice() : [];
+  }
+
+  setKeyBindingState(code, key, isDown) {
+    if (!this._keyBindingsList || this._keyBindingsList.length === 0 || !this.vars) return false;
+    const matched = new Set();
+    if (code && this._keyBindingsByCode && this._keyBindingsByCode.has(code)) {
+      const arr = this._keyBindingsByCode.get(code);
+      for (let i = 0; i < arr.length; i++) matched.add(arr[i]);
+    }
+    if (key && this._keyBindingsByKey) {
+      if (this._keyBindingsByKey.has(key)) {
+        const arr = this._keyBindingsByKey.get(key);
+        for (let i = 0; i < arr.length; i++) matched.add(arr[i]);
+      }
+      const low = key.length === 1 ? key.toLowerCase() : '';
+      if (low && this._keyBindingsByKey.has(low)) {
+        const arr = this._keyBindingsByKey.get(low);
+        for (let i = 0; i < arr.length; i++) matched.add(arr[i]);
+      }
+    }
+    if (matched.size === 0) return false;
+    let changed = false;
+    matched.forEach(entry => {
+      if (!entry.varName) return;
+      const nextVal = isDown ? entry.val : entry.releaseVal;
+      if (this.vars[entry.varName] !== nextVal) {
+        this.vars[entry.varName] = nextVal;
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  clearKeyBindingsState() {
+    if (!this._keyBindingsList || this._keyBindingsList.length === 0 || !this.vars) return false;
+    let changed = false;
+    for (let i = 0; i < this._keyBindingsList.length; i++) {
+      const entry = this._keyBindingsList[i];
+      if (!entry.varName) continue;
+      if (this.vars[entry.varName] !== entry.releaseVal) {
+        this.vars[entry.varName] = entry.releaseVal;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   renderCurrentVector(container) {
     const target = container || this.container;
     if (target) {
