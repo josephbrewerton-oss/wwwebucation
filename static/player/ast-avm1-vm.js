@@ -2066,8 +2066,12 @@
         }
         this._currentframe = nextFrame;
         this._frameChangedThisTick = true;
-        this.reconcileDisplayList(this._currentframe, true);
+        const pendingChildren = [];
+        this.reconcileDisplayList(this._currentframe, true, pendingChildren);
         this.runFrameActions(this._currentframe);
+        if (!this._removed && pendingChildren.length > 0) {
+          this._finishNewlySpawnedClips(pendingChildren);
+        }
       } finally {
         this._jumpDepth = depth;
       }
@@ -2153,7 +2157,7 @@
      * Preserves dynamic script-created depths (>= 16384 or created via attachMovie/duplicateMovieClip)
      * and preserves script-modified transforms on continuing timeline instances.
      */
-    reconcileDisplayList(frameNum, force = false) {
+    reconcileDisplayList(frameNum, force = false, deferChildInitOut = null) {
       if (this._clipDepth > 24) return;
       const frames = this._frames || [];
       const idx = Math.max(0, Math.min(frames.length - 1, frameNum - 1));
@@ -2290,28 +2294,29 @@
         this._vm._tickSvgRenderMs += _nowMs() - dbgT0;
       }
 
-      // Initialize newly spawned MovieClips (reconcile frame 1, fire DoInitAction, registered AS2 class, onClipEvent(load), onLoad, frame 1 DoAction)
+      // Phase 1 of newly spawned MovieClip init: DoInitAction, frame-1 display list, registered AS2 class, initialize/construct.
+      // Phase 2 (onClipEvent(load), onLoad, frame-1 DoAction) runs AFTER parent frame DoAction when deferChildInitOut is provided
+      // so child scripts can read variables/functions defined in the parent's current frame (exact Flash Player order).
+      const immediatePending = deferChildInitOut ? null : [];
+      const pendingBucket = deferChildInitOut || immediatePending;
       for (let i = 0; i < newlySpawnedClips.length; i++) {
         if (this._vm._isOverBudget()) break;
         const mc = newlySpawnedClips[i];
         if (mc._removed) continue;
         mc._justSpawned = false;
         this._vm._ensureSpriteInitAction(mc.charId, mc);
-        mc.reconcileDisplayList(1, true);
+        const childPending = [];
+        mc.reconcileDisplayList(1, true, childPending);
         this._vm._applyRegisteredClass(mc);
         if (!this._vm._isOverBudget()) {
           mc._fireClipEvents(CE_INITIALIZE | CE_CONSTRUCT);
-          if (!mc._removed && !this._vm._isOverBudget()) {
-            mc._fireClipEvents(CE_LOAD);
-          }
-          const loadFn = mc._getEventHandler('onLoad');
-          if (!mc._removed && !this._vm._isOverBudget() && typeof loadFn === 'function') {
-            this._vm._invokeValue(loadFn, mc, EMPTY_ARR);
-          }
         }
-        if (!mc._removed && !this._vm._isOverBudget() && mc._currentframe === 1) {
-          mc.runFrameActions(1);
+        if (!mc._removed) {
+          pendingBucket.push({ mc, childPending });
         }
+      }
+      if (immediatePending && immediatePending.length > 0) {
+        this._finishNewlySpawnedClips(immediatePending);
       }
       } finally {
         wantedByDepth.clear();
@@ -2319,6 +2324,28 @@
         activeMasks.length = 0;
         newlySpawnedClips.length = 0;
         if (rPool && rPool.length < 32) rPool.push(rf);
+      }
+    }
+
+    _finishNewlySpawnedClips(list) {
+      if (!list || list.length === 0) return;
+      for (let i = 0; i < list.length; i++) {
+        if (this._vm._isOverBudget()) break;
+        const item = list[i];
+        const mc = item && item.mc;
+        if (!mc || mc._removed) continue;
+        mc._fireClipEvents(CE_LOAD);
+        const loadFn = mc._getEventHandler('onLoad');
+        if (!mc._removed && !this._vm._isOverBudget() && typeof loadFn === 'function') {
+          this._vm._invokeValue(loadFn, mc, EMPTY_ARR);
+        }
+        if (!mc._removed && !this._vm._isOverBudget() && mc._currentframe === 1) {
+          mc.runFrameActions(1);
+        }
+        if (!mc._removed && !this._vm._isOverBudget() && item.childPending && item.childPending.length > 0) {
+          mc._finishNewlySpawnedClips(item.childPending);
+        }
+        if (!mc._removed) mc.commitSvg();
       }
     }
 
@@ -2473,9 +2500,13 @@
           this._vm._grantFrameTransitionBudget();
         }
         this._currentframe = next;
-        this.reconcileDisplayList(this._currentframe);
+        const pendingChildren = [];
+        this.reconcileDisplayList(this._currentframe, false, pendingChildren);
         if (!this._vm._isOverBudget()) {
           this.runFrameActions(this._currentframe);
+        }
+        if (!this._removed && pendingChildren.length > 0) {
+          this._finishNewlySpawnedClips(pendingChildren);
         }
         if (this._removed) return;
       }
@@ -2531,15 +2562,20 @@
       }
       const mc = slot && slot.obj;
       if (mc && mc._isMovieClip) {
+        mc._justSpawned = false;
+        this._vm._ensureSpriteInitAction(mc.charId, mc);
+        const regCtor = this._vm._attachRegisteredClassProto(mc, linkageName);
         if (initObj && typeof initObj === 'object') {
           for (const k in initObj) {
             this._vm._setMember(mc, k, initObj[k]);
           }
         }
-        mc._justSpawned = false;
-        this._vm._ensureSpriteInitAction(mc.charId, mc);
-        mc.reconcileDisplayList(1, true);
-        this._vm._applyRegisteredClass(mc, linkageName);
+        const subPending = [];
+        mc.reconcileDisplayList(1, true, subPending);
+        if (regCtor) {
+          this._vm._invokeValue(regCtor, mc, EMPTY_ARR);
+          if (mc._hasInteractiveHandler()) mc._ensurePointerListeners();
+        }
         mc._fireClipEvents(CE_INITIALIZE | CE_CONSTRUCT);
         if (!mc._removed) mc._fireClipEvents(CE_LOAD);
         const loadFn = mc._getEventHandler('onLoad');
@@ -2548,6 +2584,9 @@
         }
         if (!mc._removed && mc._currentframe === 1) {
           mc.runFrameActions(1);
+        }
+        if (!mc._removed && subPending.length > 0) {
+          mc._finishNewlySpawnedClips(subPending);
         }
         mc.commitSvg();
       }
@@ -2591,15 +2630,20 @@
         dup._alpha = this._alpha;
         dup._visible = this._visible;
         dup._scriptModifiedTransform = true;
+        dup._justSpawned = false;
+        this._vm._ensureSpriteInitAction(dup.charId, dup);
+        const regCtor = this._vm._attachRegisteredClassProto(dup);
         if (initObj && typeof initObj === 'object') {
           for (const k in initObj) {
             this._vm._setMember(dup, k, initObj[k]);
           }
         }
-        dup._justSpawned = false;
-        this._vm._ensureSpriteInitAction(dup.charId, dup);
-        dup.reconcileDisplayList(1, true);
-        this._vm._applyRegisteredClass(dup);
+        const subPending = [];
+        dup.reconcileDisplayList(1, true, subPending);
+        if (regCtor) {
+          this._vm._invokeValue(regCtor, dup, EMPTY_ARR);
+          if (dup._hasInteractiveHandler()) dup._ensurePointerListeners();
+        }
         dup._fireClipEvents(CE_INITIALIZE | CE_CONSTRUCT);
         if (!dup._removed) dup._fireClipEvents(CE_LOAD);
         const loadFn = dup._getEventHandler('onLoad');
@@ -2608,6 +2652,9 @@
         }
         if (!dup._removed && dup._currentframe === 1) {
           dup.runFrameActions(1);
+        }
+        if (!dup._removed && subPending.length > 0) {
+          dup._finishNewlySpawnedClips(subPending);
         }
         dup.commitSvg();
       }
@@ -3417,6 +3464,7 @@
         this._pan = 0;
         this._startMs = -1;
         this._isPlaying = false;
+        this._completed = false;
         this._durationMs = 0;
         this._playGen = 0;
       }
@@ -3427,6 +3475,7 @@
       });
       Object.defineProperty(FlashSound.prototype, 'position', {
         get() {
+          if (this._completed) return this._durationMs || 0;
           if (!this._isPlaying || this._startMs < 0) return 0;
           const elapsed = Math.max(0, vm._elapsedMs - this._startMs);
           return this._durationMs > 0 ? Math.min(this._durationMs, elapsed) : elapsed;
@@ -3440,6 +3489,7 @@
         this._soundId = resolved !== undefined ? resolved : (Number(this._id) || null);
         const def = this._soundId != null && vm.program.sn ? vm.program.sn[this._soundId] : null;
         this._durationMs = (def && def.sc && def.rate) ? Math.round((def.sc / def.rate) * 1000) : 400;
+        this._completed = false;
       };
       FlashSound.prototype.start = function (secondOffset, loops) {
         const self = this;
@@ -3448,9 +3498,11 @@
         const offsetMs = Math.max(0, Number(secondOffset) || 0) * 1000;
         this._startMs = Math.max(0, vm._elapsedMs - offsetMs);
         this._isPlaying = true;
+        this._completed = false;
         const onComplete = () => {
           if (self._playGen !== gen) return;
           self._isPlaying = false;
+          self._completed = true;
           const cb = vm._getMember(self, 'onSoundComplete');
           if (typeof cb === 'function') {
             vm._invokeValue(cb, self, []);
@@ -3471,6 +3523,7 @@
       FlashSound.prototype.stop = function (linkageId) {
         this._playGen++;
         this._isPlaying = false;
+        this._completed = false;
         if (linkageId) {
           const resolved = vm._lookupExport(String(linkageId));
           if (resolved !== undefined) vm._stopSwfSound(resolved);
@@ -3661,9 +3714,188 @@
         if (align !== undefined) this.align = align;
       }
 
+      // Lightweight offline LoadVars & XML stubs so SWFs loading remote high-scores/configs never hang waiting on callbacks
+      function FlashLoadVars() {
+        this.loaded = false;
+      }
+      FlashLoadVars.prototype.decode = function (qs) {
+        const s = String(qs || '');
+        if (!s) return;
+        const pairs = s.split('&');
+        for (let i = 0; i < pairs.length; i++) {
+          const eq = pairs[i].indexOf('=');
+          if (eq <= 0) continue;
+          try {
+            this[decodeURIComponent(pairs[i].slice(0, eq))] = decodeURIComponent(pairs[i].slice(eq + 1));
+          } catch (_) {
+            this[pairs[i].slice(0, eq)] = pairs[i].slice(eq + 1);
+          }
+        }
+      };
+      FlashLoadVars.prototype.load = function () {
+        const self = this;
+        vm._scheduleSoundComplete(50, () => {
+          self.loaded = false;
+          const onData = vm._getMember(self, 'onData');
+          if (typeof onData === 'function') vm._invokeValue(onData, self, [undefined]);
+          else {
+            const onLoad = vm._getMember(self, 'onLoad');
+            if (typeof onLoad === 'function') vm._invokeValue(onLoad, self, [false]);
+          }
+        });
+        return true;
+      };
+      FlashLoadVars.prototype.send = function () { return true; };
+      FlashLoadVars.prototype.sendAndLoad = function (_url, target) {
+        const t = target || this;
+        if (t && typeof t.load === 'function') t.load();
+        return true;
+      };
+      FlashLoadVars.prototype.getBytesLoaded = function () { return 0; };
+      FlashLoadVars.prototype.getBytesTotal = function () { return 0; };
+
+      function FlashXML(src) {
+        this.ignoreWhite = false;
+        this.loaded = false;
+        this.status = 0;
+        this.nodeType = 1;
+        this.nodeName = null;
+        this.nodeValue = null;
+        this.attributes = {};
+        this.childNodes = [];
+        this.firstChild = null;
+        this.lastChild = null;
+        if (typeof src === 'string' && src.trim()) this.parseXML(src);
+      }
+      FlashXML.prototype.parseXML = function (str) {
+        this.childNodes = [];
+        this.firstChild = null;
+        this.lastChild = null;
+        this.loaded = true;
+        this.status = 0;
+        const raw = String(str || '').trim();
+        if (!raw) return;
+        const linkSiblings = (node) => {
+          const kids = node.childNodes || [];
+          for (let i = 0; i < kids.length; i++) {
+            kids[i].parentNode = node;
+            kids[i].previousSibling = i > 0 ? kids[i - 1] : null;
+            kids[i].nextSibling = i + 1 < kids.length ? kids[i + 1] : null;
+          }
+          node.firstChild = kids[0] || null;
+          node.lastChild = kids[kids.length - 1] || null;
+        };
+        if (typeof DOMParser !== 'undefined') {
+          try {
+            const doc = new DOMParser().parseFromString(raw, 'text/xml');
+            const wrapNode = (domNode) => {
+              if (!domNode) return null;
+              if (domNode.nodeType === 3) {
+                const txt = domNode.nodeValue || '';
+                if (this.ignoreWhite && !txt.trim()) return null;
+                return { nodeType: 3, nodeName: null, nodeValue: txt, attributes: {}, childNodes: [], firstChild: null, lastChild: null, parentNode: null, previousSibling: null, nextSibling: null, toString() { return txt; } };
+              }
+              if (domNode.nodeType !== 1) return null;
+              const attrs = {};
+              if (domNode.attributes) {
+                for (let i = 0; i < domNode.attributes.length; i++) {
+                  attrs[domNode.attributes[i].name] = domNode.attributes[i].value;
+                }
+              }
+              const kids = [];
+              const rawKids = domNode.childNodes || [];
+              for (let i = 0; i < rawKids.length; i++) {
+                const k = wrapNode(rawKids[i]);
+                if (k) kids.push(k);
+              }
+              const el = {
+                nodeType: 1,
+                nodeName: domNode.nodeName,
+                nodeValue: null,
+                attributes: attrs,
+                childNodes: kids,
+                firstChild: null,
+                lastChild: null,
+                parentNode: null,
+                previousSibling: null,
+                nextSibling: null,
+                toString() { return domNode.outerHTML || ''; },
+              };
+              linkSiblings(el);
+              return el;
+            };
+            const rootEl = doc && doc.documentElement && !doc.querySelector('parsererror') ? wrapNode(doc.documentElement) : null;
+            if (rootEl) {
+              this.childNodes = [rootEl];
+              linkSiblings(this);
+              return;
+            }
+          } catch (_) {}
+        }
+        // Pure-JS XML parser fallback (for environments without DOMParser)
+        const stack = [this];
+        const tokenRe = /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[([\s\S]*?)\]\]>|<\/([A-Za-z_][\w:.-]*)\s*>|<([A-Za-z_][\w:.-]*)((?:\s+[^<>'"\/]+=(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)/g;
+        let m;
+        while ((m = tokenRe.exec(raw)) !== null) {
+          const parent = stack[stack.length - 1];
+          if (m[1] !== undefined || m[6] !== undefined) {
+            const txt = m[1] !== undefined ? m[1] : m[6];
+            if (this.ignoreWhite && !txt.trim()) continue;
+            parent.childNodes.push({
+              nodeType: 3, nodeName: null, nodeValue: txt, attributes: {},
+              childNodes: [], firstChild: null, lastChild: null,
+              parentNode: parent, previousSibling: null, nextSibling: null,
+              toString() { return txt; },
+            });
+          } else if (m[2]) {
+            if (stack.length > 1) {
+              linkSiblings(stack.pop());
+            }
+          } else if (m[3]) {
+            const attrs = {};
+            const attrStr = m[4] || '';
+            const attrRe = /([A-Za-z_][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+            let am;
+            while ((am = attrRe.exec(attrStr)) !== null) {
+              attrs[am[1]] = am[2] !== undefined ? am[2] : (am[3] || '');
+            }
+            const el = {
+              nodeType: 1, nodeName: m[3], nodeValue: null, attributes: attrs,
+              childNodes: [], firstChild: null, lastChild: null,
+              parentNode: parent, previousSibling: null, nextSibling: null,
+              toString() { return `<${this.nodeName}/>`; },
+            };
+            parent.childNodes.push(el);
+            if (!m[5]) stack.push(el);
+          }
+        }
+        while (stack.length > 0) linkSiblings(stack.pop());
+      };
+      FlashXML.prototype.load = function () {
+        const self = this;
+        vm._scheduleSoundComplete(50, () => {
+          self.loaded = false;
+          const onLoad = vm._getMember(self, 'onLoad');
+          if (typeof onLoad === 'function') vm._invokeValue(onLoad, self, [false]);
+        });
+        return true;
+      };
+      FlashXML.prototype.send = function () { return true; };
+      FlashXML.prototype.sendAndLoad = function (_url, target) {
+        const t = target || this;
+        if (t && typeof t.load === 'function') t.load();
+        return true;
+      };
+      FlashXML.prototype.getBytesLoaded = function () { return 0; };
+      FlashXML.prototype.getBytesTotal = function () { return 0; };
+
       g.MovieClip = FlashMovieClip;
       g.TextField = AVM1TextField;
       g.TextFormat = FlashTextFormat;
+      g.LoadVars = FlashLoadVars;
+      g.XML = FlashXML;
+      g.Function = Function;
+      g.Error = Error;
       g.NaN = NaN;
       g.Infinity = Infinity;
       g.isNaN = isNaN;
@@ -4060,15 +4292,23 @@
       }
     }
 
-    _applyRegisteredClass(mc, explicitLinkage) {
-      if (!mc || !this._registeredClasses || this._registeredClasses.size === 0) return;
+    _attachRegisteredClassProto(mc, explicitLinkage) {
+      if (!mc || !this._registeredClasses || this._registeredClasses.size === 0) return null;
       const key = explicitLinkage
         ? String(explicitLinkage).toLowerCase()
         : (mc.charId ? this._exportByCharId.get(mc.charId) : null);
-      if (!key) return;
+      if (!key) return null;
       const ctor = this._registeredClasses.get(key);
       if (typeof ctor === 'function') {
         mc._proto = ctor.prototype || null;
+        return ctor;
+      }
+      return null;
+    }
+
+    _applyRegisteredClass(mc, explicitLinkage) {
+      const ctor = this._attachRegisteredClassProto(mc, explicitLinkage);
+      if (typeof ctor === 'function') {
         this._invokeValue(ctor, mc, []);
         if (mc._hasInteractiveHandler()) {
           mc._ensurePointerListeners();
@@ -4372,9 +4612,13 @@
           }
         }
       }
-      this.rootClip.reconcileDisplayList(1, true);
+      const pendingBootChildren = [];
+      this.rootClip.reconcileDisplayList(1, true, pendingBootChildren);
       if (!this._isOverBudget() && this.rootClip._currentframe === 1) {
         this.rootClip.runFrameActions(1);
+      }
+      if (!this._isOverBudget() && pendingBootChildren.length > 0) {
+        this.rootClip._finishNewlySpawnedClips(pendingBootChildren);
       }
       // If the transpiler detected leading network/dead-end preloader frames (program.ef > 1)
       // and Frame 1 scripts left _root stuck before entryFrame, advance cleanly into the main body.
@@ -5571,29 +5815,42 @@
         }
       }
       const childClips = [];
+      const textFields = [];
       if (root && root._childrenByDepth) {
         const kids = root._getChildrenSnapshot();
-        for (let i = 0; i < kids.length && childClips.length < 40; i++) {
+        for (let i = 0; i < kids.length; i++) {
           const s = kids[i];
           const o = s && s.obj;
-          if (!o || !o._isMovieClip) continue;
-          childClips.push({
-            name: o._name || '',
-            charId: o.charId,
-            depth: s.depth - AS_DEPTH_OFFSET,
-            frame: o._currentframe,
-            totalFrames: o._totalframes,
-            playing: Boolean(o._playing),
-            visible: Boolean(o._visible),
-            x: Math.round((o._x || 0) * 10) / 10,
-            y: Math.round((o._y || 0) * 10) / 10,
-            hasEnterFrame: Boolean(o._getEventHandler('onEnterFrame') || (o._clipActions && o._clipActions.some((ca) => (ca.f & CE_ENTER_FRAME) !== 0))),
-            clipActions: o._clipActions ? o._clipActions.length : 0,
-            children: o._childrenByDepth ? o._childrenByDepth.size : 0,
-          });
+          if (!o) continue;
+          if (o._isMovieClip && childClips.length < 40) {
+            const ownVars = o._vars ? Object.keys(o._vars).slice(0, 8) : [];
+            childClips.push({
+              name: o._name || '',
+              charId: o.charId,
+              depth: s.depth - AS_DEPTH_OFFSET,
+              frame: o._currentframe,
+              totalFrames: o._totalframes,
+              playing: Boolean(o._playing),
+              visible: Boolean(o._visible),
+              x: Math.round((o._x || 0) * 10) / 10,
+              y: Math.round((o._y || 0) * 10) / 10,
+              hasEnterFrame: Boolean(o._getEventHandler('onEnterFrame') || (o._clipActions && o._clipActions.some((ca) => (ca.f & CE_ENTER_FRAME) !== 0))),
+              clipActions: o._clipActions ? o._clipActions.length : 0,
+              children: o._childrenByDepth ? o._childrenByDepth.size : 0,
+              vars: ownVars,
+            });
+          } else if (o._isTextField && textFields.length < 20) {
+            textFields.push({
+              name: o._name || '',
+              variable: o._variable || '',
+              text: String(o._text || '').slice(0, 60),
+              visible: Boolean(o._visible),
+            });
+          }
         }
       }
       return {
+        runtime: 'avm1',
         enabled: _isSwfDebugEnabled(),
         importSummary: {
           totalTagsParsed,
@@ -5618,9 +5875,11 @@
           totalFrames: root ? root._totalframes : 0,
           playing: root ? Boolean(root._playing) : false,
           entryFrame: Number(this.program.ef) || 1,
+          preloaderStripped: Boolean(this.program.ps),
           tickCount: this._tickCount,
           elapsedMs: Math.round(this._elapsedMs),
           liveClips: this._liveClipCount || 0,
+          liveButtons: this._liveButtons ? this._liveButtons.size : 0,
           scriptThrottled: Boolean(this._scriptThrottled),
           budgetExceeded: Boolean(this._budgetExceededThisTick),
           activeIntervals: this._intervals ? this._intervals.size : 0,
@@ -5631,6 +5890,7 @@
           rootVars: rootVarsPreview,
           rootVarCount: rootVarKeys.length,
           childClips,
+          textFields,
           recentSounds: this._soundLog ? this._soundLog.slice(-10) : [],
           recentTraces: this._traces ? this._traces.slice(-20) : [],
         },

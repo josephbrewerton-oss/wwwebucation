@@ -308,6 +308,26 @@ export function renderPlayerPage(): HTMLElement {
     getActivePreset: () => activePreset,
   });
 
+  const prevSwfDebugGetter = (window as any).__getSwfDebugReport;
+  const hostSwfDebugGetter = () => {
+    try {
+      const cw = iframe?.contentWindow as any;
+      if (cw && typeof cw.__getSwfDebugReport === 'function') {
+        return cw.__getSwfDebugReport();
+      }
+      if (cw && cw.__SWF_DEBUG_STATE__?.activeRuntime?.getDebugReport) {
+        return cw.__SWF_DEBUG_STATE__.activeRuntime.getDebugReport();
+      }
+      const eng = cw?.__astEngine || cw?.astEngine;
+      const vm = eng?._swfVm || eng?._avm1Vm;
+      if (vm && typeof vm.getDebugReport === 'function') {
+        return vm.getDebugReport();
+      }
+    } catch (_) {}
+    return typeof prevSwfDebugGetter === 'function' ? prevSwfDebugGetter() : { error: 'No active SWF VM in player iframe' };
+  };
+  (window as any).__getSwfDebugReport = hostSwfDebugGetter;
+
   let pageDisposed = false;
   let wasContainerConnected = false;
   let unmountObserver: MutationObserver | null = null;
@@ -315,6 +335,10 @@ export function renderPlayerPage(): HTMLElement {
     if (pageDisposed) return;
     pageDisposed = true;
     mcpRegEpoch++;
+    if ((window as any).__getSwfDebugReport === hostSwfDebugGetter) {
+      if (prevSwfDebugGetter !== undefined) (window as any).__getSwfDebugReport = prevSwfDebugGetter;
+      else delete (window as any).__getSwfDebugReport;
+    }
     webMcpHandle.unregister();
     bindSitePlayerAdapter(null);
     unmountObserver?.disconnect();

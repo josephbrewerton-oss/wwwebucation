@@ -276,6 +276,9 @@ class MockSvgNode {
     if (!this.listeners[ev]) return;
     this.listeners[ev] = this.listeners[ev].filter((f) => f !== fn);
   }
+  querySelector(sel: string): MockSvgNode | null {
+    return this.querySelectorAll(sel)[0] || null;
+  }
   querySelectorAll(sel: string): MockSvgNode[] {
     const out: MockSvgNode[] = [];
     const wantTags = sel.split(',').map((p) => p.trim().split(/\s+/).pop()!.toLowerCase());
@@ -1370,6 +1373,274 @@ async function testAvm1ExtendedCompliance() {
   console.log('✓ Test 6 passed: Extended AVM1 Compliance (addProperty, ActionCastOp MC, ActionCallFunction super, ActionTry catch/return, with-closure, createTextField, getInstanceAtDepth, runtimeSnapshot)');
 }
 
+// ============================================================================
+// TEST 7: Frame Lifecycle Order, attachMovie initObj Order, Sound.position Completion,
+//         Offline LoadVars/XML Callbacks & AVM2 Document Class Stage Constructor Access
+// ============================================================================
+
+async function testAvm1AndAvm2LifecycleCompliance() {
+  const { ASTAVM1Runtime } = createAvm1Sandbox();
+
+  const actionDefFn = (name: string, params: string[], body: number[]): number[] => {
+    const header = [
+      ...cstr(name),
+      ...u16le(params.length),
+      ...params.flatMap((p) => cstr(p)),
+      ...u16le(body.length),
+    ];
+    return [0x9b, ...u16le(header.length), ...header, ...body];
+  };
+
+  // 1) Parent-before-child frame script execution order:
+  //    Root Frame 1: gotoAndStop(2)
+  //    Root Frame 2: mazeReady = 42; stop();
+  //    Child placed on Root Frame 2:
+  //      - onClipEvent(load): _root.seenInLoad = _root.mazeReady;
+  //      - Child Frame 1 DoAction: _root.seenInChildF1 = _root.mazeReady;
+  const childLoadBytecode = [
+    ...actionPush([{ t: 'str', v: '_root' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'seenInLoad' }, { t: 'str', v: '_root' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'mazeReady' }]), 0x4e,
+    0x4f,
+    0x00,
+  ];
+  const childF1Bytecode = [
+    ...actionPush([{ t: 'str', v: '_root' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'seenInChildF1' }, { t: 'str', v: '_root' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'mazeReady' }]), 0x4e,
+    0x4f,
+    0x00,
+  ];
+  const rootF1GotoF2 = [
+    0x81, 0x02, 0x00, ...u16le(1), // ActionGotoFrame 1 (0-based => Frame 2, stopped)
+    0x00,
+  ];
+  const rootF2Init = [
+    // mazeReady = 42
+    ...actionPush([{ t: 'str', v: 'mazeReady' }, { t: 'int', v: 42 }]),
+    0x1d,
+    // Register class ProtoActor with addProperty("startVal", getter, setter) BEFORE attachMovie(..., { startVal: 7 })
+    ...actionDefFn('ProtoActor', [], [
+      ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: 'ctorSawScaled' }, { t: 'str', v: 'this' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: '_scaled' }]), 0x4e,
+      0x4f,
+      0x00,
+    ]),
+    ...actionPush([{ t: 'str', v: 'ProtoActor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'MovieClip' }]), 0x1c,
+    0x69,
+    // setter(v) { this._scaled = v * 10; }
+    ...actionDefFn('', ['v'], [
+      ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: '_scaled' }, { t: 'str', v: 'v' }]), 0x1c,
+      ...actionPush([{ t: 'int', v: 10 }]), 0x0c,
+      0x4f,
+      0x00,
+    ]),
+    // getter() { return this._scaled; }
+    ...actionDefFn('', [], [
+      ...actionPush([{ t: 'str', v: 'this' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: '_scaled' }]), 0x4e,
+      0x3e,
+      0x00,
+    ]),
+    ...actionPush([{ t: 'str', v: 'startVal' }, { t: 'int', v: 3 }, { t: 'str', v: 'ProtoActor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'prototype' }]), 0x4e,
+    ...actionPush([{ t: 'str', v: 'addProperty' }]),
+    0x52, 0x17,
+    ...actionPush([{ t: 'str', v: 'ProtoActor' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'protoSym' }, { t: 'int', v: 2 }, { t: 'str', v: 'Object' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'registerClass' }]),
+    0x52, 0x17,
+    // initObj = { startVal: 7 }; spawned = attachMovie("protoSym", "sp1", 10, initObj)
+    ...actionPush([{ t: 'str', v: 'spawned' }, { t: 'str', v: 'startVal' }, { t: 'int', v: 7 }, { t: 'int', v: 1 }]),
+    0x43, // ActionInitObject { startVal: 7 }
+    ...actionPush([{ t: 'int', v: 10 }, { t: 'str', v: 'sp1' }, { t: 'str', v: 'protoSym' }, { t: 'int', v: 4 }, { t: 'str', v: 'this' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'attachMovie' }]),
+    0x52,
+    0x1d,
+    // Offline XML parsing & offline LoadVars.load() + XML.load()
+    ...actionPush([{ t: 'str', v: 'parsedXml' }, { t: 'str', v: "<a k='1'><b/></a>" }, { t: 'int', v: 1 }, { t: 'str', v: 'XML' }]),
+    0x40, 0x1d,
+    ...actionPush([{ t: 'str', v: 'lv' }, { t: 'int', v: 0 }, { t: 'str', v: 'LoadVars' }]),
+    0x40, 0x1d,
+    ...actionPush([{ t: 'str', v: 'lv' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'onLoad' }]),
+    ...actionDefFn('', ['ok'], [
+      ...actionPush([{ t: 'str', v: '_root' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: 'lvOk' }, { t: 'str', v: 'ok' }]), 0x1c,
+      0x4f,
+      0x00,
+    ]),
+    0x4f,
+    ...actionPush([{ t: 'str', v: 'http://example.invalid/scores.txt' }, { t: 'int', v: 1 }, { t: 'str', v: 'lv' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'load' }]),
+    0x52, 0x17,
+    ...actionPush([{ t: 'str', v: 'xnet' }, { t: 'int', v: 0 }, { t: 'str', v: 'XML' }]),
+    0x40, 0x1d,
+    ...actionPush([{ t: 'str', v: 'xnet' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'onLoad' }]),
+    ...actionDefFn('', ['ok'], [
+      ...actionPush([{ t: 'str', v: '_root' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: 'xmlOk' }, { t: 'str', v: 'ok' }]), 0x1c,
+      0x4f,
+      0x00,
+    ]),
+    0x4f,
+    ...actionPush([{ t: 'str', v: 'http://example.invalid/cfg.xml' }, { t: 'int', v: 1 }, { t: 'str', v: 'xnet' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'load' }]),
+    0x52, 0x17,
+    // FlashSound completion position check:
+    ...actionPush([{ t: 'str', v: 'snd' }, { t: 'int', v: 0 }, { t: 'str', v: 'Sound' }]),
+    0x40, 0x1d,
+    ...actionPush([{ t: 'str', v: 'jingle' }, { t: 'int', v: 1 }, { t: 'str', v: 'snd' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'attachSound' }]),
+    0x52, 0x17,
+    ...actionPush([{ t: 'str', v: 'snd' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'onSoundComplete' }]),
+    ...actionDefFn('', [], [
+      ...actionPush([{ t: 'str', v: '_root' }]), 0x1c,
+      ...actionPush([{ t: 'str', v: 'sndDone' }, { t: 'int', v: 1 }]),
+      0x4f,
+      0x00,
+    ]),
+    0x4f,
+    ...actionPush([{ t: 'int', v: 1 }, { t: 'int', v: 0 }, { t: 'int', v: 2 }, { t: 'str', v: 'snd' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'start' }]),
+    0x52, 0x17,
+    0x07, // stop
+    0x00,
+  ];
+
+  // Minimal 100ms silent PCM sound (fmt=3, 5512Hz rateCode=0, 16-bit=1, mono=0 => 551 samples ~= 100ms)
+  const prog = {
+    v: 1, swfVer: 8, fps: 30, w: 400, h: 300, bg: '#000000', fc: 2,
+    l: [], sh: {}, et: {}, bt: {},
+    sp: {
+      30: { fc: 1, l: [], fr: [[]], ac: [{ f: 1, b64: Buffer.from(childF1Bytecode).toString('base64') }] },
+      31: { fc: 1, l: [], fr: [[]], ac: [] },
+    },
+    exp: { protoSym: 31, jingle: 99 },
+    sn: {
+      99: { fmt: 3, rate: 5512, s16: 1, st: 0, sc: 551, b64: Buffer.alloc(551 * 2).toString('base64') },
+    },
+    fr: [
+      [],
+      [{ d: 1, c: 30, n: 'actorChild', ca: [{ f: 0x01, b64: Buffer.from(childLoadBytecode).toString('base64') }] }],
+    ],
+    ac: [
+      { f: 1, b64: Buffer.from(rootF1GotoF2).toString('base64') },
+      { f: 2, b64: Buffer.from(rootF2Init).toString('base64') },
+    ],
+  };
+
+  const stage = new MockSvgNode('svg');
+  const rt = new ASTAVM1Runtime(Buffer.from(JSON.stringify(prog)).toString('base64'), { engine: { vars: {} } });
+  rt.mount(stage, stage);
+
+  // Parent-before-child frame script execution order assertions
+  assert.equal(rt.rootClip._vars.seenInLoad, 42, 'Child onClipEvent(load) on Frame 2 must see parent Frame 2 DoAction variable (mazeReady=42)');
+  assert.equal(rt.rootClip._vars.seenInChildF1, 42, 'Child Frame 1 DoAction on Frame 2 must see parent Frame 2 DoAction variable (mazeReady=42)');
+
+  // Prototype-before-initObj in attachMovie assertions
+  const spawned = rt.rootClip._vars.spawned;
+  assert.ok(spawned, 'attachMovie must return spawned MovieClip');
+  assert.equal(spawned._vars._scaled, 70, 'attachMovie must attach registered class prototype BEFORE initObj so addProperty setter runs (7*10=70)');
+  assert.equal(spawned._vars.ctorSawScaled, 70, 'Registered class constructor must see properties initialized by initObj setter');
+
+  // Offline XML parsing assertions
+  const parsedXml = rt.rootClip._vars.parsedXml;
+  assert.ok(parsedXml && parsedXml.firstChild, 'new XML(...) must parse root element');
+  assert.equal(parsedXml.firstChild.nodeName, 'a', 'XML.firstChild.nodeName must equal "a"');
+  assert.equal(parsedXml.firstChild.attributes.k, '1', 'XML.firstChild.attributes.k must equal "1"');
+  assert.equal(parsedXml.firstChild.firstChild.nodeName, 'b', 'Nested self-closing <b/> must parse');
+
+  // Advance VM time 200ms so offline LoadVars.load(), XML.load(), and FlashSound fallback completion timers fire
+  for (let i = 0; i < 6; i++) rt.step(0.04);
+
+  assert.equal(rt.rootClip._vars.lvOk, false, 'Offline LoadVars.load() must invoke onLoad(false) via VM timer instead of hanging');
+  assert.equal(rt.rootClip._vars.xmlOk, false, 'Offline XML.load() must invoke onLoad(false) via VM timer instead of hanging');
+
+  const snd = rt.rootClip._vars.snd;
+  assert.equal(rt.rootClip._vars.sndDone, 1, 'FlashSound onSoundComplete must fire cleanly even without Web Audio');
+  assert.ok(snd.duration >= 95 && snd.duration <= 105, `FlashSound.duration should be ~100ms, got ${snd.duration}`);
+  assert.equal(snd.position, snd.duration, 'FlashSound.position must equal duration after natural completion');
+  snd.stop();
+  assert.equal(snd.position, 0, 'FlashSound.position must reset to 0 after stop()');
+
+  const rep = rt.getDebugReport();
+  assert.equal(rep.runtime, 'avm1');
+  assert.equal(rep.avm1Faults.runtimeErrors.length, 0);
+  rt.destroy();
+
+  // 2) AVM2 Document Class stage availability during constructor + getDebugReport()
+  const avm2Code = fs.readFileSync(path.resolve('static/player/ast-avm2-vm.js'), 'utf8');
+  const mockDoc2 = {
+    createElementNS: (_ns: string, tag: string) => new MockSvgNode(tag),
+    createElement: (tag: string) => new MockSvgNode(tag),
+  };
+  const avm2Sandbox: any = {
+    console, Math, Date, Number, String, Boolean, Array, Object, Map, Set, RegExp, JSON,
+    Uint8Array, Float32Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
+    atob: (s: string) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s: string) => Buffer.from(s, 'binary').toString('base64'),
+    performance: { now: () => Date.now() },
+    document: mockDoc2,
+  };
+  avm2Sandbox.globalThis = avm2Sandbox;
+  avm2Sandbox.window = avm2Sandbox;
+  vm.runInNewContext(avm2Code, avm2Sandbox);
+
+  const avm2Prog = {
+    v: 2, swfVer: 10, fps: 30, w: 500, h: 400, bg: '#000000', fc: 1,
+    dc: 'MainDoc', l: [], sh: {}, et: {}, bt: {}, sp: {}, sc: {}, abc: [], fr: [[]],
+  };
+  const avm2Stage = new MockSvgNode('svg');
+  const avm2Rt = new avm2Sandbox.ASTAVM2Runtime(Buffer.from(JSON.stringify(avm2Prog)).toString('base64'), { engine: { vars: {} } });
+
+  let stageSeenInCtor: any = null;
+  let keyListenerWorked = false;
+  // Register synthetic ABC-backed Document Class extending flash.display.MovieClip whose iinit reads this.stage
+  const mcClass = avm2Rt._classes.get('flash.display.MovieClip');
+  const docClassDesc: any = {
+    qname: 'MainDoc',
+    simpleName: 'MainDoc',
+    superClass: mcClass,
+    abc: { cpool: {}, methods: [{ body: {} }] },
+    instInfo: { iinit: 0 },
+    instanceTraits: new Map(),
+    staticTraits: new Map(),
+    staticObj: {},
+    scopeChain: [],
+    symbolCharId: 0,
+  };
+  avm2Rt._classes.set('MainDoc', docClassDesc);
+  const origExecMethod = avm2Rt._execMethod.bind(avm2Rt);
+  avm2Rt._execMethod = (abc: any, methodIdx: number, thisObj: any, args: any[], scopeChain: any[]) => {
+    if (abc === docClassDesc.abc && methodIdx === 0) {
+      stageSeenInCtor = thisObj.stage;
+      if (thisObj.stage && typeof thisObj.stage.addEventListener === 'function') {
+        thisObj.stage.addEventListener('keyDown', () => { keyListenerWorked = true; });
+      }
+      return undefined;
+    }
+    return origExecMethod(abc, methodIdx, thisObj, args, scopeChain);
+  };
+
+  avm2Rt.mount(avm2Stage, avm2Stage);
+  assert.ok(stageSeenInCtor && stageSeenInCtor === avm2Rt.stage, 'AVM2 Document Class constructor must have non-null this.stage before iinit runs');
+  avm2Rt.handleForwardedKeyEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 });
+  assert.equal(keyListenerWorked, true, 'stage.addEventListener(KEY_DOWN) attached in AVM2 Document Class constructor must receive key events');
+
+  const avm2Rep = avm2Sandbox.__getSwfDebugReport();
+  assert.ok(avm2Rep && avm2Rep.runtime === 'avm2', '__getSwfDebugReport() must return live AVM2 debug snapshot');
+  assert.equal(avm2Rep.runtimeSnapshot.documentClass, 'MainDoc');
+  avm2Rt.destroy();
+
+  console.log('✓ Test 7 passed: Frame Lifecycle Order, attachMovie initObj Order, Sound.position Completion, Offline LoadVars/XML & AVM2 Document Class Stage Constructor Access');
+}
+
 (async () => {
   await testSwfSoundEngine();
   await testPureSvgVisualFx();
@@ -1377,6 +1648,8 @@ async function testAvm1ExtendedCompliance() {
   await testDecoupledMediaInputRoute();
   await testAvm1CoreSpecCompliance();
   await testAvm1ExtendedCompliance();
+  await testAvm1AndAvm2LifecycleCompliance();
   console.log('ALL RUFFLE-PARITY SWF ENGINE TESTS PASSED!');
   process.exit(0);
 })();
+

@@ -3000,10 +3000,16 @@
       }
 
       // If this class is bound to a SymbolClass Sprite or Document Class (charId === 0), attach timeline children
+      const isRootDocClass = clsDesc.qname === this.program.dc || clsDesc.simpleName === this.program.dc;
+      if (isRootDocClass && this.stage && !this.rootDoc && obj instanceof AS3DisplayObject) {
+        this.rootDoc = obj;
+        this.rootClip = obj;
+        this.stage.addChild(obj);
+      }
       if (clsDesc.symbolCharId > 0 && this.program.sp && this.program.sp[clsDesc.symbolCharId]) {
         if (obj instanceof AS3MovieClip) obj._syncTimeline();
         else this._syncTimelineFrame(obj, this.program.sp[clsDesc.symbolCharId], 1);
-      } else if (clsDesc.qname === this.program.dc || clsDesc.simpleName === this.program.dc) {
+      } else if (isRootDocClass) {
         if (obj instanceof AS3MovieClip) obj._syncTimeline();
         else this._syncTimelineFrame(obj, { fr: this.program.fr || [] }, 1);
       }
@@ -4122,14 +4128,44 @@
       this.rootDoc = docInst;
       this.rootClip = docInst;
       this.rootClip._totalframes = docInst.totalFrames || this.program.fc || 1;
-      this.stage.addChild(docInst);
+      if (docInst.parent !== this.stage) this.stage.addChild(docInst);
 
       if (doc) this.stage._syncSvg(doc);
+
+      // Register active AVM2 runtime for shared console debug inspection
+      if (!global.__SWF_DEBUG_STATE__) {
+        global.__SWF_DEBUG_STATE__ = { importSummary: { totalTagsParsed: 0, cachedDefsShapes: 0, skippedTagIds: [] }, activeRuntime: null };
+      }
+      global.__SWF_DEBUG_STATE__.activeRuntime = this;
 
       // Register independently on Universal Media Input Bus (zero duplicate window listeners!)
       this._bindUniversalInputSink();
       this._mounted = true;
       return this;
+    }
+
+    getDebugReport() {
+      const root = this.rootDoc;
+      return {
+        runtime: 'avm2',
+        runtimeSnapshot: {
+          swfVer: this.program && this.program.swfVer ? this.program.swfVer : 9,
+          fps: this.fps || 24,
+          documentClass: (this.program && this.program.dc) || '',
+          rootFrame: root ? (root.currentFrame || 1) : 0,
+          totalFrames: root ? (root.totalFrames || 1) : 0,
+          playing: root ? Boolean(root._playing) : false,
+          tickCount: this._tickCount || 0,
+          elapsedMs: Math.round(this._elapsedMs || 0),
+          activeTimers: this._timers ? this._timers.size : 0,
+          activeIntervals: this._intervals ? this._intervals.size : 0,
+          stageChildren: this.stage && this.stage._children ? this.stage._children.length : 0,
+          rootChildren: root && root._children ? root._children.length : 0,
+          warnings: this._warnings ? this._warnings.slice(-20) : [],
+          recentTraces: this._traces ? this._traces.slice(-20) : [],
+          budgetHits: this._budgetHits || 0,
+        },
+      };
     }
 
     _bindUniversalInputSink() {
@@ -4149,6 +4185,8 @@
       if (gestures && typeof gestures.registerMediaInputSink === 'function') {
         const sinkId = `avm2-runtime-${++this._instanceSeq}`;
         gestures.registerMediaInputSink(sinkId, {
+          exclusiveKeyboard: true,
+          exclusivePointer: true,
           onInput: (payload) => {
             if (!payload || !payload.channel) return false;
             const orig = payload.originalEvent || {};
@@ -4529,9 +4567,23 @@
     }
   }
 
+  function __getSwfDebugReportAvm2() {
+    const shared = global.__SWF_DEBUG_STATE__;
+    if (shared && shared.activeRuntime && typeof shared.activeRuntime.getDebugReport === 'function') {
+      return shared.activeRuntime.getDebugReport();
+    }
+    return { runtime: 'avm2', runtimeSnapshot: null };
+  }
+
   global.ASTAVM2Runtime = ASTAVM2Runtime;
+  if (typeof global.__getSwfDebugReport !== 'function') {
+    global.__getSwfDebugReport = __getSwfDebugReportAvm2;
+  }
   if (typeof window !== 'undefined') {
     window.ASTAVM2Runtime = ASTAVM2Runtime;
+    if (typeof window.__getSwfDebugReport !== 'function') {
+      window.__getSwfDebugReport = __getSwfDebugReportAvm2;
+    }
   }
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
