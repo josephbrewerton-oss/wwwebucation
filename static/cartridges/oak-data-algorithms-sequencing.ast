@@ -9,7 +9,7 @@
         :options ("A precise, step-by-step set of instructions to solve a problem or complete a task" "The physical glass screen of a tablet computer" "A computer virus that steals passwords from websites" "A keyboard shortcut used to delete a whole paragraph")
         :answer 0
         :tier "recall"
-        :hint "Think of a recipe in cooking or a Lego construction manual."
+        :hint "Think of a recipe in cooking or a set of interlocking brick instructions."
         :explanation "An algorithm is an ordered, unambiguous set of rules or steps that takes an input and reliably produces the desired output."
         :misconceptions ("Correct! An algorithm is a precise, ordered sequence of instructions." "Misconception: A tablet screen is physical display hardware." "Misconception: A virus is malicious software, not the definition of an algorithm." "Misconception: A keyboard shortcut is an input event, not an algorithm.")
     )

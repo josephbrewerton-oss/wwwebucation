@@ -36,6 +36,12 @@ import {
   BslGrammarAnalysis,
 } from '../utils/bslGrammarEngine';
 import {
+  isNanoBslEnhancementReady,
+  shouldEnhanceBslWithNano,
+  getCachedNanoBslAnalysis,
+  enhanceBslWithNano,
+} from '../utils/nanoBslEnhancer';
+import {
   buildBslInterpreterShellHtml,
   buildBslQuickPillsMarkup,
   getMakatonSymbolPictogram,
@@ -99,6 +105,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private grammarMode: BslGrammarMode = 'bsl-natural';
   private voiceEnabled = true;
   private lastUtteranceText = '';
+  private utteranceSeqId = 0;
+  private pendingNanoRaceTimer: number | null = null;
 
   // Animation Loop State
   private animationFrameId: number | null = null;
@@ -219,6 +227,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
       window.removeEventListener('resize', this.boundWindowResize);
       this.boundWindowResize = undefined;
     }
+    if (this.pendingNanoRaceTimer !== null) {
+      window.clearTimeout(this.pendingNanoRaceTimer);
+      this.pendingNanoRaceTimer = null;
+    }
+    this.utteranceSeqId++;
     if (this.pipWindow) {
       this.dockBackFromPiP(true);
     }
@@ -947,9 +960,61 @@ export class NativeBslInterpreterElement extends HTMLElement {
       }
     }
 
-    // Linguistic Grammar Analysis (BSL Level 6 / Makaton / Fingerspelling)
-    const analysis: BslGrammarAnalysis = analyzeAndTransformBslGrammar(cleanText, this.grammarMode);
+    // Cancel any pending Nano race timer from a previous utterance
+    const seqId = ++this.utteranceSeqId;
+    if (this.pendingNanoRaceTimer !== null) {
+      window.clearTimeout(this.pendingNanoRaceTimer);
+      this.pendingNanoRaceTimer = null;
+    }
+
+    // Fast <1ms Deterministic Linguistic Grammar Analysis (BSL Level 6 / Makaton / Fingerspelling)
+    const activeMode = this.grammarMode;
+    const baseline: BslGrammarAnalysis = analyzeAndTransformBslGrammar(cleanText, activeMode);
+
+    // Optional On-Device Gemini Nano Boost (strictly gated on consent + Tier-1 Nano availability):
+    // Resolves unknown words to verified lexicon signs, refines BSL Topic-Comment/spatial grammar,
+    // and distils core Makaton keywords — with 0ms LRU cache hits and a 450ms fast-race ceiling
+    // so live signing never stalls.
+    if (isNanoBslEnhancementReady() && shouldEnhanceBslWithNano(cleanText, activeMode, baseline)) {
+      const cached = getCachedNanoBslAnalysis(cleanText, activeMode);
+      if (cached) {
+        this.applyGrammarAnalysis(cleanText, cached, true);
+        return;
+      }
+
+      let dispatched = false;
+      this.pendingNanoRaceTimer = window.setTimeout(() => {
+        this.pendingNanoRaceTimer = null;
+        if (!dispatched && seqId === this.utteranceSeqId && this.grammarMode === activeMode) {
+          dispatched = true;
+          this.applyGrammarAnalysis(cleanText, baseline, false);
+        }
+      }, 450);
+
+      void enhanceBslWithNano(cleanText, activeMode, baseline, 1800).then((enhanced) => {
+        if (this.pendingNanoRaceTimer !== null && seqId === this.utteranceSeqId) {
+          window.clearTimeout(this.pendingNanoRaceTimer);
+          this.pendingNanoRaceTimer = null;
+        }
+        if (dispatched || seqId !== this.utteranceSeqId || this.grammarMode !== activeMode) {
+          return;
+        }
+        dispatched = true;
+        this.applyGrammarAnalysis(cleanText, enhanced || baseline, Boolean(enhanced));
+      });
+      return;
+    }
+
+    this.applyGrammarAnalysis(cleanText, baseline, false);
+  }
+
+  private applyGrammarAnalysis(
+    cleanText: string,
+    analysis: BslGrammarAnalysis,
+    nanoEnhanced: boolean = false
+  ) {
     const isMakaton = this.grammarMode === 'makaton';
+    const nanoPrefix = nanoEnhanced ? '✨ ' : '';
 
     this.currentGloss = analysis.glossSequence || cleanText.toUpperCase();
     this.currentSentenceType = analysis.sentenceType.toUpperCase();
@@ -962,8 +1027,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
     if (hudGloss) {
       hudGloss.style.background = isMakaton ? 'rgba(5,150,105,0.9)' : 'rgba(2,132,199,0.85)';
       hudGloss.textContent = isMakaton
-        ? `KEY WORDS: ${this.currentGloss.slice(0, 22)}`
-        : `GLOSS: ${this.currentGloss.slice(0, 24)}`;
+        ? `${nanoPrefix}KEY WORDS: ${this.currentGloss.slice(0, 22)}`
+        : `${nanoPrefix}GLOSS: ${this.currentGloss.slice(0, 24)}`;
     }
 
     const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
@@ -980,7 +1045,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       if (clToken && clToken.classifier) {
         this.activeClassifierText = `CL: ${clToken.classifier.type} (${clToken.aspect || 'normal'})`;
       } else {
-        this.activeClassifierText = 'CL: NONE';
+        this.activeClassifierText = nanoEnhanced ? 'NANO BSL-6' : 'CL: NONE';
       }
     }
     const hudCl = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-cl');
@@ -1041,6 +1106,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   public returnToRest() {
+    this.utteranceSeqId++;
+    if (this.pendingNanoRaceTimer !== null) {
+      window.clearTimeout(this.pendingNanoRaceTimer);
+      this.pendingNanoRaceTimer = null;
+    }
     this.poseQueue = [];
     this.updateMakatonSymbolCard(null);
     if (this.isIdle && this.targetPose.letter === 'REST') {

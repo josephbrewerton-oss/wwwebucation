@@ -32,7 +32,7 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 - [DNA Double Helix & Transcription](/player?preset=dna-helix): 3D base-pair hydrogen bonding and interactive strand unzipping
 - [Photosynthesis & Water Cycle](/player?preset=photosynthesis): Chloroplast light/Calvin reactions alongside Earth hydrology simulations
 - [Jacob's Ladder of Prime Bricks](/player?preset=jacobs-ladder-primes): Interactive Riemann Hypothesis lab with the Critical Line ($\sigma = 0.5$), 15 clickable zeta zeros, and live $\pi(x)$ vs $\text{Li}(x)$ alignment
-- [Modular Brick Engineering & Vector Racing](/player?preset=lego-blocks): 3D spatial geometry construction (`lego-blocks`) and continuous keyboard-driven kinematics (`vector-racing`)
+- [Modular Brick Engineering & Vector Racing](/player?preset=modular-bricks): 3D spatial geometry construction (`modular-bricks`) and continuous keyboard-driven kinematics (`vector-racing`)
 - [Inverted Pendulum & BBC Micro 6502](/player?preset=pendulum_dyno): Cart-pole control systems (`pendulum_dyno`) and historical Acorn MOS 6502 computing (`bbc-model-b`)
 
 ## Humanities, Literacy & Catholic Sanctuary Cartridges

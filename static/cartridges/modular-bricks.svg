@@ -1,14 +1,14 @@
 <svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <!-- Background Workshop Floor Gradients -->
-    <radialGradient id="lego-bg" cx="50%" cy="45%" r="75%">
+    <radialGradient id="brick-bg" cx="50%" cy="45%" r="75%">
       <stop offset="0%" stop-color="#1e293b" />
       <stop offset="60%" stop-color="#0f172a" />
       <stop offset="100%" stop-color="#020617" />
     </radialGradient>
 
     <!-- Blueprint Grid Pattern -->
-    <pattern id="lego-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+    <pattern id="brick-grid" width="24" height="24" patternUnits="userSpaceOnUse">
       <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#334155" stroke-width="0.75" stroke-opacity="0.35" />
       <circle cx="24" cy="24" r="1" fill="#475569" fill-opacity="0.5" />
     </pattern>
@@ -22,11 +22,11 @@
     </radialGradient>
 
     <!-- Drop Shadows -->
-    <filter id="lego-drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
+    <filter id="brick-drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.75" />
     </filter>
 
-    <filter id="lego-subtle-shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <filter id="brick-subtle-shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.5" />
     </filter>
 
@@ -73,15 +73,15 @@
   </defs>
 
   <!-- 1. Workshop Floor & Background Grid -->
-  <rect width="800" height="480" fill="url(#lego-bg)" />
-  <rect width="800" height="480" fill="url(#lego-grid)" />
+  <rect width="800" height="480" fill="url(#brick-bg)" />
+  <rect width="800" height="480" fill="url(#brick-grid)" />
 
   <!-- 2. Header Status & Title Bar -->
-  <g id="lego-header" data-interactive="true" transform="translate(24, 20)">
+  <g id="brick-header" data-interactive="true" transform="translate(24, 20)">
     <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
 
     <g transform="translate(14, 13)">
-      <rect id="lego-logo-base" x="0" y="0" width="16" height="16" rx="3" fill="#e11d48" />
+      <rect id="brick-logo-base" x="0" y="0" width="16" height="16" rx="3" fill="#e11d48" />
       <circle cx="5" cy="5" r="2.2" fill="#ffffff" fill-opacity="0.35" />
       <circle cx="11" cy="5" r="2.2" fill="#ffffff" fill-opacity="0.35" />
       <circle cx="5" cy="11" r="2.2" fill="#000000" fill-opacity="0.25" />
@@ -94,7 +94,7 @@
     <!-- Real-time Quick Metric Badge -->
     <g transform="translate(552, 9)">
       <rect x="0" y="0" width="188" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text id="lego-badge-text" x="94" y="16" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle" font-family="ui-monospace, monospace">32×16×9.6 mm • 4.9 cm³</text>
+      <text id="brick-badge-text" x="94" y="16" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle" font-family="ui-monospace, monospace">32×16×9.6 mm • 4.9 cm³</text>
     </g>
   </g>
 
@@ -104,7 +104,7 @@
     <ellipse id="turntable-hitbox" cx="0" cy="65" rx="260" ry="110" fill="#000000" fill-opacity="0.001" pointer-events="all" style="cursor: grab;" />
 
     <!-- Turntable Ellipse Cast Shadow -->
-    <ellipse cx="0" cy="80" rx="260" ry="85" fill="#000000" opacity="0.6" filter="url(#lego-drop-shadow)" />
+    <ellipse cx="0" cy="80" rx="260" ry="85" fill="#000000" opacity="0.6" filter="url(#brick-drop-shadow)" />
 
     <!-- Isometric Turntable Disc -->
     <ellipse cx="0" cy="65" rx="220" ry="72" fill="url(#turntable-grad)" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.8" />
@@ -120,7 +120,7 @@
     </g>
 
     <!-- 4. Interactive 3D Spinning Brick Stage Node -->
-    <g id="brick-3d-stage" filter="url(#lego-drop-shadow)">
+    <g id="brick-3d-stage" filter="url(#brick-drop-shadow)">
 
       <!-- Baseplate Substrate (Visible when in Stacked Wall mode) -->
       <g id="brick-baseplate" opacity="0" style="transition: opacity 0.3s ease;">
@@ -337,7 +337,7 @@
     </g>
 
     <!-- 5. Overlay Dimension Annotations (Toggleable) -->
-    <g id="lego-dimension-overlays" opacity="1">
+    <g id="brick-dimension-overlays" opacity="1">
       <line x1="-122" y1="-8" x2="22" y2="64" stroke="#38bdf8" stroke-width="1.5" />
       <rect x="-82" y="16" width="56" height="18" rx="4" fill="#0b1120" stroke="#38bdf8" stroke-width="1" />
       <text id="dim-length-text" x="-54" y="28" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">32.0 mm</text>
@@ -358,33 +358,33 @@
   </g>
 
   <!-- 6. Left Control Deck: Brick Models & Color Palette -->
-  <g id="lego-left-deck" data-interactive="true" transform="translate(24, 75)">
+  <g id="brick-left-deck" data-interactive="true" transform="translate(24, 75)">
     <rect width="180" height="340" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
 
     <text x="16" y="24" fill="#94a3b8" font-size="9.5" font-weight="800" letter-spacing="0.5">SELECT BRICK GEOMETRY:</text>
 
     <!-- Brick Type Selector Buttons -->
-    <g id="btn-type-2x4" class="lego-btn" transform="translate(14, 34)" cursor="pointer">
+    <g id="btn-type-2x4" class="brick-btn" transform="translate(14, 34)" cursor="pointer">
       <rect id="btn-type-2x4-rect" width="152" height="30" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.6" />
       <text id="btn-type-2x4-txt" x="12" y="19" fill="#ffffff" font-size="11" font-weight="800">🧱 2×4 Standard (8 Stud)</text>
     </g>
 
-    <g id="btn-type-2x2" class="lego-btn" transform="translate(14, 70)" cursor="pointer">
+    <g id="btn-type-2x2" class="brick-btn" transform="translate(14, 70)" cursor="pointer">
       <rect id="btn-type-2x2-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
       <text id="btn-type-2x2-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📦 2×2 Cube (4 Stud)</text>
     </g>
 
-    <g id="btn-type-1x2" class="lego-btn" transform="translate(14, 106)" cursor="pointer">
+    <g id="btn-type-1x2" class="brick-btn" transform="translate(14, 106)" cursor="pointer">
       <rect id="btn-type-1x2-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
       <text id="btn-type-1x2-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📏 1×2 Beam (2 Stud)</text>
     </g>
 
-    <g id="btn-type-slope" class="lego-btn" transform="translate(14, 142)" cursor="pointer">
+    <g id="btn-type-slope" class="brick-btn" transform="translate(14, 142)" cursor="pointer">
       <rect id="btn-type-slope-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
       <text id="btn-type-slope-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📐 2×4 Roof Slope 45°</text>
     </g>
 
-    <g id="btn-type-tile" class="lego-btn" transform="translate(14, 178)" cursor="pointer">
+    <g id="btn-type-tile" class="brick-btn" transform="translate(14, 178)" cursor="pointer">
       <rect id="btn-type-tile-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
       <text id="btn-type-tile-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">🛡️ 2×4 Smooth Tile</text>
     </g>
@@ -419,7 +419,7 @@
   </g>
 
   <!-- 7. Right Telemetry & Engineering Card -->
-  <g id="lego-right-card" data-interactive="true" transform="translate(596, 75)">
+  <g id="brick-right-card" data-interactive="true" transform="translate(596, 75)">
     <rect width="180" height="340" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
 
     <text x="16" y="24" fill="#38bdf8" font-size="10" font-weight="800" letter-spacing="0.5">📐 SPATIAL DIMENSIONS</text>
@@ -473,29 +473,29 @@
   </g>
 
   <!-- 8. Bottom In-Stage Interactive Action Toolbar -->
-  <g id="lego-bottom-bar" data-interactive="true" transform="translate(24, 426)">
+  <g id="brick-bottom-bar" data-interactive="true" transform="translate(24, 426)">
     <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
 
     <!-- 360° Turntable Spin Control -->
-    <g id="btn-action-spin" class="lego-btn" transform="translate(12, 7)" cursor="pointer">
+    <g id="btn-action-spin" class="brick-btn" transform="translate(12, 7)" cursor="pointer">
       <rect id="btn-spin-rect" width="116" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
       <text id="txt-spin-btn" x="58" y="18" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">⚡ Spin 360°: ON</text>
     </g>
 
     <!-- Flip Underside View Toggle -->
-    <g id="btn-action-flip" class="lego-btn" transform="translate(134, 7)" cursor="pointer">
+    <g id="btn-action-flip" class="brick-btn" transform="translate(134, 7)" cursor="pointer">
       <rect id="btn-flip-rect" width="134" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
       <text id="txt-flip-btn" x="67" y="18" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">🔄 View: TOP STUDS</text>
     </g>
 
     <!-- Explode View Toggle -->
-    <g id="btn-action-explode" class="lego-btn" transform="translate(274, 7)" cursor="pointer">
+    <g id="btn-action-explode" class="brick-btn" transform="translate(274, 7)" cursor="pointer">
       <rect id="btn-explode-rect" width="116" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
       <text id="txt-explode-btn" x="58" y="18" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">💥 Explode: OFF</text>
     </g>
 
     <!-- Engineering Dimensions Toggle -->
-    <g id="btn-action-dimensions" class="lego-btn" transform="translate(396, 7)" cursor="pointer">
+    <g id="btn-action-dimensions" class="brick-btn" transform="translate(396, 7)" cursor="pointer">
       <rect id="btn-dimensions-rect" width="116" height="28" rx="6" fill="#1e293b" stroke="#facc15" stroke-width="1.2" />
       <text id="txt-dimensions-btn" x="58" y="18" fill="#facc15" font-size="10" font-weight="800" text-anchor="middle">📏 Dimensions: ON</text>
     </g>
@@ -504,11 +504,11 @@
     <g transform="translate(518, 9)">
       <text x="0" y="16" fill="#94a3b8" font-size="8.5" font-weight="700">ORBIT:</text>
       <rect x="42" y="6" width="124" height="10" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <circle id="lego-yaw-knob" cx="42" cy="11" r="7" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" cursor="ew-resize" />
+      <circle id="brick-yaw-knob" cx="42" cy="11" r="7" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" cursor="ew-resize" />
     </g>
 
     <!-- Reset View Button -->
-    <g id="btn-action-reset" class="lego-btn" transform="translate(696, 7)" cursor="pointer">
+    <g id="btn-action-reset" class="brick-btn" transform="translate(696, 7)" cursor="pointer">
       <rect width="44" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
       <text x="22" y="18" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">↺</text>
     </g>

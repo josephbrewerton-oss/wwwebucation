@@ -1,4 +1,4 @@
-(:scene :id "lego-blocks" :type "Sim" :oak-id "OAK-KS3-DT-001" :oak-unit "ks3-design-technology-modular-structures-spatial-geometry" :title "Modular Brick Engineering & 3D Spatial Geometry" :stage "KS2/KS3 DESIGN & TECH" :duration 16.0
+(:scene :id "modular-bricks" :type "Sim" :oak-id "OAK-KS3-DT-001" :oak-unit "ks3-design-technology-modular-structures-spatial-geometry" :title "Modular Brick Engineering & 3D Spatial Geometry" :stage "KS2/KS3 DESIGN & TECH" :duration 16.0
   (:vars (
     (:var :name "brickType" :val "2x4" :label "Brick Geometry Form Factor")
     (:var :name "brickColor" :val "red" :label "ABS Injection Color")
@@ -44,7 +44,7 @@
     (:trackball :target "#stage-svg" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
     (:trackball :target "#turntable-root" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
     (:trackball :target "#brick-3d-stage" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
-    (:draggable :target "#lego-yaw-knob" :axis "x" :min-x 42 :max-x 166 :var "turntableYaw" :relative true)
+    (:draggable :target "#brick-yaw-knob" :axis "x" :min-x 42 :max-x 166 :var "turntableYaw" :relative true)
 
     ;; Brick Form Factor Buttons
     (:clickable :target "#btn-type-2x4" :set "brickType" :val "2x4")
@@ -90,7 +90,7 @@
       :prompt "What is the mathematical ratio between a standard brick's height (9.6 mm) and a flat construction plate's height (3.2 mm)?"
       :options ("3 : 1 (3 plates stacked equal 1 standard brick)" "2 : 1 (2 plates equal 1 brick)" "4 : 1 (4 plates equal 1 brick)" "1 : 1 (they are identical)")
       :answer 0
-      :explanation "Standard LEGO-compatible modular systems enforce an exact 3:1 height ratio: three plates stacked together (3 × 3.2 mm = 9.6 mm) equal exactly one brick height.")
+      :explanation "Standard interlocking modular brick systems enforce an exact 3:1 height ratio: three plates stacked together (3 × 3.2 mm = 9.6 mm) equal exactly one brick height.")
     (:checkpoint :t 0.80
       :prompt "In masonry and modular brick architecture, why is staggered (overlapping) bonding far stronger than stack bonding?"
       :options ("Overlapping distributes shear tension across adjacent units, preventing vertical seam cracks." "It uses fewer plastic polymers." "It reduces overall mass." "It allows bricks to slide freely.")
@@ -137,7 +137,7 @@
     (:target "#brick-grad-left-1" :attr "stop-color" :expr "vars.absLeft1")
     (:target "#brick-grad-right-0" :attr "stop-color" :expr "vars.absRight0")
     (:target "#brick-grad-right-1" :attr "stop-color" :expr "vars.absRight1")
-    (:target "#lego-logo-base" :attr "fill" :expr "vars.absTop1")
+    (:target "#brick-logo-base" :attr "fill" :expr "vars.absTop1")
 
     (:target "#master-stud-wall" :attr "fill" :expr "vars.absLeft0")
     (:target "#master-stud-top" :attr "fill" :expr "vars.absTop0")
@@ -204,7 +204,7 @@
     ;; 5. Stack Mode, Dimensions, Bottom Toolbar Buttons & Scrubber Knob
     (:target "#brick-baseplate" :attr "opacity" :expr "vars.stackMode ? 1 : 0")
     (:target "#brick-bottom-layer" :attr "opacity" :expr "vars.stackMode ? 1 : 0")
-    (:target "#lego-dimension-overlays" :attr "opacity" :expr "vars.showDimensions ? 1 : 0")
+    (:target "#brick-dimension-overlays" :attr "opacity" :expr "vars.showDimensions ? 1 : 0")
     (:target "#dim-pitch-group" :attr "opacity" :expr "vars.brickType === 'tile' ? 0 : 1")
     (:target "#dim-length-text" :attr "text" :expr "(vars.brickType === '2x2' || vars.brickType === '1x2') ? '16.0 mm' : '32.0 mm'")
     (:target "#dim-width-text" :attr "text" :expr "vars.brickType === '1x2' ? '8.0 mm' : '16.0 mm'")
@@ -234,10 +234,10 @@
     (:target "#txt-stack-mode" :attr "fill" :expr "vars.stackMode ? '#34d399' : '#94a3b8'")
     (:target "#txt-stack-mode" :attr "text" :expr "vars.stackMode ? '🧱 WALL STACK: ACTIVE' : '🧱 WALL STACK: OFF'")
 
-    (:target "#lego-yaw-knob" :attr "cx" :expr "42 + (vars.currentYaw / 360) * 124")
+    (:target "#brick-yaw-knob" :attr "cx" :expr "42 + (vars.currentYaw / 360) * 124")
 
     ;; 6. Engineering Telemetry & Header Readouts
-    (:target "#lego-badge-text" :attr "text" :expr "vars.brickType === '2x2' ? '16×16×9.6 mm • 2.5 cm³' : (vars.brickType === '1x2' ? '16×8×9.6 mm • 1.2 cm³' : (vars.brickType === 'slope' ? '32×16×9.6 mm • 3.3 cm³' : (vars.brickType === 'tile' ? '32×16×3.2 mm • 1.6 cm³' : '32×16×9.6 mm • 4.9 cm³')))")
+    (:target "#brick-badge-text" :attr "text" :expr "vars.brickType === '2x2' ? '16×16×9.6 mm • 2.5 cm³' : (vars.brickType === '1x2' ? '16×8×9.6 mm • 1.2 cm³' : (vars.brickType === 'slope' ? '32×16×9.6 mm • 3.3 cm³' : (vars.brickType === 'tile' ? '32×16×3.2 mm • 1.6 cm³' : '32×16×9.6 mm • 4.9 cm³')))")
     (:target "#stat-brick-type" :attr "text" :expr "vars.brickType.toUpperCase()")
     (:target "#stat-brick-height" :attr "text" :expr "vars.brickType === 'tile' ? '3.2 mm (1p)' : '9.6 mm (3p)'")
     (:target "#stat-studs" :attr "text" :expr "vars.brickType === 'slope' ? '4 ridge studs' : (vars.brickType === 'tile' ? '0 (smooth)' : (vars.studCount + ' studs'))")

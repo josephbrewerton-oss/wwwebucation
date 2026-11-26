@@ -967,8 +967,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
-    "id": "lego-blocks",
-    "base": "lego-blocks",
+    "id": "modular-bricks",
+    "base": "modular-bricks",
     "type": "Sim",
     "kind": "lab",
     "isPlayableScene": true,
@@ -981,7 +981,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "isCore": true,
     "featured": false,
     "tier": "core",
-    "mount": "/curriculum/computing/lego-blocks",
+    "mount": "/curriculum/computing/modular-bricks",
     "section": "Computing & Design Technology",
     "hasCheckpoints": true,
     "checkpointCount": 2

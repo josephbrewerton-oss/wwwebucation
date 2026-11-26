@@ -112,8 +112,11 @@ const VALID_ROUTES = [
   '/bsl',
   '/shakespeare',
   '/overseas-curriculums',
+  '/teacher-beacon',
+  '/news',
   '/licensing',
   '/privacy',
+  '/child-safety',
   '/profile',
   '/settings',
 ];

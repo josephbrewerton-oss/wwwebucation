@@ -559,7 +559,7 @@ const COMPUTING_ALGORITHMS_PAYLOAD: DataCartridgePayload = {
         'A keyboard shortcut used to delete a whole paragraph'
       ],
       answer: 0,
-      hint: 'Think of a recipe in cooking or a Lego construction manual.',
+      hint: 'Think of a recipe in cooking or a set of interlocking brick instructions.',
       explanation: 'An algorithm is an ordered, unambiguous set of rules or steps that takes an input and reliably produces the desired output.',
       tier: 'recall',
       misconceptions: [

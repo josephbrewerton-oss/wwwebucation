@@ -60,7 +60,15 @@ export function renderLicensingPage(): HTMLElement {
         </li>
         <li>
           <strong>Open Government Licence v3.0 (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">OGL v3</a>):</strong> 
-          Oak National Academy curriculum unit trajectories and national curriculum knowledge mappings.
+          Contains public sector information licensed under the Open Government Licence v3.0, incorporating UK National Curriculum frameworks and Oak National Academy unit trajectories.
+        </li>
+        <li>
+          <strong>Third-Party Open-Source Runtime (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">Apache 2.0</a>):</strong> 
+          Optional on-device Tier-2 WebGPU inference uses <code style="color: #0f172a;">@mlc-ai/web-llm</code> (MLC AI) and optional SmolLM2 weights (Hugging Face), each licensed under the Apache License, Version 2.0.
+        </li>
+        <li>
+          <strong>Public Domain Literary &amp; Liturgical Sources:</strong> 
+          Plays by William Shakespeare and traditional Latin liturgical and Scripture excerpts (Latin Vulgate and Douay-Rheims) are in the public domain.
         </li>
       </ul>
     </div>
@@ -76,7 +84,10 @@ export function renderLicensingPage(): HTMLElement {
           <strong>User Content Responsibility:</strong> Teachers, schools, and learners are responsible for ensuring they own, authored, or hold the appropriate licence or permission to convert, update, or reuse any third-party <code style="color: #0f172a;">.swf</code> or curriculum file they load locally.
         </li>
         <li>
-          <strong>Independent Tooling &amp; Trademark Notice:</strong> References to third-party formats and curricula are descriptive only. Adobe and Flash are trademarks of Adobe Inc.; PhET is a trademark of the University of Colorado Boulder; AQA, Edexcel, and OCR are trademarks of their respective awarding bodies. St Joseph's Curriculum Portal is an independent open-source project and is not affiliated with or endorsed by any of those organisations.
+          <strong>Sign Language Learning &amp; Training Aid:</strong> The procedural BSL and Makaton-style signing avatar is an assistive educational and practice tool to help pupils and staff learn and reinforce signs. It is not an alternative to or replacement for a qualified human BSL interpreter, Deaf tutor, or accredited Makaton training.
+        </li>
+        <li>
+          <strong>Independent Tooling &amp; Trademark Notice:</strong> References to third-party formats, curricula, and communication systems are descriptive only. Adobe and Flash are trademarks of Adobe Inc.; PhET is a trademark of the University of Colorado Boulder; Makaton is a registered trademark of The Makaton Charity; AQA, Edexcel, and OCR are trademarks of their respective awarding bodies. St Joseph's Curriculum Portal is an independent open-source project and is not affiliated with or endorsed by any of those organisations.
         </li>
       </ul>
     </div>

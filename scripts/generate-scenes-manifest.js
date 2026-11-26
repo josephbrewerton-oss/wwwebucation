@@ -173,7 +173,7 @@ export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
   } else if (
     oakSubjCode === 'COM' || oakSubjCode === 'DT' ||
     /\b(COMPUTING|BENCHMARK|STRESS|TECH|TECHNOLOGY|DESIGN)\b/.test(normStage) ||
-    /\b(fish-tank|bbc-model-b|lego-blocks|algorithms)\b/i.test(id)
+    /\b(fish-tank|bbc-model-b|modular-bricks|algorithms)\b/i.test(id)
   ) {
     inferSubject = 'Computing';
     inferSection = 'Computing & Design Technology';

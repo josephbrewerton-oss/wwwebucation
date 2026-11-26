@@ -185,6 +185,10 @@ export function buildBslInterpreterShellHtml(voiceEnabled: boolean, grammarMode:
                   Sign
                 </button>
               </form>
+
+              <p style="margin:0; font-size:0.63rem; color:#94a3b8; line-height:1.35;">
+                Educational training &amp; practice aid — supports learning and is not a replacement for a qualified human BSL interpreter or accredited tutor.
+              </p>
             </div>
 
           </div>

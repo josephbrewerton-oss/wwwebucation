@@ -1249,7 +1249,7 @@ export const CURRICULUM_KNOWLEDGE_BASE: Record<string, CurriculumTopicKnowledge>
     hook: 'What would happen if a recipe told you to bake a cake in the oven before mixing the flour and eggs?',
     guidedStep: 'Deconstruct a task into sequential inputs, processes, decision conditions (if/else), and outputs.',
     scaffoldHints: {
-      level1: 'Think of a recipe or building Lego: every step must be done in exact order or the result is ruined.',
+      level1: 'Think of a recipe or building with interlocking bricks: every step must be done in exact order or the result is ruined.',
       level2: 'Computers do exactly what you tell them, not what you meant to tell them. Bugs happen when steps are missing or out of order.',
       level3: 'Algorithms use sequence (step-by-step), selection (if condition then do X else Y), and repetition (loops).'
     },
@@ -1306,7 +1306,7 @@ export const CURRICULUM_KNOWLEDGE_BASE: Record<string, CurriculumTopicKnowledge>
           'Translating code into ancient languages'
         ],
         answerKey: 0,
-        hint: 'Think of taking a complex Lego castle apart into individual bricks or rooms.',
+        hint: 'Think of taking a complex brick castle apart into individual blocks or rooms.',
         explanation: 'Decomposition is a core computational thinking skill where you divide a complex challenge into smaller parts that are easier to solve.'
       },
       {

@@ -297,7 +297,7 @@ The portal includes both a PhET distillation bridge (`ast-phet-bridge.js` & `src
 51. **Solderless Breadboard & Ohm's Law Lab (`breadboard-components`)**: KS3/KS4 Engineering. Interactive breadboard wiring, resistors, LEDs, and live current diagnostics.
 52. **BBC Micro Model B: 6502 Computing (`bbc-model-b`)**: Computing History. Acorn MOS 6502 architecture, Mode 7 teletext memory map, and interactive BBC BASIC exploration.
 53. **Inverted Pendulum Dynamical System (`pendulum_dyno`)**: Control Engineering. Cart-pole dynamical system, state feedback stabilization, and real-time phase telemetry.
-54. **Modular Brick Engineering & 3D Spatial Geometry (`lego-blocks`)**: Design & Technology. Snap-grid 3D brick construction, spatial rotation, and structural symmetry.
+54. **Modular Brick Engineering & 3D Spatial Geometry (`modular-bricks`)**: Design & Technology. Snap-grid 3D brick construction, spatial rotation, and structural symmetry.
 55. **Vector Racing (`vector-racing`)**: Physics & Computing. Continuous press-and-hold keyboard steering (`:key` hold loop), velocity vectors, and track kinematics.
 
 ### 10.8. Decodable Phonics Storybooks (UK DfE Phases 2–5) & Early Alphabet

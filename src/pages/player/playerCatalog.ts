@@ -64,6 +64,7 @@ export function escapeHtml(str: string): string {
 export function normalizePresetId(raw: string | null | undefined): string {
   if (!raw) return DEFAULT_PRESET_ID;
   if (raw === 'lumina-architecture-manifesto') return 'lumina-architecture';
+  if (raw === 'lego-blocks') return 'modular-bricks';
   if (VALID_PRESET_IDS.has(raw)) return raw;
   try {
     const custom = getCustomCartridges();

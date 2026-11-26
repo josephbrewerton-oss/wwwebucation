@@ -222,14 +222,6 @@
       :bytecode "bytecode/latin-mass-prayers.astb")
 
     (:cartridge
-      :id "lego-blocks"
-      :type "Sim"
-      :title "Modular Brick Engineering & 3D Spatial Geometry"
-      :stage "KS2/KS3 DESIGN & TECH"
-      :oak-id "OAK-KS3-DT-001"
-      :bytecode "bytecode/lego-blocks.astb")
-
-    (:cartridge
       :id "liturgical-calendar"
       :type "Sim"
       :title "The Catholic Liturgical Year: Sacred Seasons & Colors"
@@ -260,6 +252,14 @@
       :stage "KS1/KS2 MATHS"
       :oak-id "OAK-KS1-MAT-007"
       :bytecode "bytecode/math-fishing.astb")
+
+    (:cartridge
+      :id "modular-bricks"
+      :type "Sim"
+      :title "Modular Brick Engineering & 3D Spatial Geometry"
+      :stage "KS2/KS3 DESIGN & TECH"
+      :oak-id "OAK-KS3-DT-001"
+      :bytecode "bytecode/modular-bricks.astb")
 
     (:cartridge
       :id "mountain-elevation"

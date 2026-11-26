@@ -23,6 +23,11 @@ import {
   project3DToSvg,
   Point3D,
 } from '../src/utils/bslAlphabet';
+import {
+  buildVerifiedNanoBslAnalysis,
+  isNanoBslEnhancementReady,
+  shouldEnhanceBslWithNano,
+} from '../src/utils/nanoBslEnhancer';
 
 console.log('🧪 Starting BSL In-Vision Interpreter Verification Harness...\n');
 
@@ -871,6 +876,81 @@ assert(bslName.tokens.some((t) => t.cleanWord === 'JOSEPH' && t.isFingerspelled)
   'BSL Level 6 fingerspells unlisted proper noun JOSEPH');
 assert(makName.tokens.every((t) => !t.isFingerspelled) && makName.stream.length < bslName.stream.length,
   'Makaton signs HELLO and omits manual fingerspelling of JOSEPH');
+
+// ---------------------------------------------------------
+// Test 19: On-Device Gemini Nano BSL & Makaton Enhancer Guardrails
+// ---------------------------------------------------------
+console.log('\n19. Testing Gemini Nano BSL & Makaton Enhancer Verification:');
+assert(isNanoBslEnhancementReady() === false, 'Eco Mode default: Nano BSL enhancer stays inactive without explicit consent & Prompt API');
+
+const complexUtterance = 'Yesterday the perplexed pupil observed heavy precipitation';
+const complexBaseline = analyzeAndTransformBslGrammar(complexUtterance, 'bsl-natural');
+assert(shouldEnhanceBslWithNano(complexUtterance, 'bsl-natural', complexBaseline) === true,
+  'Complex utterance with unmapped words qualifies for Nano enhancement');
+assert(shouldEnhanceBslWithNano('HELLO', 'fingerspell', analyzeAndTransformBslGrammar('HELLO', 'fingerspell')) === false,
+  'Fingerspell mode strictly bypasses Nano enhancement');
+
+const verifiedNanoBsl = buildVerifiedNanoBslAnalysis(
+  complexUtterance,
+  'bsl-natural',
+  {
+    sentenceType: 'statement',
+    eyebrows: 'neutral',
+    headTilt: 'neutral',
+    tokens: [
+      { gloss: 'YESTERDAY', role: 'time' },
+      { gloss: 'PUPIL', role: 'subject', locus: 'LOCUS_A', roleShiftYaw: 60 }, // yaw should clamp to 25
+      { gloss: 'THINK', role: 'modifier', eyebrows: 'furrowed' },
+      { gloss: 'WATER', role: 'object' },
+      { gloss: 'HELP', role: 'directional-verb', directionalVerb: 'help', fromLocus: 'ME', toLocus: 'LOCUS_A', aspect: 'durative' },
+      { gloss: 'HALLUCINATED_FAKE_SIGN_XYZ', role: 'verb' }, // MUST be rejected
+    ],
+  },
+  complexBaseline
+);
+
+assert(verifiedNanoBsl !== null && verifiedNanoBsl.nanoEnhanced === true,
+  'Verified Nano BSL plan synthesizes a valid EnhancedBslGrammarAnalysis');
+assert(
+  Boolean(verifiedNanoBsl && !verifiedNanoBsl.tokens.some((t) => t.gloss.includes('HALLUCINATED'))),
+  'Hallucinated glosses not in lexicon or original text are strictly rejected'
+);
+assert(
+  Boolean(verifiedNanoBsl && verifiedNanoBsl.tokens.some((t) => t.role === 'directional-verb' && t.directionalFrom === 'ME' && t.directionalTo === 'LOCUS_A')),
+  'Directional agreement verb trajectories synthesize cleanly from validated loci'
+);
+const roleShiftTok = verifiedNanoBsl?.tokens.find((t) => t.nmf?.roleShift);
+assert(
+  Boolean(roleShiftTok && roleShiftTok.nmf?.roleShift && roleShiftTok.nmf.roleShift.yaw === 25),
+  'Role-shift torso yaw is strictly clamped to anatomical [-25, +25] deg bounds'
+);
+assert(
+  Boolean(verifiedNanoBsl && verifiedNanoBsl.stream.length > 0 && verifiedNanoBsl.resolvedFingerspellCount >= 1),
+  `Nano synonym mapping reduced fingerspelling (resolved: ${verifiedNanoBsl?.resolvedFingerspellCount ?? 0})`
+);
+
+const makBaseline = analyzeAndTransformBslGrammar('Please examine the aquatic creature carefully', 'makaton');
+const verifiedNanoMak = buildVerifiedNanoBslAnalysis(
+  'Please examine the aquatic creature carefully',
+  'makaton',
+  {
+    tokens: [
+      { gloss: 'LOOK' },
+      { gloss: 'WATER' },
+      { gloss: 'WHY-RHQ' }, // Non-Makaton BSL operator MUST be rejected
+      { gloss: 'HALLUCINATED_SIGN' },
+    ],
+  },
+  makBaseline
+);
+assert(
+  Boolean(
+    verifiedNanoMak &&
+    verifiedNanoMak.tokens.length >= 1 &&
+    verifiedNanoMak.tokens.every((t) => !t.isFingerspelled && t.makatonStage !== undefined)
+  ),
+  'Makaton Nano enhancer strictly enforces verified Stage 1-8 core signs with zero fingerspelling'
+);
 
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);

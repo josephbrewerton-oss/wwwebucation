@@ -172,7 +172,7 @@ export function inferMisSubjectDomain(rawTopicId: string): string {
   if (/fraction|pythagoras|bodmas|algebra|calculus|times-tables|domino|math|elevation/.test(lower)) {
     return 'MATHEMATICS';
   }
-  if (/bbc-model|lego/.test(lower)) {
+  if (/bbc-model|modular-bricks/.test(lower)) {
     return 'COMPUTING & DT';
   }
   if (/phonics|spelling|shakespeare|macbeth/.test(lower)) {

@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-26T19:10:44.728Z",
+  "generatedAt": "2026-11-26T19:19:46.141Z",
   "totalCartridges": 79,
   "units": [
     {
@@ -416,7 +416,7 @@
       "section": "Computing & Design Technology",
       "stage": "KS2/KS3 DESIGN & TECH",
       "title": "Modular Brick Engineering & 3D Spatial Geometry",
-      "cartridgeId": "lego-blocks"
+      "cartridgeId": "modular-bricks"
     },
     {
       "unit": "ks3-physics-electricity-breadboard-circuits",
@@ -1622,8 +1622,8 @@
       "checkpointCount": 0
     },
     {
-      "id": "lego-blocks",
-      "base": "lego-blocks",
+      "id": "modular-bricks",
+      "base": "modular-bricks",
       "type": "Sim",
       "title": "Modular Brick Engineering & 3D Spatial Geometry",
       "stage": "KS2/KS3 DESIGN & TECH",
@@ -1631,11 +1631,11 @@
       "oakUnit": "ks3-design-technology-modular-structures-spatial-geometry",
       "subject": "Computing",
       "section": "Computing & Design Technology",
-      "mount": "/curriculum/computing/lego-blocks",
+      "mount": "/curriculum/computing/modular-bricks",
       "duration": 16,
-      "svgFile": "cartridges/lego-blocks.svg",
-      "astFile": "cartridges/lego-blocks.ast",
-      "astbFile": "bytecode/lego-blocks.astb",
+      "svgFile": "cartridges/modular-bricks.svg",
+      "astFile": "cartridges/modular-bricks.ast",
+      "astbFile": "bytecode/modular-bricks.astb",
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,
