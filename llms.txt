@@ -6,7 +6,7 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 
 ## Core Portal Endpoints
 - [Portal Home](/): Overview, featured live simulation stage, and curriculum learning pathways
-- [Interactive Science, Maths & Faith Labs](/player): 60 FPS AST Vector Media Player with 72 interactive simulations, parameter controls, smartboard ink, and procedural sonification
+- [Interactive Science, Maths & Faith Labs](/player): 60 FPS AST Vector Media Player with compiled interactive simulations, parameter controls, smartboard ink, procedural sonification, and lazy pure-SVG offline Flash `.swf` (AVM1/AVM2) import with zero `<canvas>` or WebGL
 - [Standalone Micro-Vector Player](/player.html): Embeddable zero-dependency vector stage, OBS broadcast link, and live SlideScript / AST Code Studio
 - [Interactive Practice Lab](/practice-lab): Diagnostic curriculum drills with step-by-step hints and misconception checks
 - [GCSE Exam Prep & Flashcards](/revision): AQA, Edexcel, and OCR 6-mark walkthroughs, active-recall flashcards, and audio dictation
