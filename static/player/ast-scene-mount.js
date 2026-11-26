@@ -1070,6 +1070,7 @@
       if (parsed.controls) this.scene.controls = parsed.controls;
       this.scene.swfVm = parsed.swfVm || parsed.swfVmPayload || null;
       this.scene.swfVmPayload = this.scene.swfVm;
+      this.scene._swfProgram = null;
       this.scene.keyframes = parsed.keyframes || [];
       this.scene.subtitles = parsed.subtitles || [];
       this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];

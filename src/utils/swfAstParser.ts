@@ -2683,6 +2683,11 @@ function parseClipActions(
     if (eventFlags & 0x0020) events.push('mouseUp');
     if (eventFlags & 0x0040) events.push('keyDown');
     if (eventFlags & 0x0080) events.push('keyUp');
+    if (eventFlags & 0x0400) events.push('press');
+    if (eventFlags & 0x0800) events.push('release');
+    if (eventFlags & 0x1000) events.push('releaseOutside');
+    if (eventFlags & 0x2000) events.push('rollOver');
+    if (eventFlags & 0x4000) events.push('rollOut');
     if (eventFlags & 0x20000) events.push('keyPress');
 
     const actionRecord = parseDoAction(reader, recordEnd, currentFrame, { clipPrefix, fileLength });
@@ -4392,7 +4397,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
         for (const snap of sp.frames) {
           for (const e of snap.entries.values()) {
-            if (e.clipActions?.some((ca) => ca.events.includes('mouseDown') || ca.events.includes('keyDown') || ca.events.includes('keyPress'))) {
+            if (e.clipActions?.some((ca) => ca.events.includes('mouseDown') || ca.events.includes('press') || ca.events.includes('release') || ca.events.includes('keyDown') || ca.events.includes('keyPress'))) {
               return true;
             }
             if (spriteHasInteractiveControl(e.characterId, visited)) return true;
@@ -4406,7 +4411,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         for (const tr of mainTrackList) {
           if (!tr.frameStates.has(frameNum)) continue;
           if (buttons.has(tr.characterId) || spriteHasInteractiveControl(tr.characterId)) return true;
-          if (tr.clipActions.some((ca) => ca.events.includes('mouseDown') || ca.events.includes('keyDown') || ca.events.includes('keyPress'))) {
+          if (tr.clipActions.some((ca) => ca.events.includes('mouseDown') || ca.events.includes('press') || ca.events.includes('release') || ca.events.includes('keyDown') || ca.events.includes('keyPress'))) {
             return true;
           }
         }
