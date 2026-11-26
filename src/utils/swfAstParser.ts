@@ -1920,11 +1920,22 @@ function parseDoAction(
       else if (code === 0x8A || code === 0x8D) record.usesPreloaderApi = true;
       if (code >= 0x80) {
         const length = reader.readUI16();
-        reader.offset = Math.min(tagEndOffset, reader.offset + length);
+        const pStart = reader.offset;
+        const pEnd = Math.min(tagEndOffset, pStart + length);
+        reader.offset = pEnd;
+        if ((code === 0x9B || code === 0x8E) && pEnd - pStart >= 2) {
+          const codeSize = (reader.bytes[pEnd - 2] | (reader.bytes[pEnd - 1] << 8)) & 0xffff;
+          reader.offset = Math.min(tagEndOffset, pEnd + codeSize);
+        } else if (code === 0x8F && pEnd - pStart >= 7) {
+          const trySize = (reader.bytes[pStart + 1] | (reader.bytes[pStart + 2] << 8)) & 0xffff;
+          const catchSize = (reader.bytes[pStart + 3] | (reader.bytes[pStart + 4] << 8)) & 0xffff;
+          const finallySize = (reader.bytes[pStart + 5] | (reader.bytes[pStart + 6] << 8)) & 0xffff;
+          reader.offset = Math.min(tagEndOffset, pEnd + trySize + catchSize + finallySize);
+        }
       }
     }
     if (hasAnyIns) {
-      const rawSlice = reader.sliceBytes(rawActionStart, Math.min(tagEndOffset, reader.offset));
+      const rawSlice = reader.sliceBytes(rawActionStart, tagEndOffset);
       if (rawSlice.length > 0) {
         record.rawBytecodeB64 = bytesToBase64(rawSlice);
       }
@@ -1934,22 +1945,37 @@ function parseDoAction(
 
   const instrs: Avm1DecodedIns[] = [];
   const offsetToIdx = new Map<number, number>();
+  let nestedSkipUntil = 0;
   while (reader.offset < tagEndOffset) {
     const startOff = reader.offset;
     const code = reader.readUI8();
-    if (code === 0) break; // ActionEnd
+    if (code === 0) {
+      // Only treat ActionEnd (0x00) as end-of-block when outside a nested function/try body
+      if (startOff >= nestedSkipUntil) break;
+      continue;
+    }
     let length = 0;
     if (code >= 0x80) {
       length = reader.readUI16();
     }
-    const endOff = Math.min(tagEndOffset, reader.offset + length);
-    const payload = length > 0 ? reader.readBytes(endOff - reader.offset) : new Uint8Array(0);
+    const pStart = reader.offset;
+    const endOff = Math.min(tagEndOffset, pStart + length);
+    const payload = length > 0 ? reader.readBytes(endOff - pStart) : new Uint8Array(0);
     offsetToIdx.set(startOff, instrs.length);
     instrs.push({ offset: startOff, endOffset: endOff, code, payload });
     reader.offset = endOff;
+    if ((code === 0x9B || code === 0x8E) && payload.length >= 2) {
+      const codeSize = (payload[payload.length - 2] | (payload[payload.length - 1] << 8)) & 0xffff;
+      nestedSkipUntil = Math.max(nestedSkipUntil, Math.min(tagEndOffset, endOff + codeSize));
+    } else if (code === 0x8F && payload.length >= 7) {
+      const trySize = (payload[1] | (payload[2] << 8)) & 0xffff;
+      const catchSize = (payload[3] | (payload[4] << 8)) & 0xffff;
+      const finallySize = (payload[5] | (payload[6] << 8)) & 0xffff;
+      nestedSkipUntil = Math.max(nestedSkipUntil, Math.min(tagEndOffset, endOff + trySize + catchSize + finallySize));
+    }
   }
   if (instrs.length > 0) {
-    const rawSlice = reader.sliceBytes(rawActionStart, Math.min(tagEndOffset, reader.offset));
+    const rawSlice = reader.sliceBytes(rawActionStart, tagEndOffset);
     if (rawSlice.length > 0) {
       record.rawBytecodeB64 = bytesToBase64(rawSlice);
     }
