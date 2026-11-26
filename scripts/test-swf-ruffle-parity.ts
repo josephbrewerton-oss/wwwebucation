@@ -1641,6 +1641,181 @@ async function testAvm1AndAvm2LifecycleCompliance() {
   console.log('✓ Test 7 passed: Frame Lifecycle Order, attachMovie initObj Order, Sound.position Completion, Offline LoadVars/XML & AVM2 Document Class Stage Constructor Access');
 }
 
+// ============================================================================
+// Test 8: General-Purpose AVM1 Frame-1 Preloader Self-Completion & Stalled Fallback
+// ============================================================================
+async function testAvm1PreloaderSelfCompletion() {
+  const { ASTAVM1Runtime } = createAvm1Sandbox();
+  const actionDefineFunction = (name: string, params: string[], body: number[]): number[] => {
+    const header: number[] = [];
+    for (let i = 0; i < name.length; i++) header.push(name.charCodeAt(i));
+    header.push(0);
+    header.push(params.length & 0xFF, (params.length >> 8) & 0xFF);
+    for (const p of params) {
+      for (let i = 0; i < p.length; i++) header.push(p.charCodeAt(i));
+      header.push(0);
+    }
+    header.push(body.length & 0xFF, (body.length >> 8) & 0xFF);
+    return [0x9B, header.length & 0xFF, (header.length >> 8) & 0xFF, ...header, ...body];
+  };
+
+  // Case A: Standard Flash 6/7/8 Frame-1 onEnterFrame preloader:
+  //   stop();
+  //   this.onEnterFrame = function() {
+  //     if (this.getBytesLoaded() == this.getBytesTotal()) {
+  //       delete this.onEnterFrame;
+  //       nextFrame();
+  //     }
+  //   };
+  // Frame 2: Title screen (NO stop() of its own — relies on preloader's nextFrame() to stay stopped!)
+  //          with a button calling play().
+  // Frame 3: Transition frame (no stop).
+  // Frame 4: Setup frame (no stop) -> flows into Frame 5 which sets ready = 1 and stops.
+  const preloaderBody: number[] = [
+    // this.getBytesLoaded() == this.getBytesTotal()
+    ...actionPush([{ t: 'int', v: 0 }, { t: 'str', v: 'this' }]),
+    0x1C, // GetVariable ('this')
+    ...actionPush([{ t: 'str', v: 'getBytesLoaded' }]),
+    0x52, // CallMethod
+    ...actionPush([{ t: 'int', v: 0 }, { t: 'str', v: 'this' }]),
+    0x1C,
+    ...actionPush([{ t: 'str', v: 'getBytesTotal' }]),
+    0x52,
+    0x49, // Equals2
+    0x12, // Not
+    // ActionIf skip if not equal (delete + nextFrame = 15 bytes: push 'this'(7) + getVar(1) + push 'onEnterFrame'(15) + delete(1) + pop(1) + nextFrame(1))
+  ];
+  const deleteAndNextFrame: number[] = [
+    ...actionPush([{ t: 'str', v: 'this' }]),
+    0x1C,
+    ...actionPush([{ t: 'str', v: 'onEnterFrame' }]),
+    0x3A, // ActionDelete
+    0x17, // Pop
+    0x04, // ActionNextFrame
+  ];
+  const f1PreloaderBytes: number[] = [
+    0x07, // stop()
+    ...actionPush([{ t: 'str', v: 'this' }]),
+    0x1C,
+    ...actionPush([{ t: 'str', v: 'onEnterFrame' }]),
+    ...actionDefineFunction('', [], [
+      ...preloaderBody,
+      0x9D, 0x02, 0x00, deleteAndNextFrame.length & 0xFF, (deleteAndNextFrame.length >> 8) & 0xFF,
+      ...deleteAndNextFrame,
+    ]),
+    0x4F, // SetMember
+    0x00,
+  ];
+
+  const playBtnAct: number[] = [0x06, 0x00]; // play()
+  const f4SetupBytes: number[] = [
+    ...actionPush([{ t: 'str', v: 'setupRan' }, { t: 'int', v: 1 }]),
+    0x1D, // SetVariable
+    0x00,
+  ];
+  const f5ReadyBytes: number[] = [
+    ...actionPush([{ t: 'str', v: 'gameStarted' }, { t: 'int', v: 1 }]),
+    0x1D,
+    0x07, // stop()
+    0x00,
+  ];
+
+  const progA = {
+    v: 1, swfVer: 6, fps: 21, w: 360, h: 420, bg: '#000000', fc: 5,
+    ef: 2, ps: 1,
+    l: [],
+    sh: { 1: { p: [['M 0 0 L 100 0 L 100 30 L 0 30 Z', '#ffff00', 'none', 0]], bb: [0, 0, 100, 30] } },
+    et: {},
+    bt: {
+      30: {
+        r: [{ s: 0x0F, c: 1, d: 1, m: [1, 0, 0, 1, 0, 0] }],
+        a: [{ f: 0x08, k: 0, b64: Buffer.from(playBtnAct).toString('base64') }],
+      },
+    },
+    sp: {},
+    fr: [
+      [],
+      [{ d: 1, c: 30, m: [1, 0, 0, 1, 130, 260] }],
+      [],
+      [],
+      [],
+    ],
+    ac: [
+      { f: 1, b64: Buffer.from(f1PreloaderBytes).toString('base64') },
+      { f: 4, b64: Buffer.from(f4SetupBytes).toString('base64') },
+      { f: 5, b64: Buffer.from(f5ReadyBytes).toString('base64') },
+    ],
+  };
+
+  const stageA = new MockSvgNode('svg');
+  const rtA = new ASTAVM1Runtime(Buffer.from(JSON.stringify(progA)).toString('base64'), { engine: { vars: {} } });
+  rtA.mount(stageA, stageA);
+
+  assert.equal(rtA.rootClip._currentframe, 2, 'Frame-1 onEnterFrame preloader must self-complete onto Frame 2');
+  assert.equal(rtA.rootClip._playing, false, 'nextFrame() inside Frame-1 preloader must keep Frame 2 title screen stopped');
+  assert.equal(rtA.rootClip._vars.onEnterFrame, undefined, 'Preloader delete this.onEnterFrame must execute cleanly before Frame 2');
+  assert.equal(rtA._liveButtons.size, 1, 'Frame 2 title screen button must be live immediately on mount');
+
+  // Remain stably on Frame 2 across idle frames
+  for (let i = 0; i < 5; i++) rtA.stepOneSwfFrame();
+  assert.equal(rtA.rootClip._currentframe, 2, 'Title screen must stay stopped on Frame 2 until user clicks Play');
+
+  // Clicking Play advances naturally through Frame 3 -> Frame 4 (setup) -> Frame 5 (gameStarted)
+  const btn = Array.from(rtA._liveButtons)[0] as any;
+  btn.triggerClick();
+  for (let i = 0; i < 4; i++) rtA.stepOneSwfFrame();
+  assert.equal(rtA.rootClip._currentframe, 5, 'Clicking Play must advance cleanly through Frame 4 setup into Frame 5');
+  assert.equal(rtA.rootClip._vars.setupRan, 1, 'Frame 4 setup script must execute');
+  assert.equal(rtA.rootClip._vars.gameStarted, 1, 'Frame 5 game start script must execute');
+
+  // Reset must cleanly return to Frame 2 stopped with no stale onEnterFrame
+  rtA.reset();
+  assert.equal(rtA.rootClip._currentframe, 2, 'reset() must return cleanly to Frame 2 title screen');
+  assert.equal(rtA.rootClip._playing, false, 'reset() must preserve stopped Frame 2 title screen');
+  assert.equal(rtA.rootClip._vars.onEnterFrame, undefined, 'reset() must leave no stale preloader onEnterFrame');
+  rtA.destroy();
+
+  // Case B: Stalled external preloader (never calls nextFrame) must fall back to entryFrame AND clear stalled onEnterFrame
+  const stalledPreloaderBytes: number[] = [
+    0x07, // stop()
+    ...actionPush([{ t: 'str', v: 'this' }]),
+    0x1C,
+    ...actionPush([{ t: 'str', v: 'onEnterFrame' }]),
+    ...actionDefineFunction('', [], [
+      ...actionPush([{ t: 'str', v: 'stalledTicks' }, { t: 'str', v: 'stalledTicks' }]),
+      0x1C,
+      ...actionPush([{ t: 'int', v: 1 }]),
+      0x47, // Add2
+      0x1D, // SetVariable
+    ]),
+    0x4F,
+    0x00,
+  ];
+  const f2MenuStop: number[] = [0x07, 0x00];
+  const progB = {
+    v: 1, swfVer: 7, fps: 24, w: 320, h: 240, bg: '#000000', fc: 3,
+    ef: 2, ps: 1,
+    l: [], sh: {}, et: {}, bt: {}, sp: {},
+    fr: [[], [], []],
+    ac: [
+      { f: 1, b64: Buffer.from(stalledPreloaderBytes).toString('base64') },
+      { f: 2, b64: Buffer.from(f2MenuStop).toString('base64') },
+    ],
+  };
+
+  const stageB = new MockSvgNode('svg');
+  const rtB = new ASTAVM1Runtime(Buffer.from(JSON.stringify(progB)).toString('base64'), { engine: { vars: {} } });
+  rtB.mount(stageB, stageB);
+  assert.equal(rtB.rootClip._currentframe, 2, 'Stalled Frame-1 preloader must fall back to entryFrame 2');
+  assert.equal(rtB.rootClip._vars.onEnterFrame, undefined, 'Fallback jump must clear stalled Frame-1 preloader onEnterFrame');
+  const ticksAfterMount = Number(rtB.rootClip._vars.stalledTicks) || 0;
+  for (let i = 0; i < 4; i++) rtB.stepOneSwfFrame();
+  assert.equal(Number(rtB.rootClip._vars.stalledTicks) || 0, ticksAfterMount, 'Cleared stalled preloader must not run after entering Frame 2');
+  rtB.destroy();
+
+  console.log('✓ Test 8 passed: AVM1 Frame-1 Preloader Self-Completion, Exact Play/Stop Semantics & Stalled Preloader Cleanup');
+}
+
 (async () => {
   await testSwfSoundEngine();
   await testPureSvgVisualFx();
@@ -1649,7 +1824,9 @@ async function testAvm1AndAvm2LifecycleCompliance() {
   await testAvm1CoreSpecCompliance();
   await testAvm1ExtendedCompliance();
   await testAvm1AndAvm2LifecycleCompliance();
+  await testAvm1PreloaderSelfCompletion();
   console.log('ALL RUFFLE-PARITY SWF ENGINE TESTS PASSED!');
   process.exit(0);
 })();
+
 
