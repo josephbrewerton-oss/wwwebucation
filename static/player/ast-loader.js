@@ -645,6 +645,9 @@
                 ) {
                   parsedAst.gestures = textParsed.gestures;
                 }
+                if (textParsed.keyBindings && textParsed.keyBindings.length > 0 && (!parsedAst.keyBindings || textParsed.keyBindings.length >= parsedAst.keyBindings.length)) {
+                  parsedAst.keyBindings = textParsed.keyBindings;
+                }
                 if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.length >= parsedAst.bindings.length || textParsed.bindings.some(b => b.type === 'var-update'))) {
                   parsedAst.bindings = textParsed.bindings;
                 }
@@ -728,6 +731,7 @@
           uiControls: (parsedAst && parsedAst.uiControls) || registryScene.uiControls || (parsedAst && parsedAst.inputs) || registryScene.inputs || [],
           computed: (parsedAst && parsedAst.computed) || registryScene.computed || [],
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
+          keyBindings: (parsedAst && parsedAst.keyBindings) || registryScene.keyBindings || [],
           skills: (parsedAst && parsedAst.skills) || registryScene.skills || [],
           definedSkills: (parsedAst && parsedAst.definedSkills) || registryScene.definedSkills || null,
           controls: (parsedAst && parsedAst.controls) || registryScene.controls || null,
@@ -868,7 +872,9 @@
         has3D: this.has3D(),
         hasInteractive: Boolean(this.scene && this.scene.interactive && this.scene.interactive.checkpoints && this.scene.interactive.checkpoints.length),
         keyframes: this.scene.keyframes || [],
-        isPlaying: Boolean(this.isPlaying)
+        isPlaying: Boolean(this.isPlaying),
+        hasMediaInput: Boolean(this._avm1Vm || this._avm1VmPending || (this.scene && (this.scene.swfVm || this.scene.swfVmPayload))),
+        hasKeyBindings: Boolean(this.scene && Array.isArray(this.scene.keyBindings) && this.scene.keyBindings.length > 0)
       });
 
       // Broadcast initial scene subtitle & narration to parent and BSL engine
@@ -977,6 +983,7 @@
       uiControls: sceneData.uiControls || (parsedAst && parsedAst.uiControls) || sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
       computed: sceneData.computed || (parsedAst && parsedAst.computed) || null,
       gestures: sceneData.gestures || (parsedAst && parsedAst.gestures) || null,
+      keyBindings: sceneData.keyBindings || (parsedAst && parsedAst.keyBindings) || [],
       skills: sceneData.skills || (parsedAst && parsedAst.skills) || [],
       definedSkills: sceneData.definedSkills || (parsedAst && parsedAst.definedSkills) || null,
       controls: sceneData.controls || (parsedAst && parsedAst.controls) || null,

@@ -3682,6 +3682,12 @@
           },
           'pointer-down'(payload) {
             if (!self._mounted) return;
+            const rawTarget = payload && payload.originalEvent ? payload.originalEvent.target : null;
+            if (self._focusedTarget && self._focusedTarget._isTextField && rawTarget !== self._focusedTarget.bgRect) {
+              if (self._global && self._global.Selection) {
+                self._global.Selection.setFocus(null);
+              }
+            }
             const pt = (payload && payload.svgPt)
               ? payload.svgPt
               : (payload && payload.originalEvent ? self._clientToStage(payload.originalEvent.clientX, payload.originalEvent.clientY) : null);

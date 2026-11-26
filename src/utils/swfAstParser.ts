@@ -1665,6 +1665,13 @@ function mapFlashKeyCode(keyCode: number): SwfKeyBindingSpec {
   }
 }
 
+function domKeyFromDomCode(domCode: string): string {
+  if (/^Key([A-Z])$/.test(domCode)) return domCode.slice(3).toLowerCase();
+  if (/^Digit([0-9])$/.test(domCode)) return domCode.slice(5);
+  if (domCode === 'Space') return ' ';
+  return domCode;
+}
+
 function mapSwfButtonKeyCode(btnKeyCode: number): SwfKeyBindingSpec {
   // SWF DefineButton2 CondKeyPress uses Flash special codes 1..19 and ASCII 32..126
   switch (btnKeyCode) {
@@ -4973,7 +4980,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
     const keyBindingsAst = allUsedKeys.size > 0
       ? `\n  (:key-bindings (\n${Array.from(allUsedKeys.values())
-          .map((spec) => `    (:bind :code "${spec.domCode}" :key "${spec.domCode}" :flash-key ${spec.keyCode} :var "${spec.varName}")`)
+          .map((spec) => `    (:bind :code "${spec.domCode}" :key "${domKeyFromDomCode(spec.domCode)}" :flash-key ${spec.keyCode} :var "${spec.varName}")`)
           .join('\n')}\n  ))\n`
       : '';
 
@@ -5370,7 +5377,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       if (allUsedKeys.size > 0) {
         vmProgram.kb = Array.from(allUsedKeys.values()).map((spec) => ({
           code: spec.domCode,
-          key: spec.domCode,
+          key: domKeyFromDomCode(spec.domCode),
           fk: spec.keyCode,
           v: spec.varName,
         }));

@@ -823,7 +823,26 @@
         return;
       }
 
-      // 1b. Yield immediately if the loaded cartridge declares a :key gesture for this key
+      // 1b. Yield immediately if an active media input sink or declarative :key / :key-bindings owns keyboard input
+      if (
+        window.__astGestures &&
+        typeof window.__astGestures.hasActiveMediaInputSink === 'function' &&
+        window.__astGestures.hasActiveMediaInputSink('key-down') &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        return;
+      }
+      const activeKeyBindings = this.engine && this.engine.scene && Array.isArray(this.engine.scene.keyBindings)
+        ? this.engine.scene.keyBindings
+        : null;
+      if (activeKeyBindings && activeKeyBindings.some(b => b && (
+        (b.code && e.code && b.code === e.code) ||
+        (b.key && e.key && (b.key === e.key || (b.key.length === 1 && e.key.length === 1 && b.key.toLowerCase() === e.key.toLowerCase())))
+      ))) {
+        return;
+      }
       const activeGestures = this.engine && this.engine.scene && Array.isArray(this.engine.scene.gestures)
         ? this.engine.scene.gestures
         : null;

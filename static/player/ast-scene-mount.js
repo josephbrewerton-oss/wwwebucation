@@ -965,6 +965,14 @@
               isAs3: Boolean(vm.program && vm.program.as3),
               runtime: isAs3Executable ? 'avm2' : 'avm1'
             });
+            if (typeof this.notifyParent === 'function') {
+              this.notifyParent({
+                type: 'MEDIA_INPUT_STATE',
+                active: true,
+                preset: scene.id,
+                runtime: isAs3Executable ? 'avm2' : 'avm1'
+              });
+            }
           } catch (avmErr) {
             console.warn(`[AST Engine] ${isAs3Executable ? 'AVM2' : 'AVM1'} Micro-VM boot fallback to declarative AST:`, avmErr);
           }
@@ -991,11 +999,23 @@
         }
       }
 
+      if (!swfVm && typeof this.notifyParent === 'function') {
+        this.notifyParent({
+          type: 'MEDIA_INPUT_STATE',
+          active: Boolean(scene && Array.isArray(scene.keyBindings) && scene.keyBindings.length > 0),
+          preset: scene && scene.id
+        });
+      }
       if (this.profiler) {
         this.profiler.mount(this.getStageSvg());
       }
-      if (typeof window !== 'undefined' && window.__astGestures && typeof window.__astGestures.enhanceSceneInteractivity === 'function') {
-        window.__astGestures.enhanceSceneInteractivity();
+      if (typeof window !== 'undefined' && window.__astGestures) {
+        if (typeof window.__astGestures._syncCartridgeControls === 'function') {
+          window.__astGestures._syncCartridgeControls();
+        }
+        if (typeof window.__astGestures.enhanceSceneInteractivity === 'function') {
+          window.__astGestures.enhanceSceneInteractivity();
+        }
       }
     } finally {
       this._isMounting = false;
@@ -1046,6 +1066,7 @@
       if (parsed.inputs) this.scene.inputs = parsed.inputs;
       if (parsed.computed) this.scene.computed = parsed.computed;
       if (parsed.gestures) this.scene.gestures = parsed.gestures;
+      this.scene.keyBindings = Array.isArray(parsed.keyBindings) ? parsed.keyBindings : [];
       if (parsed.controls) this.scene.controls = parsed.controls;
       this.scene.swfVm = parsed.swfVm || parsed.swfVmPayload || null;
       this.scene.swfVmPayload = this.scene.swfVm;

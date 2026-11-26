@@ -716,6 +716,7 @@
         payload.code = typeof rawEvent.code === 'string' ? rawEvent.code : '';
         payload.key = typeof rawEvent.key === 'string' ? rawEvent.key : '';
         payload.keyCode = typeof rawEvent.keyCode === 'number' ? rawEvent.keyCode : 0;
+        payload.shiftKey = Boolean(rawEvent.shiftKey);
         payload.repeat = Boolean(rawEvent.repeat);
       } else if (rawEvent && route.channel === 'wheel') {
         payload.deltaY = typeof rawEvent.deltaY === 'number' ? rawEvent.deltaY : 0;
@@ -747,7 +748,16 @@
       }
 
       if (routed && rawEvent && typeof rawEvent.preventDefault === 'function' && route.channel === 'key-down') {
-        const shouldCapture = consumed || (
+        const sceneKbs = this.engine && this.engine.scene && Array.isArray(this.engine.scene.keyBindings)
+          ? this.engine.scene.keyBindings
+          : null;
+        const matchesSceneKb = Boolean(
+          sceneKbs && sceneKbs.some((kb) => kb && (
+            (kb.code && payload.code && kb.code === payload.code) ||
+            (kb.key && payload.key && (kb.key === payload.key || (kb.key.length === 1 && payload.key.length === 1 && kb.key.toLowerCase() === payload.key.toLowerCase())))
+          ))
+        );
+        const shouldCapture = consumed || matchesSceneKb || (
           Array.isArray(route.captureKeys) &&
           (route.captureKeys.includes(payload.code) || route.captureKeys.includes(payload.key))
         );

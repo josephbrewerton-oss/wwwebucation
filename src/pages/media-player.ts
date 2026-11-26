@@ -98,6 +98,7 @@ export function renderPlayerPage(): HTMLElement {
   // Launcher-First Grid: keep player iframe unloaded (0 KB engine download, 0% CPU) until a lab is selected or deep-linked
   let isStageOpen = Boolean(requestedPresetParam || initialSrcParam || pendingAutoEppBench);
   let pendingCustomCartridge: CartridgeDefinition | null = null;
+  let stageMediaInputActive = false;
   let lastMountedCustomPresetId: string | null = null;
   let lastMountedCustomAt = 0;
   let activeSubject: SubjectFilterId = 'All';
@@ -319,8 +320,8 @@ export function renderPlayerPage(): HTMLElement {
     unmountObserver?.disconnect();
     unmountObserver = null;
     window.removeEventListener('pagehide', cleanupPlayerLifecycle);
-    window.removeEventListener('keydown', onKeyDown);
-    window.removeEventListener('keyup', onKeyUp);
+    window.removeEventListener('keydown', onKeyDown, true);
+    window.removeEventListener('keyup', onKeyUp, true);
     window.removeEventListener('blur', onWindowBlur);
     window.removeEventListener('popstate', onPopState);
   };
@@ -361,6 +362,9 @@ export function renderPlayerPage(): HTMLElement {
 
   function focusPlayerStage() {
     try {
+      if (document.activeElement instanceof HTMLElement && document.activeElement !== iframe) {
+        document.activeElement.blur();
+      }
       iframe?.focus({ preventScroll: true });
       iframe?.contentWindow?.focus();
     } catch (_) {}
@@ -1253,6 +1257,7 @@ export function renderPlayerPage(): HTMLElement {
     isStageOpen = false;
     isIframeReady = false;
     pendingCustomCartridge = null;
+    stageMediaInputActive = false;
     initialExternalSrc = null;
     activeDrawer = null;
     renderActiveDrawer();
@@ -1320,6 +1325,11 @@ export function renderPlayerPage(): HTMLElement {
     const localCustomCart = getCustomCartridges().find(
       (c) => c.id === safePresetId && c.source !== 'builtin' && Boolean(c.svgMarkup || c.astSource)
     ) || null;
+    stageMediaInputActive = Boolean(
+      cartridgeNeedsStageKeyForwarding(localCustomCart) ||
+      cartridgeNeedsStageKeyForwarding(pendingCustomCartridge) ||
+      safePresetId.startsWith('flash-')
+    );
     // Lazily inflate requested built-in curriculum/data cartridge into native IndexedDB (skip for Local Vault custom cartridges)
     if (!localCustomCart && safePresetId !== 'lumina-architecture') {
       inflateCartridgeToVault(safePresetId, getRegisteredRecord(safePresetId)?.seal).catch(() => {});
@@ -1393,6 +1403,7 @@ export function renderPlayerPage(): HTMLElement {
     const alreadyLive = Boolean(isIframeReady && iframe?.contentWindow && iframe.getAttribute('src') !== 'about:blank');
     lastMountedCustomPresetId = cart.id;
     lastMountedCustomAt = Date.now();
+    stageMediaInputActive = cartridgeNeedsStageKeyForwarding(cart);
     if (!alreadyLive) {
       pendingCustomCartridge = cart;
     }
@@ -1700,29 +1711,45 @@ export function renderPlayerPage(): HTMLElement {
     } catch (_) {}
   });
 
-  const isSwfStageInputActive = (): boolean =>
+  const cartridgeNeedsStageKeyForwarding = (cart?: CartridgeDefinition | null): boolean =>
     Boolean(
-      isStageOpen &&
-        (swfDistillSession.active ||
-          activePreset.startsWith('flash-') ||
-          pendingCustomCartridge?.astSource?.includes('(:swf-vm'))
+      cart?.astSource &&
+        (cart.astSource.includes('(:swf-vm') || cart.astSource.includes('(:key-bindings'))
     );
 
-  // Keyboard accessibility shortcuts & direct Flash SWF keyboard forwarding (when stage is open)
+  const isSwfStageInputActive = (): boolean => {
+    if (!isStageOpen) return false;
+    if (stageMediaInputActive || swfDistillSession.active || activePreset.startsWith('flash-')) {
+      return true;
+    }
+    if (cartridgeNeedsStageKeyForwarding(pendingCustomCartridge)) return true;
+    const activeCustom = getCustomCartridges().find((c) => c.id === activePreset);
+    return cartridgeNeedsStageKeyForwarding(activeCustom);
+  };
+
+  // Keyboard accessibility shortcuts & direct SWF / key-bound cartridge keyboard forwarding (when stage is open)
   const onKeyDown = (e: KeyboardEvent) => {
     if (!isStageOpen) return;
     const activeTag = document.activeElement?.tagName.toLowerCase();
     if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
     if (isSwfStageInputActive() && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') {
+      if (
+        e.code === 'Space' ||
+        e.code.startsWith('Arrow') ||
+        e.code === 'Tab' ||
+        e.code === 'Backspace' ||
+        e.code === 'Enter'
+      ) {
         e.preventDefault();
       }
+      e.stopImmediatePropagation();
       postToPlayer({
         type: 'SWF_KEY_EVENT',
         kind: 'keydown',
         code: e.code,
         key: e.key,
         keyCode: e.keyCode,
+        shiftKey: Boolean(e.shiftKey),
       });
       return;
     }
@@ -1736,12 +1763,15 @@ export function renderPlayerPage(): HTMLElement {
   };
   const onKeyUp = (e: KeyboardEvent) => {
     if (!isSwfStageInputActive()) return;
+    const activeTag = document.activeElement?.tagName.toLowerCase();
+    if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
     postToPlayer({
       type: 'SWF_KEY_EVENT',
       kind: 'keyup',
       code: e.code,
       key: e.key,
       keyCode: e.keyCode,
+      shiftKey: Boolean(e.shiftKey),
     });
   };
   const onWindowBlur = () => {
@@ -1749,8 +1779,8 @@ export function renderPlayerPage(): HTMLElement {
       postToPlayer({ type: 'SWF_RELEASE_INPUTS' });
     }
   };
-  window.addEventListener('keydown', onKeyDown);
-  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('keydown', onKeyDown, true);
+  window.addEventListener('keyup', onKeyUp, true);
   window.addEventListener('blur', onWindowBlur);
 
   window.addEventListener('message', (e) => {
@@ -1776,9 +1806,11 @@ export function renderPlayerPage(): HTMLElement {
       if (pendingCustomCartridge) {
         const queued = pendingCustomCartridge;
         pendingCustomCartridge = null;
+        stageMediaInputActive = cartridgeNeedsStageKeyForwarding(queued);
         lastMountedCustomPresetId = queued.id;
         lastMountedCustomAt = Date.now();
         postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: queued, play: true });
+        focusPlayerStage();
       } else if (initialExternalSrc) {
         initialExternalSrc = null;
       } else if (activePreset && (!e.data.preset || e.data.preset !== activePreset)) {
@@ -1786,12 +1818,17 @@ export function renderPlayerPage(): HTMLElement {
           (c) => c.id === activePreset && c.source !== 'builtin' && Boolean(c.svgMarkup || c.astSource)
         );
         if (activeCustomCart) {
+          stageMediaInputActive = cartridgeNeedsStageKeyForwarding(activeCustomCart);
           lastMountedCustomPresetId = activeCustomCart.id;
           lastMountedCustomAt = Date.now();
           postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: activeCustomCart, play: true });
+          focusPlayerStage();
         } else {
           postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
         }
+      } else if (typeof e.data.hasMediaInput === 'boolean' || typeof e.data.hasKeyBindings === 'boolean') {
+        stageMediaInputActive = Boolean(e.data.hasMediaInput || e.data.hasKeyBindings);
+        if (stageMediaInputActive) focusPlayerStage();
       }
       updatePlayButtonUI(Boolean(e.data.isPlaying));
 
@@ -1825,6 +1862,12 @@ export function renderPlayerPage(): HTMLElement {
           autoRunEppBenchOnce = true;
           renderActiveDrawer(true);
         }, 150);
+      }
+    }
+    if (e.data.type === 'MEDIA_INPUT_STATE' && typeof e.data.active === 'boolean') {
+      stageMediaInputActive = e.data.active;
+      if (e.data.active && isStageOpen) {
+        focusPlayerStage();
       }
     }
     if ((e.data.type === 'PLAY_STATE_CHANGED' || e.data.type === 'STATE_CHANGED' || e.data.type === 'statechange') && typeof (e.data.isPlaying ?? e.data.playing) === 'boolean') {

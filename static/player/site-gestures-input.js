@@ -223,6 +223,7 @@
     if (typeof this.routeMediaInputEvent === 'function') {
       const mediaRes = this.routeMediaInputEvent('keydown', e);
       if (mediaRes && (mediaRes.consumed || mediaRes.exclusive)) {
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
         return;
       }
     }
@@ -345,7 +346,10 @@
     }
 
     if (typeof this.routeMediaInputEvent === 'function') {
-      this.routeMediaInputEvent('keyup', e);
+      const mediaUpRes = this.routeMediaInputEvent('keyup', e);
+      if (mediaUpRes && (mediaUpRes.consumed || mediaUpRes.exclusive) && typeof e.stopImmediatePropagation === 'function') {
+        e.stopImmediatePropagation();
+      }
     }
 
     if (this._heldKeys.size === 0 && this._heldPointerEntries.size === 0) {
