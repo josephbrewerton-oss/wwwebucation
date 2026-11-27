@@ -39,6 +39,7 @@ export const FLAG_HAS_CHECKPOINTS = 0x0004;
 export const FLAG_HAS_SUBTITLES = 0x0008;
 export const FLAG_HAS_SVG = 0x0010;
 export const FLAG_COMPLETE_BINARY = 0x0020;
+export const FLAG_HAS_VECTOR_DICT = 0x0040;
 
 // Opcodes
 export const OP_SCENE_META = 0x01; // [id_str: u16] [title_str: u16] [stage_str: u16] [video_str: u16] [video_fit_u8]
@@ -56,6 +57,9 @@ export const OP_COMPUTED        = 0x61; // [name_str: u16] [expr_str: u16]
 export const OP_INPUT           = 0x70; // [kind_u8 (1:slider, 2:switch, 3:btn)] [var_str: u16] [label_str: u16] [min_f32] [max_f32] [step_f32]
 export const OP_CAMERA          = 0x80; // [yaw_str: u16] [pitch: f32] [distance: f32] [fov: f32]
 export const OP_SVG_COMPANION   = 0x81; // [svg_str: u16] (optional embedded Duo SVG stage vector)
+export const OP_STYLE_TABLE     = 0x82; // [payload_len: u32] [style_count: u16] { solid | linearGradient | focalRadialGradient }*
+export const OP_SHAPE_DEF       = 0x83; // [payload_len: u32] [sym_id_str: u16] [layer_count: u8] { fillIdx, strokeIdx, strokeW, flags, delta M/L/Q/C/Z }*
+export const OP_STAMP           = 0x84; // [depth: u16] [sym_id_str: u16] [inst_id_str: u16] [matrix: 6*f32] [opacity: u8] [flags: u8] (fixed 32 B)
 export const OP_SCOPE           = 0x90; // [target_str: u16] [x_expr_str: u16] [y_expr_str: u16] [samples: u16] [x_min: f32] [x_max: f32] [y_min: f32] [y_max: f32] [plot_x: f32] [plot_y: f32] [plot_w: f32] [plot_h: f32]
 export const OP_LEDGER          = 0x91; // [id_str: u16] [target_str: u16] [unit_str: u16] [max_expr_str: u16] [x: f32] [y: f32] [w: f32] [h: f32] [term_count: u8] { [label_str: u16] [expr_str: u16] [color_str: u16] }*
 export const OP_SCENE_EXT       = 0xA0; // [section_key_str: u16] [json_payload_str: u16]
@@ -104,6 +108,79 @@ export interface AstCheckpointConfig {
   onWrong?: Record<number, string>;
 }
 
+export interface AstVectorRgba {
+  r: number;
+  g: number;
+  b: number;
+  a: number; // 0..255
+}
+
+export interface AstVectorGradientStop {
+  offset: number; // 0..1
+  color: AstVectorRgba;
+}
+
+export type AstVectorStyleEntry =
+  | { kind: 'solid'; color: AstVectorRgba }
+  | {
+      kind: 'linear';
+      id: string;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      stops: AstVectorGradientStop[];
+    }
+  | {
+      kind: 'radial';
+      id: string;
+      cx: number;
+      cy: number;
+      r: number;
+      fx: number;
+      fy: number;
+      stops: AstVectorGradientStop[];
+    };
+
+export type AstVectorPathCmd =
+  | { op: 'M'; x: number; y: number }
+  | { op: 'L'; x: number; y: number }
+  | { op: 'Q'; cx: number; cy: number; x: number; y: number }
+  | { op: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
+  | { op: 'Z' };
+
+export interface AstVectorShapeLayer {
+  fillStyle?: number; // index into styles[]
+  strokeStyle?: number; // index into styles[]
+  strokeWidth?: number;
+  evenOdd?: boolean;
+  roundCap?: boolean;
+  roundJoin?: boolean;
+  ariaHidden?: boolean;
+  commands: AstVectorPathCmd[];
+}
+
+export interface AstVectorShapeDef {
+  id: string;
+  layers: AstVectorShapeLayer[];
+}
+
+export interface AstVectorStamp {
+  depth: number;
+  symbolId: string;
+  instanceId?: string;
+  matrix: [number, number, number, number, number, number];
+  opacity?: number; // 0..1
+  ariaHidden?: boolean;
+}
+
+export interface AstVectorDictionary {
+  viewBox?: string;
+  styles: AstVectorStyleEntry[];
+  shapes: AstVectorShapeDef[];
+  stamps: AstVectorStamp[];
+}
+
 export interface BytecodeCompiledScene {
   id: string;
   type: 'Sim' | 'Slide' | 'App' | 'Film';
@@ -141,6 +218,168 @@ export interface BytecodeCompiledScene {
   staticElements?: Array<any>;
   completeBinary?: boolean;
   svgMarkup?: string;
+  vectorDict?: AstVectorDictionary;
+}
+
+/**
+ * Parses an absolute SVG path string (M, L, Q, C, H, V, Z) into compact AstVectorPathCmd[].
+ */
+export function encodeSvgPathToVectorCmds(d: string): AstVectorPathCmd[] {
+  const cmds: AstVectorPathCmd[] = [];
+  if (!d) return cmds;
+  const tokens = d.match(/[MLQCHVZmlqchvz]|-?\d*\.?\d+(?:e[+-]?\d+)?/gi) || [];
+  let cmd = 'M';
+  let cx = 0;
+  let cy = 0;
+  let sx = 0;
+  let sy = 0;
+  let i = 0;
+  const num = () => Number(tokens[i++]) || 0;
+
+  while (i < tokens.length) {
+    if (/^[A-Za-z]$/.test(tokens[i])) {
+      cmd = tokens[i++];
+      if (cmd === 'Z' || cmd === 'z') {
+        cmds.push({ op: 'Z' });
+        cx = sx;
+        cy = sy;
+      }
+      continue;
+    }
+    if (cmd === 'M' || cmd === 'm') {
+      const nx = cmd === 'm' ? cx + num() : num();
+      const ny = cmd === 'm' ? cy + num() : num();
+      cx = nx; cy = ny; sx = nx; sy = ny;
+      cmds.push({ op: 'M', x: nx, y: ny });
+      cmd = cmd === 'm' ? 'l' : 'L';
+    } else if (cmd === 'L' || cmd === 'l') {
+      const nx = cmd === 'l' ? cx + num() : num();
+      const ny = cmd === 'l' ? cy + num() : num();
+      cx = nx; cy = ny;
+      cmds.push({ op: 'L', x: nx, y: ny });
+    } else if (cmd === 'H' || cmd === 'h') {
+      const nx = cmd === 'h' ? cx + num() : num();
+      cx = nx;
+      cmds.push({ op: 'L', x: cx, y: cy });
+    } else if (cmd === 'V' || cmd === 'v') {
+      const ny = cmd === 'v' ? cy + num() : num();
+      cy = ny;
+      cmds.push({ op: 'L', x: cx, y: cy });
+    } else if (cmd === 'Q' || cmd === 'q') {
+      const qx = cmd === 'q' ? cx + num() : num();
+      const qy = cmd === 'q' ? cy + num() : num();
+      const nx = cmd === 'q' ? cx + num() : num();
+      const ny = cmd === 'q' ? cy + num() : num();
+      cx = nx; cy = ny;
+      cmds.push({ op: 'Q', cx: qx, cy: qy, x: nx, y: ny });
+    } else if (cmd === 'C' || cmd === 'c') {
+      const x1 = cmd === 'c' ? cx + num() : num();
+      const y1 = cmd === 'c' ? cy + num() : num();
+      const x2 = cmd === 'c' ? cx + num() : num();
+      const y2 = cmd === 'c' ? cy + num() : num();
+      const nx = cmd === 'c' ? cx + num() : num();
+      const ny = cmd === 'c' ? cy + num() : num();
+      cx = nx; cy = ny;
+      cmds.push({ op: 'C', x1, y1, x2, y2, x: nx, y: ny });
+    } else {
+      i++;
+    }
+  }
+  return cmds;
+}
+
+function rgbaToHex(c: AstVectorRgba): string {
+  const hex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  return `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`;
+}
+
+function fmtDeci(v: number): string {
+  const r = Number(v.toFixed(1));
+  return Object.is(r, -0) ? '0' : String(r);
+}
+
+/**
+ * Hydrates a decoded binary .astb VectorDictionary (OP_STYLE_TABLE + OP_SHAPE_DEF + OP_STAMP)
+ * into pure W3C SVG DOM markup (<defs> + instanced <use transform="matrix(...)"/>) with zero JSON.parse.
+ */
+export function hydrateVectorDictionaryToSvg(dict: AstVectorDictionary, viewBox?: string): string {
+  const vb = viewBox || dict.viewBox || '0 0 800 480';
+  const defsParts: string[] = [];
+
+  for (const st of dict.styles) {
+    if (st.kind === 'linear') {
+      const stops = st.stops
+        .map((s) => {
+          const op = s.color.a < 255 ? ` stop-opacity="${(s.color.a / 255).toFixed(2)}"` : '';
+          return `<stop offset="${Math.round(s.offset * 100)}%" stop-color="${rgbaToHex(s.color)}"${op}/>`;
+        })
+        .join('');
+      defsParts.push(
+        `<linearGradient id="${st.id}" x1="${st.x1}" y1="${st.y1}" x2="${st.x2}" y2="${st.y2}">${stops}</linearGradient>`
+      );
+    } else if (st.kind === 'radial') {
+      const stops = st.stops
+        .map((s) => {
+          const op = s.color.a < 255 ? ` stop-opacity="${(s.color.a / 255).toFixed(2)}"` : '';
+          return `<stop offset="${Math.round(s.offset * 100)}%" stop-color="${rgbaToHex(s.color)}"${op}/>`;
+        })
+        .join('');
+      defsParts.push(
+        `<radialGradient id="${st.id}" cx="${st.cx}" cy="${st.cy}" r="${st.r}" fx="${st.fx}" fy="${st.fy}">${stops}</radialGradient>`
+      );
+    }
+  }
+
+  for (const sh of dict.shapes) {
+    const layerXml = sh.layers
+      .map((layer) => {
+        const dParts: string[] = [];
+        for (const c of layer.commands) {
+          if (c.op === 'M') dParts.push(`M${fmtDeci(c.x)} ${fmtDeci(c.y)}`);
+          else if (c.op === 'L') dParts.push(`L${fmtDeci(c.x)} ${fmtDeci(c.y)}`);
+          else if (c.op === 'Q') dParts.push(`Q${fmtDeci(c.cx)} ${fmtDeci(c.cy)} ${fmtDeci(c.x)} ${fmtDeci(c.y)}`);
+          else if (c.op === 'C') dParts.push(`C${fmtDeci(c.x1)} ${fmtDeci(c.y1)} ${fmtDeci(c.x2)} ${fmtDeci(c.y2)} ${fmtDeci(c.x)} ${fmtDeci(c.y)}`);
+          else if (c.op === 'Z') dParts.push('Z');
+        }
+        let fillAttr = ' fill="none"';
+        if (layer.fillStyle !== undefined && layer.fillStyle >= 0 && layer.fillStyle < dict.styles.length) {
+          const fs = dict.styles[layer.fillStyle];
+          if (fs.kind === 'solid') {
+            fillAttr = ` fill="${rgbaToHex(fs.color)}"${fs.color.a < 255 ? ` fill-opacity="${(fs.color.a / 255).toFixed(2)}"` : ''}`;
+          } else {
+            fillAttr = ` fill="url(#${fs.id})"`;
+          }
+        }
+        let strokeAttr = '';
+        if (layer.strokeStyle !== undefined && layer.strokeStyle >= 0 && layer.strokeStyle < dict.styles.length) {
+          const ss = dict.styles[layer.strokeStyle];
+          const sw = layer.strokeWidth ?? 1;
+          const colorStr = ss.kind === 'solid' ? rgbaToHex(ss.color) : `url(#${ss.id})`;
+          const sop = ss.kind === 'solid' && ss.color.a < 255 ? ` stroke-opacity="${(ss.color.a / 255).toFixed(2)}"` : '';
+          strokeAttr = ` stroke="${colorStr}"${sop} stroke-width="${fmtDeci(sw)}"`;
+          if (layer.roundCap) strokeAttr += ' stroke-linecap="round"';
+          if (layer.roundJoin) strokeAttr += ' stroke-linejoin="round"';
+        }
+        const eo = layer.evenOdd ? ' fill-rule="evenodd"' : '';
+        const ah = layer.ariaHidden ? ' aria-hidden="true"' : '';
+        return `<path d="${dParts.join('')}"${fillAttr}${strokeAttr}${eo}${ah}/>`;
+      })
+      .join('');
+    defsParts.push(`<g id="${sh.id}">${layerXml}</g>`);
+  }
+
+  const sortedStamps = dict.stamps.slice().sort((a, b) => a.depth - b.depth);
+  const stampXml = sortedStamps
+    .map((st) => {
+      const idAttr = st.instanceId ? ` id="${st.instanceId}"` : '';
+      const m = st.matrix.map((n) => Number(n.toFixed(3))).join(' ');
+      const op = st.opacity !== undefined && st.opacity < 0.999 ? ` opacity="${Number(st.opacity.toFixed(2))}"` : '';
+      const ah = st.ariaHidden ? ' aria-hidden="true"' : '';
+      return `<use${idAttr} href="#${st.symbolId}" transform="matrix(${m})"${op}${ah}/>`;
+    })
+    .join('');
+
+  return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg"><defs>${defsParts.join('')}</defs>${stampXml}</svg>`;
 }
 
 /**
@@ -268,6 +507,9 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   if (scene.subtitles && scene.subtitles.length > 0) flags |= FLAG_HAS_SUBTITLES;
   if (scene.svgMarkup && scene.svgMarkup.trim().length > 0) flags |= FLAG_HAS_SVG;
   if (scene.completeBinary) flags |= FLAG_COMPLETE_BINARY;
+  if (scene.vectorDict && (scene.vectorDict.styles.length > 0 || scene.vectorDict.shapes.length > 0 || scene.vectorDict.stamps.length > 0)) {
+    flags |= FLAG_HAS_VECTOR_DICT;
+  }
 
   // Stream buffer for instructions
   const ops: number[] = [];
@@ -275,6 +517,15 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   const appendU16 = (val: number) => {
     ops.push(val & 0xff);
     ops.push((val >> 8) & 0xff);
+  };
+  const appendI16 = (val: number) => {
+    const clamped = Math.max(-32768, Math.min(32767, Math.round(val)));
+    const u = clamped < 0 ? clamped + 65536 : clamped;
+    ops.push(u & 0xff, (u >> 8) & 0xff);
+  };
+  const appendU32 = (val: number) => {
+    const u = val >>> 0;
+    ops.push(u & 0xff, (u >> 8) & 0xff, (u >> 16) & 0xff, (u >> 24) & 0xff);
   };
   const appendF32 = (val: number) => {
     const fBuf = new Float32Array([val]);
@@ -298,6 +549,125 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   if (scene.svgMarkup && scene.svgMarkup.trim().length > 0) {
     appendU8(OP_SVG_COMPANION);
     appendU16(strTable.intern(scene.svgMarkup));
+  }
+
+  // 1c. SWF-Inspired Binary 2D Vector Dictionary (0x82 OP_STYLE_TABLE, 0x83 OP_SHAPE_DEF, 0x84 OP_STAMP)
+  if (scene.vectorDict) {
+    const vd = scene.vectorDict;
+    if (vd.styles.length > 0) {
+      const sub: number[] = [];
+      const sU8 = (v: number) => sub.push(v & 0xff);
+      const sU16 = (v: number) => sub.push(v & 0xff, (v >> 8) & 0xff);
+      const sI16 = (v: number) => {
+        const cl = Math.max(-32768, Math.min(32767, Math.round(v)));
+        const u = cl < 0 ? cl + 65536 : cl;
+        sub.push(u & 0xff, (u >> 8) & 0xff);
+      };
+      sU16(vd.styles.length);
+      for (const st of vd.styles) {
+        if (st.kind === 'solid') {
+          sU8(1);
+          sU8(st.color.r); sU8(st.color.g); sU8(st.color.b); sU8(st.color.a);
+        } else if (st.kind === 'linear') {
+          sU8(2);
+          sU16(strTable.intern(st.id));
+          sI16(st.x1 * 1000); sI16(st.y1 * 1000); sI16(st.x2 * 1000); sI16(st.y2 * 1000);
+          const stops = st.stops.slice(0, 32);
+          sU8(stops.length);
+          for (const sp of stops) {
+            sU8(Math.max(0, Math.min(255, Math.round(sp.offset * 255))));
+            sU8(sp.color.r); sU8(sp.color.g); sU8(sp.color.b); sU8(sp.color.a);
+          }
+        } else {
+          sU8(3);
+          sU16(strTable.intern(st.id));
+          sI16(st.cx * 1000); sI16(st.cy * 1000); sI16(st.r * 1000); sI16(st.fx * 1000); sI16(st.fy * 1000);
+          const stops = st.stops.slice(0, 32);
+          sU8(stops.length);
+          for (const sp of stops) {
+            sU8(Math.max(0, Math.min(255, Math.round(sp.offset * 255))));
+            sU8(sp.color.r); sU8(sp.color.g); sU8(sp.color.b); sU8(sp.color.a);
+          }
+        }
+      }
+      appendU8(OP_STYLE_TABLE);
+      appendU32(sub.length);
+      for (let i = 0; i < sub.length; i++) ops.push(sub[i]);
+    }
+
+    for (const sh of vd.shapes) {
+      const sub: number[] = [];
+      const sU8 = (v: number) => sub.push(v & 0xff);
+      const sU16 = (v: number) => sub.push(v & 0xff, (v >> 8) & 0xff);
+      const sI16 = (v: number) => {
+        const cl = Math.max(-32768, Math.min(32767, Math.round(v)));
+        const u = cl < 0 ? cl + 65536 : cl;
+        sub.push(u & 0xff, (u >> 8) & 0xff);
+      };
+      sU16(strTable.intern(sh.id));
+      const layers = sh.layers.slice(0, 255);
+      sU8(layers.length);
+      for (const layer of layers) {
+        sU16(layer.fillStyle !== undefined ? layer.fillStyle : 0xffff);
+        sU16(layer.strokeStyle !== undefined ? layer.strokeStyle : 0xffff);
+        sU16(Math.max(0, Math.min(65535, Math.round((layer.strokeWidth ?? 0) * 10))));
+        const lFlags =
+          (layer.evenOdd ? 0x01 : 0) |
+          (layer.roundCap ? 0x02 : 0) |
+          (layer.roundJoin ? 0x04 : 0) |
+          (layer.ariaHidden ? 0x08 : 0);
+        sU8(lFlags);
+        sU16(layer.commands.length);
+        // Delta-encoded fixed-point decipixels (0.1 px = 1 unit, Int16)
+        let penX = 0;
+        let penY = 0;
+        for (const c of layer.commands) {
+          if (c.op === 'M') {
+            const tx = Math.round(c.x * 10);
+            const ty = Math.round(c.y * 10);
+            sU8(1); sI16(tx - penX); sI16(ty - penY);
+            penX = tx; penY = ty;
+          } else if (c.op === 'L') {
+            const tx = Math.round(c.x * 10);
+            const ty = Math.round(c.y * 10);
+            sU8(2); sI16(tx - penX); sI16(ty - penY);
+            penX = tx; penY = ty;
+          } else if (c.op === 'Q') {
+            const qx = Math.round(c.cx * 10);
+            const qy = Math.round(c.cy * 10);
+            const tx = Math.round(c.x * 10);
+            const ty = Math.round(c.y * 10);
+            sU8(3); sI16(qx - penX); sI16(qy - penY); sI16(tx - penX); sI16(ty - penY);
+            penX = tx; penY = ty;
+          } else if (c.op === 'C') {
+            const x1 = Math.round(c.x1 * 10);
+            const y1 = Math.round(c.y1 * 10);
+            const x2 = Math.round(c.x2 * 10);
+            const y2 = Math.round(c.y2 * 10);
+            const tx = Math.round(c.x * 10);
+            const ty = Math.round(c.y * 10);
+            sU8(4); sI16(x1 - penX); sI16(y1 - penY); sI16(x2 - penX); sI16(y2 - penY); sI16(tx - penX); sI16(ty - penY);
+            penX = tx; penY = ty;
+          } else if (c.op === 'Z') {
+            sU8(5);
+          }
+        }
+      }
+      appendU8(OP_SHAPE_DEF);
+      appendU32(sub.length);
+      for (let i = 0; i < sub.length; i++) ops.push(sub[i]);
+    }
+
+    for (const st of vd.stamps) {
+      appendU8(OP_STAMP);
+      appendU16(st.depth & 0xffff);
+      appendU16(strTable.intern(st.symbolId));
+      appendU16(strTable.intern(st.instanceId || ''));
+      for (let m = 0; m < 6; m++) appendF32(st.matrix[m]);
+      appendU8(Math.max(0, Math.min(255, Math.round((st.opacity ?? 1) * 255))));
+      appendU8(st.ariaHidden ? 0x01 : 0x00);
+    }
+    void appendI16;
   }
 
   // 2. Camera (if 3D) — native binary record: [yaw_str: u16] [pitch: f32] [distance: f32] [fov: f32]
@@ -848,6 +1218,131 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         if (svgStr) scene.svgMarkup = svgStr;
         break;
       }
+      case OP_STYLE_TABLE: {
+        const payloadLen = view.getUint32(offset, true); offset += 4;
+        const endOff = Math.min(len, offset + payloadLen);
+        if (!scene.vectorDict) scene.vectorDict = { styles: [], shapes: [], stamps: [] };
+        const styleCount = view.getUint16(offset, true); offset += 2;
+        for (let i = 0; i < styleCount && offset < endOff; i++) {
+          const kind = bytes[offset++];
+          if (kind === 1) {
+            const r = bytes[offset++]; const g = bytes[offset++]; const b = bytes[offset++]; const a = bytes[offset++];
+            scene.vectorDict.styles.push({ kind: 'solid', color: { r, g, b, a } });
+          } else if (kind === 2) {
+            const id = strTable.get(view.getUint16(offset, true)); offset += 2;
+            const x1 = view.getInt16(offset, true) / 1000; offset += 2;
+            const y1 = view.getInt16(offset, true) / 1000; offset += 2;
+            const x2 = view.getInt16(offset, true) / 1000; offset += 2;
+            const y2 = view.getInt16(offset, true) / 1000; offset += 2;
+            const stopCount = bytes[offset++];
+            const stops: AstVectorGradientStop[] = [];
+            for (let s = 0; s < stopCount; s++) {
+              const off = bytes[offset++] / 255;
+              const r = bytes[offset++]; const g = bytes[offset++]; const b = bytes[offset++]; const a = bytes[offset++];
+              stops.push({ offset: off, color: { r, g, b, a } });
+            }
+            scene.vectorDict.styles.push({ kind: 'linear', id, x1, y1, x2, y2, stops });
+          } else if (kind === 3) {
+            const id = strTable.get(view.getUint16(offset, true)); offset += 2;
+            const cx = view.getInt16(offset, true) / 1000; offset += 2;
+            const cy = view.getInt16(offset, true) / 1000; offset += 2;
+            const r = view.getInt16(offset, true) / 1000; offset += 2;
+            const fx = view.getInt16(offset, true) / 1000; offset += 2;
+            const fy = view.getInt16(offset, true) / 1000; offset += 2;
+            const stopCount = bytes[offset++];
+            const stops: AstVectorGradientStop[] = [];
+            for (let s = 0; s < stopCount; s++) {
+              const off = bytes[offset++] / 255;
+              const sr = bytes[offset++]; const sg = bytes[offset++]; const sb = bytes[offset++]; const sa = bytes[offset++];
+              stops.push({ offset: off, color: { r: sr, g: sg, b: sb, a: sa } });
+            }
+            scene.vectorDict.styles.push({ kind: 'radial', id, cx, cy, r, fx, fy, stops });
+          }
+        }
+        offset = endOff;
+        break;
+      }
+      case OP_SHAPE_DEF: {
+        const payloadLen = view.getUint32(offset, true); offset += 4;
+        const endOff = Math.min(len, offset + payloadLen);
+        if (!scene.vectorDict) scene.vectorDict = { styles: [], shapes: [], stamps: [] };
+        const id = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const layerCount = bytes[offset++];
+        const layers: AstVectorShapeLayer[] = [];
+        for (let l = 0; l < layerCount && offset < endOff; l++) {
+          const fillIdx = view.getUint16(offset, true); offset += 2;
+          const strokeIdx = view.getUint16(offset, true); offset += 2;
+          const strokeW = view.getUint16(offset, true) / 10; offset += 2;
+          const lFlags = bytes[offset++];
+          const cmdCount = view.getUint16(offset, true); offset += 2;
+          const commands: AstVectorPathCmd[] = [];
+          let penX = 0;
+          let penY = 0;
+          for (let c = 0; c < cmdCount && offset < endOff; c++) {
+            const cop = bytes[offset++];
+            if (cop === 1) {
+              penX += view.getInt16(offset, true); offset += 2;
+              penY += view.getInt16(offset, true); offset += 2;
+              commands.push({ op: 'M', x: penX / 10, y: penY / 10 });
+            } else if (cop === 2) {
+              penX += view.getInt16(offset, true); offset += 2;
+              penY += view.getInt16(offset, true); offset += 2;
+              commands.push({ op: 'L', x: penX / 10, y: penY / 10 });
+            } else if (cop === 3) {
+              const qx = penX + view.getInt16(offset, true); offset += 2;
+              const qy = penY + view.getInt16(offset, true); offset += 2;
+              penX += view.getInt16(offset, true); offset += 2;
+              penY += view.getInt16(offset, true); offset += 2;
+              commands.push({ op: 'Q', cx: qx / 10, cy: qy / 10, x: penX / 10, y: penY / 10 });
+            } else if (cop === 4) {
+              const x1 = penX + view.getInt16(offset, true); offset += 2;
+              const y1 = penY + view.getInt16(offset, true); offset += 2;
+              const x2 = penX + view.getInt16(offset, true); offset += 2;
+              const y2 = penY + view.getInt16(offset, true); offset += 2;
+              penX += view.getInt16(offset, true); offset += 2;
+              penY += view.getInt16(offset, true); offset += 2;
+              commands.push({ op: 'C', x1: x1 / 10, y1: y1 / 10, x2: x2 / 10, y2: y2 / 10, x: penX / 10, y: penY / 10 });
+            } else if (cop === 5) {
+              commands.push({ op: 'Z' });
+            }
+          }
+          layers.push({
+            ...(fillIdx !== 0xffff ? { fillStyle: fillIdx } : {}),
+            ...(strokeIdx !== 0xffff ? { strokeStyle: strokeIdx, strokeWidth: strokeW } : {}),
+            ...(lFlags & 0x01 ? { evenOdd: true } : {}),
+            ...(lFlags & 0x02 ? { roundCap: true } : {}),
+            ...(lFlags & 0x04 ? { roundJoin: true } : {}),
+            ...(lFlags & 0x08 ? { ariaHidden: true } : {}),
+            commands,
+          });
+        }
+        scene.vectorDict.shapes.push({ id, layers });
+        offset = endOff;
+        break;
+      }
+      case OP_STAMP: {
+        if (!scene.vectorDict) scene.vectorDict = { styles: [], shapes: [], stamps: [] };
+        const depth = view.getUint16(offset, true); offset += 2;
+        const symbolId = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const instanceId = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const a = view.getFloat32(offset, true); offset += 4;
+        const b = view.getFloat32(offset, true); offset += 4;
+        const c = view.getFloat32(offset, true); offset += 4;
+        const d = view.getFloat32(offset, true); offset += 4;
+        const e = view.getFloat32(offset, true); offset += 4;
+        const f = view.getFloat32(offset, true); offset += 4;
+        const opacity = bytes[offset++] / 255;
+        const sFlags = bytes[offset++];
+        scene.vectorDict.stamps.push({
+          depth,
+          symbolId,
+          ...(instanceId ? { instanceId } : {}),
+          matrix: [a, b, c, d, e, f],
+          opacity,
+          ...(sFlags & 0x01 ? { ariaHidden: true } : {}),
+        });
+        break;
+      }
       case OP_KEYFRAME: {
         const normT = view.getUint16(offset, true); offset += 2;
         const titleIdx = view.getUint16(offset, true); offset += 2;
@@ -1276,6 +1771,10 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         // Skip unknown opcode safely
         break;
     }
+  }
+
+  if (scene.vectorDict && !scene.svgMarkup) {
+    scene.svgMarkup = hydrateVectorDictionaryToSvg(scene.vectorDict);
   }
 
   return scene;

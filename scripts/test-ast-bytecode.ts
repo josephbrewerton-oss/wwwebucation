@@ -13,14 +13,22 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vm from 'vm';
+import * as zlib from 'zlib';
 import {
   compileAstTextToBytecode,
+  compileSceneToBytecode,
   decompileBytecodeToScene,
+  encodeSvgPathToVectorCmds,
+  hydrateVectorDictionaryToSvg,
   isAstBytecode,
   ASTB_MAGIC,
   FLAG_HAS_SVG,
+  FLAG_HAS_VECTOR_DICT,
   OP_CAMERA,
   OP_3D_LINE,
+  OP_STYLE_TABLE,
+  OP_SHAPE_DEF,
+  OP_STAMP,
 } from '../src/utils/astBytecode';
 import {
   EverymanBios,
@@ -406,6 +414,150 @@ async function runTests() {
   // Verify WASM Everyman BIOS boots dna-helix.astb cleanly with new OP_CAMERA & OP_3D_LINE opcodes
   const dnaBoot = bios.bootCartridge(dnaAstbBin);
   assert(dnaBoot.status === 0 && dnaBoot.manifest.length > 0, `WASM Everyman BIOS booted dna-helix.astb cleanly (${dnaBoot.manifest.length} manifest rows, OP_CAMERA=${OP_CAMERA}, OP_3D_LINE=${OP_3D_LINE})`);
+
+  // ---------------------------------------------------------------------------
+  // Test 11: .astb v1.1 Binary Vector Dictionary & Instancing (0x82..0x84)
+  // ---------------------------------------------------------------------------
+  console.log('\n11. Testing .astb v1.1 Binary Vector Dictionary & Instancing (0x82..0x84):');
+  const treeCanopyCmds = encodeSvgPathToVectorCmds('M 0 -46 Q 18 -20 26 2 L -26 2 Q -18 -20 0 -46 Z');
+  const treeTrunkCmds = encodeSvgPathToVectorCmds('M -5 0 L 5 0 L 6 18 L -6 18 Z');
+  const dropletCmds = encodeSvgPathToVectorCmds('M 0 -14 C 9 -3 10 6 0 12 C -10 6 -9 -3 0 -14 Z');
+
+  const vecDict = {
+    viewBox: '0 0 800 500',
+    styles: [
+      { kind: 'solid' as const, color: { r: 109, g: 68, b: 41, a: 255 } },
+      {
+        kind: 'linear' as const,
+        id: 'grad-pine',
+        x1: 0, y1: 0, x2: 0, y2: 1,
+        stops: [
+          { offset: 0, color: { r: 52, g: 211, b: 153, a: 255 } },
+          { offset: 1, color: { r: 6, g: 95, b: 70, a: 255 } },
+        ],
+      },
+      {
+        kind: 'radial' as const,
+        id: 'grad-drop',
+        cx: 0.4, cy: 0.35, r: 0.6, fx: 0.32, fy: 0.25,
+        stops: [
+          { offset: 0, color: { r: 224, g: 242, b: 254, a: 255 } },
+          { offset: 0.55, color: { r: 56, g: 189, b: 248, a: 255 } },
+          { offset: 1, color: { r: 3, g: 105, b: 161, a: 255 } },
+        ],
+      },
+      { kind: 'solid' as const, color: { r: 2, g: 44, b: 34, a: 255 } },
+    ],
+    shapes: [
+      {
+        id: 'sym-pine',
+        layers: [
+          { fillStyle: 0, commands: treeTrunkCmds, ariaHidden: true },
+          { fillStyle: 1, strokeStyle: 3, strokeWidth: 1.5, roundJoin: true, commands: treeCanopyCmds },
+        ],
+      },
+      {
+        id: 'sym-droplet',
+        layers: [
+          { fillStyle: 2, strokeStyle: 3, strokeWidth: 1.0, roundCap: true, roundJoin: true, commands: dropletCmds },
+        ],
+      },
+    ],
+    stamps: [
+      // 10 instanced pine trees across an alpine ridge
+      ...Array.from({ length: 10 }, (_, idx) => {
+        const s = Number((0.65 + (idx % 4) * 0.18).toFixed(2));
+        return {
+          symbolId: 'sym-pine',
+          instanceId: `pine-${idx}`,
+          depth: idx,
+          matrix: [s, 0, 0, s, 80 + idx * 72, 340 + (idx % 3) * 14] as [number, number, number, number, number, number],
+          opacity: 1,
+          ariaHidden: true,
+        };
+      }),
+      // 10 instanced specular water droplets
+      ...Array.from({ length: 10 }, (_, idx) => {
+        const s = Number((0.75 + (idx % 3) * 0.2).toFixed(2));
+        return {
+          symbolId: 'sym-droplet',
+          instanceId: `drop-${idx}`,
+          depth: 10 + idx,
+          matrix: [s, 0, 0, s, 110 + idx * 68, 120 + (idx % 4) * 26] as [number, number, number, number, number, number],
+          opacity: 0.92,
+          ariaHidden: true,
+        };
+      }),
+    ],
+  };
+
+  const vecBaseScene: any = {
+    id: 'vector-dict-proto',
+    title: 'Binary Vector Dictionary Prototype',
+    stage: 'vector-dict-proto.svg',
+    type: 'Sim',
+    duration: 10,
+    easing: 'linear',
+    keyframes: [{ t: 0, title: 'Start', rule: 'Instanced binary vector stage' }],
+    subtitles: [],
+    bindings: [{ target: '#stage', attr: 'opacity', expr: '1' }],
+    checkpoints: [],
+    vars: { wind: 0.5 },
+    inputs: [{ type: 'slider', var: 'wind', label: 'Wind', min: 0, max: 1, step: 0.1 }],
+  };
+
+  const binaryVecAstb = compileSceneToBytecode({ ...vecBaseScene, vectorDict: vecDict });
+  const rawInlineSvg = hydrateVectorDictionaryToSvg(vecDict, '0 0 800 500');
+  // Equivalent flat un-instanced SVG (20 repeated <path> groups, as conventional SVG tools emit)
+  const cmdToStr = (c: any) => {
+    if (c.op === 'Z') return 'Z';
+    if (c.op === 'Q') return `Q ${c.cx} ${c.cy} ${c.x} ${c.y}`;
+    if (c.op === 'C') return `C ${c.x1} ${c.y1} ${c.x2} ${c.y2} ${c.x} ${c.y}`;
+    return `${c.op} ${c.x} ${c.y}`;
+  };
+  const flatUninstancedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">${vecDict.stamps.map((st, idx) => {
+    const sh = vecDict.shapes.find(s => s.id === st.symbolId)!;
+    const dPaths = sh.layers.map(l => `<path d="${l.commands.map(cmdToStr).join(' ')}" fill="url(#grad-pine)" stroke="#022c22" stroke-width="${l.strokeWidth ?? 0}"/>`).join('');
+    return `<g id="flat-${idx}" transform="matrix(${st.matrix.join(' ')})" opacity="${st.opacity}">${dPaths}</g>`;
+  }).join('')}</svg>`;
+  const companionAsciiAstb = compileSceneToBytecode({ ...vecBaseScene, svgMarkup: flatUninstancedSvg });
+
+  const vecView = new DataView(binaryVecAstb.buffer, binaryVecAstb.byteOffset, binaryVecAstb.byteLength);
+  const vecFlags = vecView.getUint16(14, true);
+  assert((vecFlags & FLAG_HAS_VECTOR_DICT) !== 0, `FLAG_HAS_VECTOR_DICT (0x0040) set on binary vector .astb (flags=0x${vecFlags.toString(16)})`);
+
+  // Verify 0 JSON.parse calls during TS & JS decoding + bit-exact hydrated SVG parity
+  let vecJsonParseCalls = 0;
+  (JSON as any).parse = (...args: any[]) => {
+    vecJsonParseCalls++;
+    return (origJsonParse as any).apply(JSON, args);
+  };
+  let vecTsDec: any;
+  let vecJsDec: any;
+  try {
+    vecTsDec = decompileBytecodeToScene(binaryVecAstb);
+    const vecJsCtx: any = { console, window: {}, globalThis: {}, TextDecoder };
+    vm.createContext(vecJsCtx);
+    vm.runInContext(fs.readFileSync(path.join(ROOT_DIR, 'static', 'player', 'ast-bytecode-decoder.js'), 'utf8'), vecJsCtx);
+    const jsDecFn = vecJsCtx.decompileBytecode || vecJsCtx.window.decompileBytecode || vecJsCtx.globalThis.decompileBytecode;
+    vecJsDec = jsDecFn(binaryVecAstb);
+  } finally {
+    JSON.parse = origJsonParse;
+  }
+
+  assert(vecJsonParseCalls === 0, `Zero JSON.parse calls during TS & JS decoding of OP_STYLE_TABLE/OP_SHAPE_DEF/OP_STAMP (${OP_STYLE_TABLE}/${OP_SHAPE_DEF}/${OP_STAMP})`);
+  assert(vecTsDec.vectorDict?.styles.length === 4 && vecTsDec.vectorDict?.shapes.length === 2 && vecTsDec.vectorDict?.stamps.length === 20, `Decoded 4 styles, 2 vector symbols, 20 affine stamps`);
+  assert(typeof vecTsDec.svgMarkup === 'string' && vecTsDec.svgMarkup === vecJsDec.svgMarkup, `Bit-exact hydrated SVG markup parity between TS and JS decoders (${vecTsDec.svgMarkup.length} chars)`);
+  assert(vecTsDec.svgMarkup.includes('<radialGradient') && vecTsDec.svgMarkup.includes('fx="0.32"') && vecTsDec.svgMarkup.includes('<use id="pine-0" href="#sym-pine"'), 'Hydrated SVG contains focal radialGradient (fx/fy) and <use> symbol stamps');
+
+  const binGz = zlib.gzipSync(binaryVecAstb).byteLength;
+  const ascGz = zlib.gzipSync(companionAsciiAstb).byteLength;
+  const rawPctSaved = Number((((companionAsciiAstb.byteLength - binaryVecAstb.byteLength) / companionAsciiAstb.byteLength) * 100).toFixed(1));
+  assert(binaryVecAstb.byteLength < companionAsciiAstb.byteLength, `Binary vector .astb (${binaryVecAstb.byteLength} B raw / ${binGz} B gz) is ${rawPctSaved}% smaller than un-instanced ASCII SVG .astb (${companionAsciiAstb.byteLength} B raw / ${ascGz} B gz; hydrated <use> SVG=${rawInlineSvg.length} B)`);
+
+  // Verify 448 KiB Everyman WASM BIOS boots binary vector .astb cleanly without choking on 0x82..0x84
+  const vecWasmBoot = bios.bootCartridge(binaryVecAstb);
+  assert(vecWasmBoot.status === 0 && vecWasmBoot.manifest.length > 0 && vecWasmBoot.telemetry.linearMemoryBytes === WASM_MAX_BYTES, `448 KiB Everyman WASM BIOS booted binary vector .astb cleanly (status=${vecWasmBoot.status}, rows=${vecWasmBoot.manifest.length}, memory=${vecWasmBoot.telemetry.linearMemoryBytes} B)`);
 
   console.log('\n==================================================');
   console.log(`Results: ${passedCount} passed, ${failedCount} failed.`);
