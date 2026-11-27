@@ -84,13 +84,39 @@ export interface WebMcpToolDescriptor {
   execute: (args: Record<string, any>, client?: unknown) => Promise<any>;
 }
 
+export interface WebMcpRegisterOptions {
+  /** Hard cutoff timeout (ms) for async tool registration settlement. Default: 5000. */
+  timeoutMs?: number;
+  /** Roll back all tools via AbortController if any registration fails or times out. Default: true. */
+  atomic?: boolean;
+  /** Timing cutoff: 'immediate' for SPA cartridge swaps, 'dom-ready' for MPA <head> scripts. Default: 'immediate'. */
+  phase?: 'immediate' | 'dom-ready';
+  /** Expose only read-only tools (e.g. for suspect/approximated SWFs). Default: false. */
+  readOnlyOnly?: boolean;
+  /** Skip document.modelContext registration entirely (e.g. for reject-low-value SWFs). Default: false. */
+  skipRegistration?: boolean;
+  /** Optional external AbortSignal to cancel pending registration or tear down active tools. */
+  signal?: AbortSignal;
+}
+
+export interface WebMcpWaitResult {
+  ready: boolean;
+  timedOut: boolean;
+  aborted: boolean;
+  registeredTools: string[];
+  failedTools: Array<{ name: string; reason: string }>;
+  elapsedMs: number;
+}
+
 export interface WebMcpRegistrationHandle {
   registered: boolean;
   surface: WebMcpSurface;
   mode: 'registerTool' | 'headless-local';
   toolNames: string[];
   tools: WebMcpToolDescriptor[];
+  failedTools?: Array<{ name: string; reason: string }>;
   ready?: Promise<void>;
+  waitForToolsUntil?: (opts?: { timeoutMs?: number; signal?: AbortSignal }) => Promise<WebMcpWaitResult>;
   unregister: () => void;
 }
 
@@ -463,14 +489,140 @@ export function createPlayerWebMcpTools(transport: PlayerMcpTransport): WebMcpTo
 
 let activePlayerRegistrationAbort: AbortController | null = null;
 
+function waitForDomReadyCutoff(signal?: AbortSignal): Promise<boolean> {
+  if (typeof document === 'undefined' || !document.readyState || document.readyState !== 'loading') {
+    return Promise.resolve(!signal?.aborted);
+  }
+  if (signal?.aborted) return Promise.resolve(false);
+  return new Promise<boolean>((resolve) => {
+    const onReady = () => {
+      cleanup();
+      resolve(true);
+    };
+    const onAbort = () => {
+      cleanup();
+      resolve(false);
+    };
+    const cleanup = () => {
+      try {
+        document.removeEventListener('DOMContentLoaded', onReady);
+      } catch {}
+      try {
+        signal?.removeEventListener('abort', onAbort);
+      } catch {}
+    };
+    document.addEventListener('DOMContentLoaded', onReady, { once: true });
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 /**
- * Registers the 3 structured WebMCP tools exclusively on document.modelContext
- * using AbortSignal cleanup and async registerTool Promise handling.
+ * Awaits WebMCP registration settlement with a deterministic timeout/abort cutoff.
+ * If the cutoff expires before all tools settle, aborts the registration handle so
+ * an incomplete toolset is never prematurely exposed on DOOH kiosks or SPA route swaps.
  */
-export function registerWebMcpTools(transport: PlayerMcpTransport): WebMcpRegistrationHandle {
-  const tools = createPlayerWebMcpTools(transport);
+export async function waitForToolsUntil(
+  handle: WebMcpRegistrationHandle,
+  opts?: { timeoutMs?: number; signal?: AbortSignal }
+): Promise<WebMcpWaitResult> {
+  const start = nowMs();
+  const timeoutMs = Math.max(10, Number(opts?.timeoutMs ?? 5000));
+  const externalSignal = opts?.signal;
+
+  if (externalSignal?.aborted) {
+    handle.unregister();
+    return {
+      ready: false,
+      timedOut: false,
+      aborted: true,
+      registeredTools: [],
+      failedTools: handle.failedTools ? handle.failedTools.slice() : [],
+      elapsedMs: Number((nowMs() - start).toFixed(2)),
+    };
+  }
+
+  if (!handle.ready) {
+    return {
+      ready: handle.registered,
+      timedOut: false,
+      aborted: false,
+      registeredTools: handle.registered ? handle.toolNames.slice() : [],
+      failedTools: handle.failedTools ? handle.failedTools.slice() : [],
+      elapsedMs: Number((nowMs() - start).toFixed(2)),
+    };
+  }
+
+  let timedOut = false;
+  let aborted = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let onAbort: (() => void) | null = null;
+
+  try {
+    await Promise.race([
+      handle.ready,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(() => {
+          timedOut = true;
+          resolve();
+        }, timeoutMs);
+        if (externalSignal) {
+          onAbort = () => {
+            aborted = true;
+            resolve();
+          };
+          externalSignal.addEventListener('abort', onAbort, { once: true });
+        }
+      }),
+    ]);
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+    if (externalSignal && onAbort) {
+      try {
+        externalSignal.removeEventListener('abort', onAbort);
+      } catch {}
+    }
+  }
+
+  if (timedOut || aborted) {
+    handle.unregister();
+    return {
+      ready: false,
+      timedOut,
+      aborted,
+      registeredTools: [],
+      failedTools: handle.failedTools ? handle.failedTools.slice() : [],
+      elapsedMs: Number((nowMs() - start).toFixed(2)),
+    };
+  }
+
+  return {
+    ready: handle.registered,
+    timedOut: false,
+    aborted: false,
+    registeredTools: handle.registered ? handle.toolNames.slice() : [],
+    failedTools: handle.failedTools ? handle.failedTools.slice() : [],
+    elapsedMs: Number((nowMs() - start).toFixed(2)),
+  };
+}
+
+/**
+ * Registers structured WebMCP tools exclusively on document.modelContext
+ * using AbortSignal cleanup, Promise.allSettled() settlement, atomic rollback
+ * on partial failure/timeout, and MPA/SPA load-cutoff support.
+ */
+export function registerWebMcpTools(
+  transport: PlayerMcpTransport,
+  options?: WebMcpRegisterOptions
+): WebMcpRegistrationHandle {
+  const allTools = createPlayerWebMcpTools(transport);
+  const tools = options?.readOnlyOnly
+    ? allTools.filter((t) => t.annotations?.readOnlyHint === true)
+    : allTools;
   const toolNames = tools.map((t) => t.name);
   const { surface, api } = detectWebMcpSurface();
+  const atomic = options?.atomic !== false;
+  const timeoutMs = Math.max(10, Number(options?.timeoutMs ?? 5000));
+  const phase = options?.phase || 'immediate';
 
   if (activePlayerRegistrationAbort && !activePlayerRegistrationAbort.signal.aborted) {
     try {
@@ -481,95 +633,196 @@ export function registerWebMcpTools(transport: PlayerMcpTransport): WebMcpRegist
     activePlayerRegistrationAbort = null;
   }
 
-  if (!api || typeof api.registerTool !== 'function') {
-    return {
+  if (options?.skipRegistration || !api || typeof api.registerTool !== 'function' || tools.length === 0) {
+    const emptyHandle: WebMcpRegistrationHandle = {
       registered: false,
       surface,
       mode: 'headless-local',
       toolNames,
       tools,
+      failedTools: [],
       ready: Promise.resolve(),
       unregister: () => {},
     };
+    emptyHandle.waitForToolsUntil = (waitOpts) => waitForToolsUntil(emptyHandle, waitOpts);
+    return emptyHandle;
   }
 
   const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
   activePlayerRegistrationAbort = abortController;
 
   const registeredIndividual: string[] = [];
-  const pendingRegistrations: Array<{ name: string; promise: Promise<any> }> = [];
+  const failedTools: Array<{ name: string; reason: string }> = [];
 
-  for (const tool of tools) {
-    const toolDef = {
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-      annotations: tool.annotations,
-      execute: tool.execute,
-    };
+  const rollback = () => {
     try {
-      const result = abortController
-        ? api.registerTool(toolDef, { signal: abortController.signal })
-        : api.registerTool(toolDef);
-      registeredIndividual.push(tool.name);
-      if (result && typeof result.then === 'function') {
-        pendingRegistrations.push({ name: tool.name, promise: result });
+      if (abortController && !abortController.signal.aborted) {
+        abortController.abort();
       }
-    } catch (err) {
-      console.warn(`[WebMCP] Synchronous registerTool failure for '${tool.name}':`, err);
-    }
-  }
-
-  const mode: WebMcpRegistrationHandle['mode'] =
-    registeredIndividual.length > 0 ? 'registerTool' : 'headless-local';
-
-  const handle: WebMcpRegistrationHandle = {
-    registered: mode === 'registerTool',
-    surface,
-    mode,
-    toolNames,
-    tools,
-    ready: Promise.resolve(),
-    unregister: () => {
-      try {
-        if (abortController && !abortController.signal.aborted) {
-          abortController.abort();
-        }
-        if (activePlayerRegistrationAbort === abortController) {
-          activePlayerRegistrationAbort = null;
-        }
-        if (typeof api.unregisterTool === 'function') {
-          for (const name of registeredIndividual) {
-            try {
-              api.unregisterTool(name);
-            } catch {
-              // Ignore if already unregistered by AbortSignal
-            }
+      if (activePlayerRegistrationAbort === abortController) {
+        activePlayerRegistrationAbort = null;
+      }
+      if (typeof api.unregisterTool === 'function') {
+        for (const name of registeredIndividual) {
+          try {
+            api.unregisterTool(name);
+          } catch {
+            // Ignore if already unregistered by AbortSignal
           }
         }
-      } catch {
-        // Safe teardown
       }
-    },
+    } catch {
+      // Safe teardown
+    }
+    handle.registered = false;
+    handle.mode = 'headless-local';
   };
 
-  if (pendingRegistrations.length > 0) {
-    handle.ready = (async () => {
-      let okCount = 0;
-      const settled = await Promise.allSettled(pendingRegistrations.map((p) => p.promise));
-      for (let i = 0; i < settled.length; i++) {
-        const res = settled[i];
-        const toolName = pendingRegistrations[i].name;
-        if (res.status === 'fulfilled') {
-          okCount += 1;
-        } else {
-          console.warn(`[WebMCP] Async registerTool rejected for '${toolName}':`, res.reason);
+  const handle: WebMcpRegistrationHandle = {
+    registered: false,
+    surface,
+    mode: 'headless-local',
+    toolNames,
+    tools,
+    failedTools,
+    ready: Promise.resolve(),
+    unregister: rollback,
+  };
+  handle.waitForToolsUntil = (waitOpts) => waitForToolsUntil(handle, waitOpts);
+
+  if (options?.signal) {
+    if (options.signal.aborted) {
+      rollback();
+      return handle;
+    }
+    options.signal.addEventListener('abort', () => rollback(), { once: true });
+  }
+
+  const invokeRegistrations = (): Array<{ name: string; promise: Promise<any> }> => {
+    const pending: Array<{ name: string; promise: Promise<any> }> = [];
+    for (const tool of tools) {
+      if (abortController?.signal.aborted) break;
+      const toolDef = {
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        annotations: tool.annotations,
+        execute: tool.execute,
+      };
+      try {
+        const result = abortController
+          ? api.registerTool(toolDef, { signal: abortController.signal })
+          : api.registerTool(toolDef);
+        registeredIndividual.push(tool.name);
+        if (result && typeof result.then === 'function') {
+          pending.push({ name: tool.name, promise: result });
         }
+      } catch (err: any) {
+        failedTools.push({ name: tool.name, reason: err?.message || String(err) });
+        console.warn(`[WebMCP] Synchronous registerTool failure for '${tool.name}':`, err);
       }
-      if (okCount === 0 && registeredIndividual.length === pendingRegistrations.length) {
-        handle.registered = false;
-        handle.mode = 'headless-local';
+    }
+    return pending;
+  };
+
+  const finalizeSettlement = (
+    settled: PromiseSettledResult<any>[],
+    pending: Array<{ name: string; promise: Promise<any> }>
+  ) => {
+    for (let i = 0; i < settled.length; i++) {
+      const res = settled[i];
+      if (res.status === 'rejected') {
+        const toolName = pending[i].name;
+        failedTools.push({
+          name: toolName,
+          reason: res.reason instanceof Error ? res.reason.message : String(res.reason),
+        });
+        console.warn(`[WebMCP] Async registerTool rejected for '${toolName}':`, res.reason);
       }
+    }
+
+    if (abortController?.signal.aborted) {
+      rollback();
+      return;
+    }
+
+    if (atomic && failedTools.length > 0) {
+      rollback();
+      return;
+    }
+
+    const okCount = registeredIndividual.length - failedTools.length;
+    if (okCount > 0) {
+      handle.registered = true;
+      handle.mode = 'registerTool';
+    } else {
+      rollback();
+    }
+  };
+
+  const needsDomReadyWait =
+    phase === 'dom-ready' &&
+    typeof document !== 'undefined' &&
+    Boolean(document.readyState) &&
+    document.readyState === 'loading';
+
+  if (needsDomReadyWait) {
+    handle.ready = (async () => {
+      const domReadyOk = await waitForDomReadyCutoff(abortController?.signal);
+      if (!domReadyOk || abortController?.signal.aborted) {
+        rollback();
+        return;
+      }
+      const pending = invokeRegistrations();
+      if (pending.length === 0) {
+        finalizeSettlement([], []);
+        return;
+      }
+      let timedOut = false;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const settled = await Promise.race([
+        Promise.allSettled(pending.map((p) => p.promise)),
+        new Promise<null>((resolve) => {
+          timer = setTimeout(() => {
+            timedOut = true;
+            resolve(null);
+          }, timeoutMs);
+        }),
+      ]);
+      if (timer !== null) clearTimeout(timer);
+      if (timedOut || !settled) {
+        failedTools.push({ name: '*', reason: `WebMCP registration timed out after ${timeoutMs}ms` });
+        rollback();
+        return;
+      }
+      finalizeSettlement(settled, pending);
+    })();
+    return handle;
+  }
+
+  const pendingRegistrations = invokeRegistrations();
+  if (pendingRegistrations.length === 0) {
+    finalizeSettlement([], []);
+  } else {
+    handle.ready = (async () => {
+      let timedOut = false;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const settled = await Promise.race([
+        Promise.allSettled(pendingRegistrations.map((p) => p.promise)),
+        new Promise<null>((resolve) => {
+          timer = setTimeout(() => {
+            timedOut = true;
+            resolve(null);
+          }, timeoutMs);
+        }),
+      ]);
+      if (timer !== null) clearTimeout(timer);
+      if (timedOut || !settled) {
+        failedTools.push({ name: '*', reason: `WebMCP registration timed out after ${timeoutMs}ms` });
+        rollback();
+        return;
+      }
+      finalizeSettlement(settled, pendingRegistrations);
     })();
   }
 

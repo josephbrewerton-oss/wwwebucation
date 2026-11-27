@@ -69,6 +69,18 @@ export interface DistillOptions {
   originalSwfBytes?: number;
 }
 
+export type SwfDistillVerdict = 'signal' | 'suspect' | 'reject-low-value';
+
+export interface SwfDistillCentrifugeResult {
+  verdict: SwfDistillVerdict;
+  keptStates: SwfCapturedState[];
+  droppedStateIds: string[];
+  droppedButtonLabels: string[];
+  signalReasons: string[];
+  suspectReasons: string[];
+  sludgeReasons: string[];
+}
+
 export interface DistilledNativeCartridge {
   id: string;
   title: string;
@@ -77,6 +89,7 @@ export interface DistilledNativeCartridge {
   type: DistillTargetFormat;
   svgMarkup: string;
   astSource: string;
+  centrifuge?: SwfDistillCentrifugeResult;
   metrics: {
     stateCount: number;
     dedupedPathCount: number;
@@ -136,15 +149,140 @@ export function formatTitleFromSlug(raw: string): string {
   return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const SLUDGE_BUTTON_RE =
+  /\b(more\s+games|play\s+more|sponsor(?:ed)?|armor\s*games|kongregate|newgrounds|miniclip|mochi|visit\s+site|facebook|twitter|download\s+flash|get\s+flash)\b|https?:\/\//i;
+const SLUDGE_PRELOADER_TEXT_RE =
+  /^(?:loading(?:\.{0,3})|\d{1,3}\s*%|please\s+wait|mochi|armor\s*games|kongregate|newgrounds|miniclip|sponsored\s+by)$/i;
+
+export function isSludgeButton(btn: SwfObservedButton): boolean {
+  const combined = `${btn?.label || ''} ${btn?.name || ''} ${btn?.id || ''}`.trim();
+  if (!combined) return false;
+  return SLUDGE_BUTTON_RE.test(combined);
+}
+
+export function filterSludgeButtons(buttons: SwfObservedButton[] | undefined): {
+  kept: SwfObservedButton[];
+  dropped: SwfObservedButton[];
+} {
+  const kept: SwfObservedButton[] = [];
+  const dropped: SwfObservedButton[] = [];
+  for (const b of buttons || []) {
+    if (isSludgeButton(b)) dropped.push(b);
+    else kept.push(b);
+  }
+  return { kept, dropped };
+}
+
 /**
- * Infers the best default native format ('Slide' vs 'Sim') from captured runtime signals.
+ * Deterministic SWF spectrum centrifuge for captured runtime states.
+ * Separates genuine Signal states/controls from Suspect/Approximable layouts
+ * and Sludge (duplicate hold frames, sponsor chrome, empty/preloader-only shells).
+ */
+export function classifySwfCapturedStates(states: SwfCapturedState[]): SwfDistillCentrifugeResult {
+  const keptStates: SwfCapturedState[] = [];
+  const droppedStateIds: string[] = [];
+  const droppedButtonLabels: string[] = [];
+  const signalReasons: string[] = [];
+  const suspectReasons: string[] = [];
+  const sludgeReasons: string[] = [];
+
+  if (!states || states.length === 0) {
+    sludgeReasons.push('no captured runtime states available');
+    return {
+      verdict: 'reject-low-value',
+      keptStates,
+      droppedStateIds,
+      droppedButtonLabels,
+      signalReasons,
+      suspectReasons,
+      sludgeReasons,
+    };
+  }
+
+  const seenFingerprints = new Set<string>();
+  let totalCleanButtons = 0;
+  let totalNumericVars = 0;
+  let totalMeaningfulTexts = 0;
+  let truncatedStates = 0;
+
+  for (const s of states) {
+    const { kept: cleanBtns, dropped: sludgeBtns } = filterSludgeButtons(s.observedButtons);
+    for (const db of sludgeBtns) droppedButtonLabels.push(db.label || db.name || db.id);
+
+    const fp = (s.fingerprint || '').trim();
+    const isDuplicate = Boolean(fp) && seenFingerprints.has(fp);
+    if (fp) seenFingerprints.add(fp);
+
+    const hasDrawables = (s.pathCount || 0) > 0 || (s.nodeCount || 0) > 0 || Boolean((s.svgMarkup || '').trim());
+    const cleanTexts = (s.observedTexts || []).filter((t) => !SLUDGE_PRELOADER_TEXT_RE.test(t.trim()));
+    const numericVarCount = Object.values(s.observedVars || {}).filter(
+      (v) => typeof v === 'number' && Number.isFinite(v)
+    ).length;
+
+    const isPreloaderOnly =
+      (s.observedTexts || []).length > 0 &&
+      cleanTexts.length === 0 &&
+      cleanBtns.length === 0 &&
+      numericVarCount === 0;
+
+    if (isDuplicate || !hasDrawables || isPreloaderOnly) {
+      droppedStateIds.push(s.id);
+      continue;
+    }
+
+    if (s.truncated) truncatedStates++;
+    totalCleanButtons += cleanBtns.length;
+    totalNumericVars += numericVarCount;
+    totalMeaningfulTexts += cleanTexts.length;
+    keptStates.push(s);
+  }
+
+  if (keptStates.length > 0) signalReasons.push(`${keptStates.length} distinct visual state(s) retained`);
+  if (totalCleanButtons > 0) signalReasons.push(`${totalCleanButtons} non-sludge interactive trigger(s)`);
+  if (totalNumericVars > 0) signalReasons.push(`${totalNumericVars} finite numeric state variable(s)`);
+  if (totalMeaningfulTexts > 0) signalReasons.push(`${totalMeaningfulTexts} legible text label(s)`);
+
+  if (truncatedStates > 0) suspectReasons.push(`${truncatedStates} state snapshot(s) truncated during capture`);
+  if (droppedButtonLabels.length > 0) {
+    suspectReasons.push(`stripped ${droppedButtonLabels.length} sponsor/outbound button(s)`);
+  }
+  if (keptStates.length === 1 && totalCleanButtons === 0 && totalNumericVars === 0) {
+    suspectReasons.push('single static state without interactive controls or numeric variables');
+  }
+
+  if (keptStates.length === 0) {
+    sludgeReasons.push('all captured states were empty, duplicate, or preloader/sponsor sludge');
+  }
+
+  const verdict: SwfDistillVerdict =
+    sludgeReasons.length > 0
+      ? 'reject-low-value'
+      : suspectReasons.length > 0
+      ? 'suspect'
+      : 'signal';
+
+  return {
+    verdict,
+    keptStates,
+    droppedStateIds,
+    droppedButtonLabels,
+    signalReasons,
+    suspectReasons,
+    sludgeReasons,
+  };
+}
+
+/**
+ * Infers the best default native format ('Slide' vs 'Sim') from captured runtime signals,
+ * ignoring sponsor/outbound sludge buttons so splash shells do not falsely promote to Sim.
  */
 export function inferRecommendedFormat(states: SwfCapturedState[]): DistillTargetFormat {
   if (!states || states.length === 0) return 'Slide';
-  let hasButtons = false;
+  let hasCleanButtons = false;
   let hasNumericVars = false;
   for (const s of states) {
-    if (s.observedButtons && s.observedButtons.length > 0) hasButtons = true;
+    const { kept } = filterSludgeButtons(s.observedButtons);
+    if (kept.length > 0) hasCleanButtons = true;
     if (s.observedVars) {
       for (const v of Object.values(s.observedVars)) {
         if (typeof v === 'number' && Number.isFinite(v)) {
@@ -154,7 +292,7 @@ export function inferRecommendedFormat(states: SwfCapturedState[]): DistillTarge
       }
     }
   }
-  return hasButtons || hasNumericVars ? 'Sim' : 'Slide';
+  return hasCleanButtons || hasNumericVars ? 'Sim' : 'Slide';
 }
 
 /**
@@ -506,9 +644,12 @@ export function distillSwfStatesToNativeCartridge(opts: DistillOptions): Distill
     height: number;
   }> = [];
 
+  const centrifuge = classifySwfCapturedStates(states);
+
   if (format === 'Sim') {
     states.forEach((s, stateIdx) => {
-      (s.observedButtons || []).slice(0, 4).forEach((b, bIdx) => {
+      const { kept: cleanBtns } = filterSludgeButtons(s.observedButtons);
+      cleanBtns.slice(0, 4).forEach((b, bIdx) => {
         const nextState = count > 1 ? (stateIdx + 1) % count : 0;
         simButtons.push({
           stateIdx,
@@ -743,6 +884,7 @@ ${gesturesLines.join('\n')}
     type: format,
     svgMarkup,
     astSource,
+    centrifuge,
     metrics: {
       stateCount: count,
       dedupedPathCount,

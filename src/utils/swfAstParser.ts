@@ -51,6 +51,30 @@ interface SwfFillDefsCollector {
   patterns: SwfBitmapPatternDef[];
 }
 
+export type SwfCentrifugeVerdict = 'signal' | 'suspect' | 'reject-low-value';
+
+export interface SwfCentrifugeReport {
+  verdict: SwfCentrifugeVerdict;
+  signalReasons: string[];
+  suspectReasons: string[];
+  sludgeReasons: string[];
+  bucketErrors: {
+    config: number;
+    assets: number;
+    code: number;
+    display: number;
+  };
+  binaryDataTagCount: number;
+  binaryDataBytes: number;
+  externalDependencyHits: string[];
+  sponsorSignalHits: string[];
+  scriptLimits?: {
+    maxRecursionDepth: number;
+    scriptTimeoutSeconds: number;
+  };
+  hasXmlMetadata?: boolean;
+}
+
 export interface SwfMetadata {
   signature: 'FWS' | 'CWS' | 'ZWS' | 'UNKNOWN';
   version: number;
@@ -82,10 +106,13 @@ export interface SwfMetadata {
   labels: { frame: number; name: string }[];
   stateMachines?: { id: string; initial: string; states: string[]; transitionsCount: number }[];
   variables?: { name: string; value: any }[];
+  centrifuge?: SwfCentrifugeReport;
   importDebugSummary?: {
     totalTagsParsed: number;
     cachedDefsShapes: number;
     skippedTagIds: number[];
+    bucketErrors?: SwfCentrifugeReport['bucketErrors'];
+    centrifugeVerdict?: SwfCentrifugeVerdict;
   };
 }
 
@@ -3409,6 +3436,11 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     let currentFrame = 1;
     let totalTagsParsed = 0;
     const skippedTagIdSet = new Set<number>();
+    const bucketErrors = { config: 0, assets: 0, code: 0, display: 0 };
+    let scriptLimits: { maxRecursionDepth: number; scriptTimeoutSeconds: number } | undefined;
+    let hasXmlMetadata = false;
+    let binaryDataTagCount = 0;
+    let binaryDataBytes = 0;
 
     const effectiveFileLength = Math.max(1024, fileLength || payload.length);
 
@@ -3439,14 +3471,18 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               sounds.set(snd.id, snd);
               totalSoundBytes += Math.ceil((snd.b64.length * 3) / 4);
             }
-          } catch {}
+          } catch {
+            bucketErrors.assets++;
+          }
         }
       } else if (tagType === 15) {
         // StartSound (Tag 15): timeline sound trigger
         try {
           const ev = parseStartSoundTag(payload, reader.offset, nextTagOffset, currentFrame);
           if (ev) startSounds.push(ev);
-        } catch {}
+        } catch {
+          bucketErrors.display++;
+        }
       } else if (tagType === 20 || tagType === 21 || tagType === 35 || tagType === 36) {
         // DefineBitsLossless (20), DefineBitsJPEG2 (21), DefineBitsJPEG3 (35), DefineBitsLossless2 (36)
         if (totalBitmapBytes < 2 * 1024 * 1024) {
@@ -3462,7 +3498,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               bitmaps.set(bmp.id, bmp);
               totalBitmapBytes += bmp.uri.length;
             }
-          } catch {}
+          } catch {
+            bucketErrors.assets++;
+          }
         }
       } else if (tagType === 2 || tagType === 22 || tagType === 32 || tagType === 83) {
         const shapeId = reader.readUI16();
@@ -3471,6 +3509,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const shape = parseSwfShape(reader, shapeId, tagVer, nextTagOffset, fillDefsCollector);
           shapes.push(shape);
         } catch {
+          bucketErrors.assets++;
           shapes.push({
             id: `swf-shape-${shapeId}`,
             charId: shapeId,
@@ -3485,6 +3524,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const morph = parseSwfMorphShape(reader, shapeId, morphVer);
           morphShapes.push(morph);
         } catch {
+          bucketErrors.assets++;
           morphShapes.push({
             id: `swf-morph-${shapeId}`,
             shapeId,
@@ -3503,19 +3543,42 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         try {
           const spriteDef = parseDefineSprite(reader, nextTagOffset, version, effectiveFileLength);
           sprites.set(spriteDef.spriteId, spriteDef);
-        } catch {}
+        } catch {
+          bucketErrors.assets++;
+        }
       } else if (tagType === 7 || tagType === 34) {
         // DefineButton (Tag 7) / DefineButton2 (Tag 34)
         try {
           const btnDef = parseDefineButton(reader, nextTagOffset, tagType === 34, currentFrame, effectiveFileLength);
           buttons.set(btnDef.buttonId, btnDef);
-        } catch {}
+        } catch {
+          bucketErrors.assets++;
+        }
       } else if (tagType === 69) {
         // FileAttributes (Tag 69): bit 3 (0x08) indicates ActionScript 3.0 (AVM2)
         try {
           const attrFlags = reader.readUI32();
           if ((attrFlags & 0x08) !== 0) isAs3Flag = true;
-        } catch {}
+        } catch {
+          bucketErrors.config++;
+        }
+      } else if (tagType === 65) {
+        // ScriptLimits (Tag 65): Bucket A VM recursion & timeout bounds
+        try {
+          const maxRecursionDepth = reader.readUI16();
+          const scriptTimeoutSeconds = reader.readUI16();
+          scriptLimits = { maxRecursionDepth, scriptTimeoutSeconds };
+        } catch {
+          bucketErrors.config++;
+        }
+      } else if (tagType === 77) {
+        // Metadata (Tag 77): Bucket A XML metadata envelope
+        hasXmlMetadata = true;
+      } else if (tagType === 87) {
+        // DefineBinaryData (Tag 87): Bucket B embedded ByteArray payload (flagged in centrifuge)
+        binaryDataTagCount++;
+        binaryDataBytes += Math.max(0, nextTagOffset - reader.offset - 6);
+        skippedTagIdSet.add(tagType);
       } else if (tagType === 12 || tagType === 59) {
         // DoAction (12) / DoInitAction (59)
         try {
@@ -3531,7 +3594,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           } else {
             actionBlocks.push(act);
           }
-        } catch {}
+        } catch {
+          bucketErrors.code++;
+        }
       } else if (tagType === 56) {
         // ExportAssets (Tag 56): linkage names for attachMovie()
         try {
@@ -3541,7 +3606,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             const expName = reader.readString();
             if (expName) exportsMap[expName] = expCharId;
           }
-        } catch {}
+        } catch {
+          bucketErrors.code++;
+        }
       } else if (tagType === 76) {
         // SymbolClass (Tag 76): AS3 linkage names + Document Class (charId === 0)
         try {
@@ -3555,7 +3622,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               else exportsMap[symName] = symCharId;
             }
           }
-        } catch {}
+        } catch {
+          bucketErrors.code++;
+        }
       } else if (tagType === 72 || tagType === 82) {
         // DoABCDefine (72) / DoABC2 (82): ActionScript 3.0 (AVM2) bytecode
         hasDoAbcTag = true;
@@ -3571,7 +3640,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               if (abcTraits.length < 128) abcTraits.push(tr);
             }
           }
-        } catch {}
+        } catch {
+          bucketErrors.code++;
+        }
       } else if (tagType === 4 || tagType === 26 || tagType === 70) {
         try {
           const placed = parsePlaceObjectTag(reader, tagType, nextTagOffset, version, currentFrame, effectiveFileLength);
@@ -3579,7 +3650,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             applyPlaceToDisplayMap(activeDisplay, placed);
             if (currentFrame > 1) sawFrameMutation = true;
           }
-        } catch {}
+        } catch {
+          bucketErrors.display++;
+        }
       } else if (tagType === 5) {
         reader.readUI16(); // CharacterId
         const depth = reader.readUI16();
@@ -3696,13 +3769,17 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               bbox: { x: bounds.xMin, y: bounds.yMin, w: bounds.width, h: bounds.height },
             });
           }
-        } catch {}
+        } catch {
+          bucketErrors.assets++;
+        }
       } else if (tagType === 10 || tagType === 48 || tagType === 75) {
         // DefineFont (10), DefineFont2 (48), DefineFont3 (75): embedded vector glyph outlines
         try {
           const fontDef = parseDefineFontTag(reader, tagType, nextTagOffset);
           if (fontDef) vectorFonts.set(fontDef.fontId, fontDef);
-        } catch {}
+        } catch {
+          bucketErrors.assets++;
+        }
       } else if (tagType === 11 || tagType === 33) {
         // DefineText (11), DefineText2 (33): static vector text rendered via DefineFont2/3 Bézier paths
         try {
@@ -3711,7 +3788,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             shapes.push(staticTextShape);
             staticTextCount++;
           }
-        } catch {}
+        } catch {
+          bucketErrors.assets++;
+        }
       } else {
         skippedTagIdSet.add(tagType);
       }
@@ -5479,10 +5558,146 @@ ${keyframesAst}
 )`;
 
     const skippedTagIds = Array.from(skippedTagIdSet).sort((a, b) => a - b);
+
+    // Deterministic SWF Spectrum Centrifuge: separate Signal, Suspect/Approximable, and Sludge
+    const extDepSet = new Set<string>();
+    const sponsorSet = new Set<string>();
+    const EXT_DEP_PATTERNS: Array<{ re: RegExp; label: string }> = [
+      { re: /\bloadMovie(?:Num)?\b/i, label: 'loadMovie' },
+      { re: /\bURLLoader\b|\bLoader\b/i, label: 'Loader/URLLoader' },
+      { re: /\bExternalInterface\b/i, label: 'ExternalInterface' },
+      { re: /\bnavigateToURL\b|\bgetURL\b/i, label: 'getURL/navigateToURL' },
+      { re: /\bXMLSocket\b|\bNetConnection\b/i, label: 'NetworkSocket' },
+    ];
+    const SPONSOR_PATTERNS: Array<{ re: RegExp; label: string }> = [
+      { re: /\bmochi(?:ads|bot|services)?\b/i, label: 'mochi' },
+      { re: /\barmor\s*games\b/i, label: 'armor-games' },
+      { re: /\bkongregate\b/i, label: 'kongregate' },
+      { re: /\bnewgrounds\b/i, label: 'newgrounds' },
+      { re: /\bminiclip\b/i, label: 'miniclip' },
+      { re: /\bmore\s+games\b|\bsponsor(?:ed)?\b/i, label: 'sponsor-chrome' },
+    ];
+    const inspectCorpus: string[] = [];
+    if (documentClass) inspectCorpus.push(documentClass);
+    for (const lbl of labels) inspectCorpus.push(lbl.name);
+    for (const tr of abcTraits) inspectCorpus.push(tr.name);
+    for (const expName of Object.keys(exportsMap)) inspectCorpus.push(expName);
+    for (const symName of Object.values(symbolClassMap)) inspectCorpus.push(symName);
+    for (const ed of editTexts.values()) {
+      if (ed.text) inspectCorpus.push(ed.text);
+      if (ed.varName) inspectCorpus.push(ed.varName);
+    }
+    for (const ab of actionBlocks) {
+      if (ab.gotoLabels) {
+        for (const gl of ab.gotoLabels) inspectCorpus.push(gl);
+      }
+      if (ab.setVariables) {
+        for (const sv of ab.setVariables.slice(0, 64)) {
+          if (sv.name) inspectCorpus.push(sv.name);
+          if (typeof sv.value === 'string') inspectCorpus.push(sv.value);
+        }
+      }
+      if (ab.referencedProps) {
+        for (const prop of ab.referencedProps) inspectCorpus.push(prop);
+      }
+    }
+    for (const sample of inspectCorpus) {
+      for (const pat of EXT_DEP_PATTERNS) {
+        if (pat.re.test(sample)) extDepSet.add(pat.label);
+      }
+      for (const pat of SPONSOR_PATTERNS) {
+        if (pat.re.test(sample)) sponsorSet.add(pat.label);
+      }
+    }
+
+    const externalDependencyHits = Array.from(extDepSet);
+    const sponsorSignalHits = Array.from(sponsorSet);
+    const signalReasons: string[] = [];
+    const suspectReasons: string[] = [];
+    const sludgeReasons: string[] = [];
+
+    const drawableAssetCount = shapes.length + sprites.size + buttons.size + editTexts.size + morphShapes.length;
+    const totalActionCount =
+      actionBlocks.length +
+      Array.from(sprites.values()).reduce((a, sp) => a + (sp.actions ? sp.actions.length : 0), 0) +
+      Array.from(buttons.values()).reduce((a, b) => a + (b.actions ? b.actions.length : 0), 0);
+    const totalBucketErrors = bucketErrors.config + bucketErrors.assets + bucketErrors.code + bucketErrors.display;
+
+    if (drawableAssetCount > 0) signalReasons.push(`${drawableAssetCount} vector/display definitions extracted`);
+    if (buttons.size > 0 || allUsedKeys.size > 0) {
+      signalReasons.push(`interactive triggers (${buttons.size} buttons, ${allUsedKeys.size} keys)`);
+    }
+    if (dynamicRules.length > 0 || (Array.isArray(smMeta) && smMeta.length > 0) || totalActionCount > 0) {
+      signalReasons.push(`behavioral core (${totalActionCount} action blocks, ${dynamicRules.length} rules)`);
+    }
+    if (labels.length > 0) signalReasons.push(`${labels.length} frame labels`);
+
+    if (binaryDataTagCount > 0) {
+      suspectReasons.push(`Tag 87 DefineBinaryData (${binaryDataTagCount} payload(s), ${binaryDataBytes} B) not expanded`);
+    }
+    const partialMediaTags = skippedTagIds.filter((id) => id === 6 || id === 88 || id === 90);
+    if (partialMediaTags.length > 0) {
+      suspectReasons.push(`partially unsupported media/font tag(s): ${partialMediaTags.join(', ')}`);
+    }
+    if (totalBucketErrors > 0) {
+      suspectReasons.push(`${totalBucketErrors} tag decode error(s) recovered safely`);
+    }
+    if (externalDependencyHits.length > 0) {
+      suspectReasons.push(`external dependency hooks detected: ${externalDependencyHits.join(', ')}`);
+    }
+    if (sponsorSignalHits.length > 0) {
+      suspectReasons.push(`sponsor/portal branding markers: ${sponsorSignalHits.join(', ')}`);
+    }
+
+    if (drawableAssetCount === 0) {
+      sludgeReasons.push('zero surviving displayable assets after Frame 1 commit');
+    }
+    const isLoaderOnlyStub =
+      externalDependencyHits.some((h) => h === 'loadMovie' || h === 'Loader/URLLoader' || h === 'NetworkSocket') &&
+      shapes.length <= 2 &&
+      sprites.size === 0 &&
+      buttons.size === 0 &&
+      dynamicRules.length === 0;
+    if (isLoaderOnlyStub) {
+      sludgeReasons.push('external loader stub without self-contained interactive core');
+    }
+    const isSponsorShellOnly =
+      sponsorSignalHits.length > 0 &&
+      totalFrames <= 2 &&
+      sprites.size === 0 &&
+      dynamicRules.length === 0 &&
+      varMap.size === 0;
+    if (isSponsorShellOnly) {
+      sludgeReasons.push('sponsor/preloader shell without substantive multi-state content');
+    }
+
+    const centrifugeVerdict: SwfCentrifugeVerdict =
+      sludgeReasons.length > 0
+        ? 'reject-low-value'
+        : suspectReasons.length > 0
+        ? 'suspect'
+        : 'signal';
+
+    const centrifuge: SwfCentrifugeReport = {
+      verdict: centrifugeVerdict,
+      signalReasons,
+      suspectReasons,
+      sludgeReasons,
+      bucketErrors,
+      binaryDataTagCount,
+      binaryDataBytes,
+      externalDependencyHits,
+      sponsorSignalHits,
+      scriptLimits,
+      hasXmlMetadata,
+    };
+
     const importDebugSummary = {
       totalTagsParsed,
       cachedDefsShapes: cachedShapeDefIds.size,
       skippedTagIds,
+      bucketErrors,
+      centrifugeVerdict,
     };
 
     // Update opt-in global diagnostic import summary without adding per-frame overhead
@@ -5507,6 +5722,8 @@ ${keyframesAst}
               totalTagsParsed: imp.totalTagsParsed || 0,
               cachedDefsShapes: imp.cachedDefsShapes || 0,
               skippedTagIds: Array.isArray(imp.skippedTagIds) ? imp.skippedTagIds.slice() : [],
+              bucketErrors: imp.bucketErrors || { config: 0, assets: 0, code: 0, display: 0 },
+              centrifugeVerdict: imp.centrifugeVerdict || 'signal',
             },
             avm1Faults: { unhandledOpcodes: [], nanProperties: [] },
             frameTiming: { sampleCount: 0, avgAvm1ExecMs: 0, avgSvgRenderMs: 0, activeDynamicDomNodes: 0 },
@@ -5531,7 +5748,7 @@ ${keyframesAst}
       staticTextCount,
       spriteCount: sprites.size,
       buttonCount: buttons.size,
-      actionCount: actionBlocks.length + Array.from(sprites.values()).reduce((a, sp) => a + sp.actions.length, 0) + Array.from(buttons.values()).reduce((a, b) => a + b.actions.length, 0),
+      actionCount: totalActionCount,
       ruleCount: dynamicRules.length,
       keyBindingCount: allUsedKeys.size,
       poolSlotCount: totalPoolSlots,
@@ -5547,6 +5764,7 @@ ${keyframesAst}
       labels,
       stateMachines: smMeta,
       variables: Array.from(varMap.entries()).map(([k, v]) => ({ name: k, value: v.val })),
+      centrifuge,
       importDebugSummary,
     };
 

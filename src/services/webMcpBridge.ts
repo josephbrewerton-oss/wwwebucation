@@ -444,10 +444,15 @@ export async function registerWebMcpTools(navigator?: NavigateFunction): Promise
     },
   ];
 
-  // Register each tool with document.modelContext
+  // Register all tools concurrently and settle atomically via Promise.allSettled()
+  // so one failed registration never leaves an incomplete toolset exposed.
+  const pending: Array<{ name: string; promise: Promise<any> }> = [];
+  const failedNames: string[] = [];
+
   for (const tool of tools) {
+    if (signal.aborted) break;
     try {
-      await mc.registerTool(
+      const res = mc.registerTool(
         {
           name: tool.name,
           title: tool.title,
@@ -458,10 +463,38 @@ export async function registerWebMcpTools(navigator?: NavigateFunction): Promise
         },
         { signal }
       );
-      state.registeredTools.push(tool.name);
+      if (res && typeof res.then === 'function') {
+        pending.push({ name: tool.name, promise: res });
+      } else {
+        state.registeredTools.push(tool.name);
+      }
     } catch (err) {
+      failedNames.push(tool.name);
       console.warn(`[WebMCP] Could not register tool '${tool.name}':`, err);
     }
+  }
+
+  if (pending.length > 0) {
+    const settled = await Promise.allSettled(pending.map((p) => p.promise));
+    for (let i = 0; i < settled.length; i++) {
+      const res = settled[i];
+      const name = pending[i].name;
+      if (res.status === 'fulfilled') {
+        state.registeredTools.push(name);
+      } else {
+        failedNames.push(name);
+        console.warn(`[WebMCP] Async portal registerTool rejected for '${name}':`, res.reason);
+      }
+    }
+  }
+
+  if (signal.aborted || failedNames.length > 0 || state.registeredTools.length !== tools.length) {
+    if (state.activeAbortController === abortController) {
+      abortController.abort();
+      state.activeAbortController = null;
+    }
+    state.registeredTools = [];
+    return false;
   }
 
   // Dispatch custom window event so UI indicators can update
@@ -477,6 +510,38 @@ export async function registerWebMcpTools(navigator?: NavigateFunction): Promise
   }
 
   return true;
+}
+
+/**
+ * Waits for portal WebMCP tool registration with MPA DOMContentLoaded + timeout cutoff.
+ */
+export async function waitForPortalWebMcpToolsUntil(
+  navigator?: NavigateFunction,
+  timeoutMs = 5000
+): Promise<{ ready: boolean; timedOut: boolean; tools: readonly string[] }> {
+  if (typeof document !== 'undefined' && document.readyState === 'loading') {
+    await new Promise<void>((resolve) => {
+      document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
+    });
+  }
+  let timedOut = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const ok = await Promise.race([
+    registerWebMcpTools(navigator),
+    new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        unregisterWebMcpTools();
+        resolve(false);
+      }, Math.max(10, timeoutMs));
+    }),
+  ]);
+  if (timer !== null) clearTimeout(timer);
+  return {
+    ready: Boolean(ok) && !timedOut,
+    timedOut,
+    tools: getRegisteredWebMcpTools(),
+  };
 }
 
 /**
