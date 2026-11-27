@@ -30,9 +30,9 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-27T08:14:38.964Z",
+  "generatedAt": "2026-11-27T08:36:24.183Z",
   "totalCartridges": 79,
-  "masterChecksum": "7aa6f4e33cc2c59efdef726e4afee6ecd3c2154dc253db44371943b4df5065af",
+  "masterChecksum": "bbd8f54a583386aafe078db430222b882d4b77c73a410cf7cda196d6171c1994",
   "cartridges": {
     "acid-alkali-titration": {
       "id": "acid-alkali-titration",
@@ -1271,15 +1271,15 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "title": "Water Cycle: Continuous Earth Cycle",
       "stage": "KS2 GEOGRAPHY",
       "type": "Slide",
-      "astSha256": "5f859567f5e5ccbe56f220fb5e0547da8808ef192de679eec02a456a526c841e",
-      "svgSha256": "43a7e94c4c829664ab6cfd57b2ca0b3a1b358923462b60aa9f720a2d19f28982",
-      "astbSha256": "1618e19d79a34bb4631ad652dc4e1fa593c0b91a1f66d92f49b1adf35f39154a",
-      "astbBytes": 3498,
-      "astBytes": 4583,
-      "svgBytes": 7576,
+      "astSha256": "7b62ab82bf5f41d8a01db3434dbbea1612bd412580c9d9f31ca09b71ea154826",
+      "svgSha256": "09c743cc6e45616578488641f329a8ae21d8dc48d376d081ec1717715b5ea699",
+      "astbSha256": "19a72cc7f6a67a58d3b98279e29bc03915c8a764073bc5f80da3c4904aa050c8",
+      "astbBytes": 4550,
+      "astBytes": 6416,
+      "svgBytes": 14469,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "fbcc3d99fb42838cec5a720f76b6b4a81644b89d8f205f8e054eaa20c35a0186",
+      "seal": "881b82e5d20905a1f6dff39f5b74a88bc1edb9bcd873c35c6e68791e6bc99071",
       "certified": true
     },
     "welcome": {

@@ -8,7 +8,18 @@
  *   3. Quick Transform — bounded auto-sweep into a bytecode-free native AST cartridge
  */
 
-import { transpileSwfToAst, type SwfTranspileResult } from '../../utils/swfAstParser';
+import {
+  indexSwfHeaderAndTranspile,
+  SWF_PARSER_SCHEMA_VERSION,
+  type SwfTranspileResult,
+} from '../../utils/swfAstParser';
+import {
+  deleteSwfHeaderRecord,
+  getAllSwfHeaderRecords,
+  updateSwfHeaderUpgradeStatus,
+  type SwfHeaderIndexRecord,
+} from '../../services/dbStore';
+import { harvestSwfSymbols } from '../../utils/swfSymbolHarvester';
 import {
   buildFlashArcadeSampleSwf,
   buildFlashAs3LabSampleSwf,
@@ -426,11 +437,21 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     onUpdateDistillReview &&
     onSavePromotedCartridge
   ) {
+    const handleSavePromoted = (cart: DistilledNativeCartridge) => {
+      if (swfFileName) {
+        void updateSwfHeaderUpgradeStatus(swfFileName, {
+          upgradeStatus: 'distilled-native',
+          nativeCartridgeId: cart.id,
+          ...(cart.centrifuge ? { verdict: cart.centrifuge.verdict } : {}),
+        });
+      }
+      onSavePromotedCartridge(cart);
+    };
     root.appendChild(
       renderPromotionReviewPanel(
         distillReview,
         onUpdateDistillReview,
-        onSavePromotedCartridge,
+        handleSavePromoted,
         onBackToLiveCapture,
         onClose
       )
@@ -486,18 +507,20 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     </div>
   `;
 
-  const processBuffer = async (buf: ArrayBuffer, cleanName: string) => {
+  const processBuffer = async (buf: ArrayBuffer, cleanName: string, rawFileName?: string) => {
     setIsParsingSwf(true);
     setSwfError(null);
     setSwfFileName?.(cleanName);
     try {
-      const res = await transpileSwfToAst(buf, cleanName);
-      if (res.success) {
+      // Stage 1: Scan SWF header + Bucket A–D tag census into IndexedDB; Stage 2: AST transpilation
+      const indexed = await indexSwfHeaderAndTranspile(buf, cleanName, rawFileName || `${cleanName}.swf`);
+      const res = indexed.transpileResult;
+      if (res && res.success) {
         setSwfResult(res);
         setCustomSvgCode(res.svgMarkup);
         setCustomAstCode(res.astSource);
       } else {
-        setSwfError(res.error || 'Failed to parse SWF binary.');
+        setSwfError(res?.error || indexed.headerScan.error || 'Failed to parse SWF binary.');
       }
     } catch (err: any) {
       setSwfError(err?.message || 'Error processing SWF file.');
@@ -523,7 +546,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     if (!file) return;
     const buf = await file.arrayBuffer();
     const cleanName = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    processBuffer(buf, cleanName);
+    processBuffer(buf, cleanName, file.name);
   };
 
   const fileInput = dropZone.querySelector<HTMLInputElement>('#ast-swf-file-input');
@@ -532,7 +555,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     if (!file) return;
     const buf = await file.arrayBuffer();
     const cleanName = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    processBuffer(buf, cleanName);
+    processBuffer(buf, cleanName, file.name);
   });
 
   root.appendChild(dropZone);
@@ -688,6 +711,44 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       resBox.appendChild(as3Note);
     }
 
+    // Centrifuge & Header Triage Readout (indexed in IndexedDB before AST upgrade)
+    if (meta.centrifuge) {
+      const c = meta.centrifuge;
+      const verdictStyle =
+        c.verdict === 'reject-low-value'
+          ? { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.45)', fg: '#fca5a5', label: 'REJECT / LOW-VALUE (SLUDGE)' }
+          : c.verdict === 'suspect'
+          ? { bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.45)', fg: '#fcd34d', label: 'SUSPECT / APPROXIMABLE' }
+          : { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.45)', fg: '#6ee7b7', label: 'CLEAN SIGNAL' };
+
+      const diagBox = document.createElement('div');
+      diagBox.style.cssText = `padding:8px 10px; border-radius:6px; background:${verdictStyle.bg}; border:1px solid ${verdictStyle.border}; color:${verdictStyle.fg}; font-size:0.73rem; line-height:1.45; display:flex; flex-direction:column; gap:3px;`;
+
+      const heading = document.createElement('strong');
+      heading.style.cssText = 'font-size:0.74rem; letter-spacing:0.02em;';
+      const extras: string[] = ['Header indexed in IndexedDB'];
+      if (c.scriptLimits) extras.push(`ScriptLimits ${c.scriptLimits.maxRecursionDepth}/${c.scriptLimits.scriptTimeoutSeconds}s`);
+      if (c.binaryDataTagCount > 0) extras.push(`Tag 87 BinaryData: ${c.binaryDataTagCount} (${formatKb(c.binaryDataBytes)})`);
+      if (meta.importDebugSummary?.skippedTagIds?.length) {
+        extras.push(`Skipped tags: [${meta.importDebugSummary.skippedTagIds.join(', ')}]`);
+      }
+      heading.textContent = `SWF Centrifuge: ${verdictStyle.label} · ${extras.join(' · ')}`;
+      diagBox.appendChild(heading);
+
+      const reasons = [
+        ...c.sludgeReasons.map((r) => `Sludge: ${r}`),
+        ...c.suspectReasons.map((r) => `Watch: ${r}`),
+        ...(c.sludgeReasons.length === 0 && c.suspectReasons.length === 0 ? c.signalReasons.slice(0, 2) : []),
+      ];
+      if (reasons.length > 0) {
+        const line = document.createElement('span');
+        line.style.cssText = 'color:#e2e8f0; opacity:0.92;';
+        line.textContent = reasons.join(' · ');
+        diagBox.appendChild(line);
+      }
+      resBox.appendChild(diagBox);
+    }
+
     // Three-Path Workflow Selector (Run Live | Run-to-Convert | Quick Transform)
     let activeMode: SwfLaunchMode = selectedMode;
     const modeDescriptions: Record<SwfLaunchMode, { cta: string; desc: string }> = {
@@ -819,8 +880,189 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     actionsRow.appendChild(secGroup);
     resBox.appendChild(actionsRow);
 
+    // 5b. Harvest Clean Zero-Bytecode SVG Symbols for Native .astb Cartridges
+    const harvestedSymbols = harvestSwfSymbols(swfResult.svgMarkup, {
+      idPrefix: swfFileName || 'swf',
+      quantizeStep: 0.5,
+      maxSymbols: 16,
+    });
+    if (harvestedSymbols.length > 0) {
+      const harvestDetails = document.createElement('details');
+      harvestDetails.style.cssText =
+        'background:#0f172a; border:1px solid #1e293b; border-radius:8px; padding:8px 10px; font-size:0.74rem; color:#cbd5e1;';
+      const harvestSum = document.createElement('summary');
+      harvestSum.style.cssText = 'cursor:pointer; font-weight:600; color:#e2e8f0; list-style:revert;';
+      harvestSum.textContent = `Harvest Clean SVG Symbols for Native .astb (${harvestedSymbols.length} vector props · 0 B Flash bytecode)`;
+      harvestDetails.appendChild(harvestSum);
+
+      const grid = document.createElement('div');
+      grid.style.cssText =
+        'display:grid; grid-template-columns:repeat(auto-fill, minmax(175px, 1fr)); gap:8px; margin-top:8px;';
+
+      harvestedSymbols.forEach((sym) => {
+        const card = document.createElement('div');
+        card.style.cssText =
+          'background:#090d16; border:1px solid #1e293b; border-radius:6px; padding:8px; display:flex; flex-direction:column; gap:6px;';
+
+        const previewWrap = document.createElement('div');
+        previewWrap.style.cssText =
+          'height:64px; border-radius:4px; background:#0f172a; border:1px solid #1e293b; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px;';
+        const img = document.createElement('img');
+        img.alt = sym.label;
+        img.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain;';
+        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sym.standaloneSvg)}`;
+        previewWrap.appendChild(img);
+
+        const metaLine = document.createElement('div');
+        metaLine.style.cssText =
+          'font-size:0.7rem; color:#94a3b8; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+        metaLine.textContent = `#${sym.id} · ${sym.optimizedBytes} B (${sym.pathCount}p${sym.savedPercent > 0 ? `, -${sym.savedPercent}%` : ''})`;
+        metaLine.title = metaLine.textContent;
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex; gap:4px; flex-wrap:wrap;';
+
+        const copySvgBtn = document.createElement('button');
+        copySvgBtn.type = 'button';
+        copySvgBtn.style.cssText =
+          'padding:3px 6px; border-radius:4px; background:#1e293b; color:#e2e8f0; border:1px solid #334155; font-size:0.68rem; cursor:pointer;';
+        copySvgBtn.textContent = 'Copy <defs>';
+        copySvgBtn.onclick = () => {
+          navigator.clipboard?.writeText(sym.symbolMarkup);
+          copySvgBtn.textContent = 'Copied';
+          setTimeout(() => { copySvgBtn.textContent = 'Copy <defs>'; }, 1200);
+        };
+
+        const copyAstBtn = document.createElement('button');
+        copyAstBtn.type = 'button';
+        copyAstBtn.style.cssText =
+          'padding:3px 6px; border-radius:4px; background:#1e293b; color:#7dd3fc; border:1px solid #334155; font-size:0.68rem; cursor:pointer;';
+        copyAstBtn.textContent = 'Copy AST';
+        copyAstBtn.onclick = () => {
+          navigator.clipboard?.writeText(sym.astBindingSnippet);
+          copyAstBtn.textContent = 'Copied';
+          setTimeout(() => { copyAstBtn.textContent = 'Copy AST'; }, 1200);
+        };
+
+        const dlBtn = document.createElement('button');
+        dlBtn.type = 'button';
+        dlBtn.style.cssText =
+          'padding:3px 6px; border-radius:4px; background:transparent; color:#94a3b8; border:1px solid #334155; font-size:0.68rem; cursor:pointer;';
+        dlBtn.textContent = '.svg';
+        dlBtn.onclick = () => {
+          const blob = new Blob([sym.standaloneSvg], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${sym.id}.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        btnRow.appendChild(copySvgBtn);
+        btnRow.appendChild(copyAstBtn);
+        btnRow.appendChild(dlBtn);
+
+        card.appendChild(previewWrap);
+        card.appendChild(metaLine);
+        card.appendChild(btnRow);
+        grid.appendChild(card);
+      });
+
+      harvestDetails.appendChild(grid);
+      resBox.appendChild(harvestDetails);
+    }
+
     root.appendChild(resBox);
   }
+
+  // 6. IndexedDB SWF Header & Upgrade Ledger (async-hydrated, zero boot penalty)
+  const ledgerDetails = document.createElement('details');
+  ledgerDetails.style.cssText =
+    'background:#090d16; border:1px solid #1e293b; border-radius:8px; padding:8px 12px; font-size:0.74rem; color:#cbd5e1;';
+  const ledgerSummary = document.createElement('summary');
+  ledgerSummary.style.cssText = 'cursor:pointer; font-weight:600; color:#e2e8f0; list-style:revert;';
+  ledgerSummary.textContent = 'Indexed SWF Headers (Local IndexedDB Ledger)';
+  ledgerDetails.appendChild(ledgerSummary);
+
+  const ledgerBody = document.createElement('div');
+  ledgerBody.style.cssText = 'margin-top:8px; display:flex; flex-direction:column; gap:6px;';
+  ledgerDetails.appendChild(ledgerBody);
+
+  const renderLedgerRows = (records: SwfHeaderIndexRecord[]) => {
+    ledgerSummary.textContent = `Indexed SWF Headers (${records.length} in Local IndexedDB Ledger)`;
+    ledgerBody.innerHTML = '';
+    if (records.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:#94a3b8; font-size:0.72rem;';
+      empty.textContent = 'No SWF headers catalogued yet. Drop any .swf file or load a sample above to index its header & tag census before upgrading to AST.';
+      ledgerBody.appendChild(empty);
+      return;
+    }
+
+    records.slice(0, 12).forEach((rec) => {
+      const row = document.createElement('div');
+      row.style.cssText =
+        'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:6px 8px; border-radius:6px; background:#0f172a; border:1px solid #1e293b;';
+
+      const left = document.createElement('div');
+      left.style.cssText = 'display:flex; flex-direction:column; gap:2px; min-width:0;';
+
+      const top = document.createElement('div');
+      top.style.cssText = 'font-weight:600; color:#f8fafc; font-variant-numeric:tabular-nums;';
+      const verdictColor =
+        rec.verdict === 'reject-low-value' ? '#fca5a5' : rec.verdict === 'suspect' ? '#fcd34d' : '#6ee7b7';
+      const outdatedNote =
+        rec.parserSchemaVersion < SWF_PARSER_SCHEMA_VERSION ? ' · Re-upgrade available' : '';
+      const fileNameSpan = document.createElement('span');
+      fileNameSpan.textContent = rec.fileName;
+      const verdictSpan = document.createElement('span');
+      verdictSpan.style.cssText = `color:${verdictColor}; font-weight:700; margin-left:6px;`;
+      verdictSpan.textContent = rec.verdict.toUpperCase();
+      const statusSpan = document.createElement('span');
+      statusSpan.style.cssText = 'color:#94a3b8; font-weight:500; margin-left:4px;';
+      statusSpan.textContent = `(${rec.upgradeStatus}${outdatedNote})`;
+      top.appendChild(fileNameSpan);
+      top.appendChild(verdictSpan);
+      top.appendChild(statusSpan);
+
+      const details = document.createElement('div');
+      details.style.cssText = 'font-size:0.71rem; color:#94a3b8; font-variant-numeric:tabular-nums;';
+      const parts = [
+        `SWF v${rec.swfVersion} ${rec.signature}`,
+        `${rec.width}×${rec.height}`,
+        `${rec.frameCount}f`,
+        rec.executionModel,
+        `Tags A:${rec.tagCensus.configTags}/B:${rec.tagCensus.assetTags}/C:${rec.tagCensus.codeTags}/D:${rec.tagCensus.displayTags}`,
+      ];
+      if (rec.documentClass) parts.push(`Doc: ${rec.documentClass}`);
+      if (rec.fileAttributes?.useGpu || rec.fileAttributes?.useDirectBlit) parts.push('GPU/DirectBlit');
+      if (rec.tagCensus.unsupportedTagIds.length > 0) {
+        parts.push(`Watch tags: [${rec.tagCensus.unsupportedTagIds.join(',')}]`);
+      }
+      details.textContent = parts.join(' · ');
+
+      left.appendChild(top);
+      left.appendChild(details);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.style.cssText =
+        'padding:3px 7px; border-radius:4px; background:transparent; color:#94a3b8; border:1px solid #334155; font-size:0.69rem; cursor:pointer; flex-shrink:0;';
+      delBtn.textContent = 'Remove';
+      delBtn.onclick = async () => {
+        await deleteSwfHeaderRecord(rec.id);
+        renderLedgerRows(await getAllSwfHeaderRecords());
+      };
+
+      row.appendChild(left);
+      row.appendChild(delBtn);
+      ledgerBody.appendChild(row);
+    });
+  };
+
+  void getAllSwfHeaderRecords().then(renderLedgerRows).catch(() => {});
+  root.appendChild(ledgerDetails);
 
   return root;
 }

@@ -18,6 +18,15 @@ import {
   type SwfBitmapDef,
 } from './swfMediaDecoders';
 import { decompressZwsSwf } from './swfLzmaDecoder';
+import {
+  putSwfHeaderRecord,
+  type SwfFileAttributesFlags,
+  type SwfHeaderIndexRecord,
+  type SwfTagCensusSummary,
+} from '../services/dbStore';
+
+/** Increment whenever SWF parser / AVM1 / AVM2 / distiller capabilities advance so indexed SWFs can be flagged for re-upgrade. */
+export const SWF_PARSER_SCHEMA_VERSION = 2;
 
 export interface SwfSurfaceFilter {
   /** 'ds'=DropShadow, 'bl'=Blur, 'gl'=Glow, 'cm'=ColorMatrix */
@@ -5783,3 +5792,403 @@ ${keyframesAst}
     };
   }
 }
+
+// =========================================================================
+// STAGE 1: FAST SWF HEADER & TAG CENSUS SCANNER (IndexedDB Pre-Flight Index)
+// =========================================================================
+
+export interface SwfHeaderScanResult {
+  success: boolean;
+  error?: string;
+  record?: SwfHeaderIndexRecord;
+}
+
+export interface SwfIndexedTranspileResult {
+  headerScan: SwfHeaderScanResult;
+  headerRecord?: SwfHeaderIndexRecord;
+  transpileResult?: SwfTranspileResult;
+}
+
+const SWF_TAG_BUCKET_CONFIG = new Set([9, 24, 41, 43, 58, 63, 64, 65, 66, 69, 77, 86]);
+const SWF_TAG_BUCKET_ASSETS = new Set([
+  2, 6, 7, 8, 10, 11, 13, 14, 17, 18, 19, 20, 21, 22, 23, 32, 33, 34, 35, 36, 37, 39, 45, 46, 48,
+  60, 61, 73, 74, 75, 78, 83, 84, 87, 88, 90, 91,
+]);
+const SWF_TAG_BUCKET_CODE = new Set([12, 56, 57, 59, 71, 72, 76, 82]);
+const SWF_TAG_BUCKET_DISPLAY = new Set([1, 4, 5, 15, 26, 28, 70, 89]);
+const SWF_TAG_UNSUPPORTED_NATIVE = new Set([6, 17, 57, 60, 61, 71, 78, 87, 88, 89, 90, 91]);
+
+function computeFastSwfContentHash(bytes: Uint8Array): string {
+  // Two-lane 32-bit FNV-1a fingerprint (deterministic, 0 crypto overhead, < 1 ms on 2 MB files)
+  let h1 = 0x811c9dc5;
+  let h2 = 0x9e3779b1;
+  const step = bytes.length > 65536 ? Math.max(1, Math.floor(bytes.length / 16384)) : 1;
+  for (let i = 0; i < bytes.length; i += step) {
+    const b = bytes[i];
+    h1 ^= b;
+    h1 = Math.imul(h1, 0x01000193) >>> 0;
+    h2 ^= b ^ (i & 0xff);
+    h2 = Math.imul(h2, 0x85ebca6b) >>> 0;
+  }
+  return `${bytes.length.toString(16)}-${h1.toString(16).padStart(8, '0')}${h2.toString(16).padStart(8, '0')}`;
+}
+
+/**
+ * Stage 1 Fast Pre-Flight Scanner:
+ * Reads the SWF header (FWS/CWS/ZWS), stage bounds, FileAttributes (Tag 69), ScriptLimits (Tag 65),
+ * SymbolClass (Tag 76), ExportAssets (Tag 56), and walks all tag headers into a structured Bucket A–D
+ * census WITHOUT generating SVG DOM or lifting bytecode.
+ *
+ * Ideal for triaging newer/complex SWFs (v9–v40+, ZWS, AS3/DoABC2, DefineBinaryData, Stage3D/GPU, Video)
+ * and cataloging them in IndexedDB before running full AST transpilation or distillation.
+ */
+export async function inspectSwfHeaderAndCensus(
+  fileData: ArrayBuffer | Uint8Array,
+  id = 'imported-swf',
+  fileName?: string
+): Promise<SwfHeaderScanResult> {
+  try {
+    const rawBytes = fileData instanceof Uint8Array ? fileData : new Uint8Array(fileData);
+    if (rawBytes.length < 8) {
+      return { success: false, error: 'File is too short to be a valid SWF binary (min 8 bytes required).' };
+    }
+    const sig = String.fromCharCode(rawBytes[0], rawBytes[1], rawBytes[2]);
+    if (sig !== 'FWS' && sig !== 'CWS' && sig !== 'ZWS') {
+      return {
+        success: false,
+        error: `Unsupported SWF signature: "${sig}". Only FWS, CWS (zlib), or ZWS (LZMA) headers are supported.`,
+      };
+    }
+
+    const swfVersion = rawBytes[3];
+    const fileLength =
+      (rawBytes[4] | (rawBytes[5] << 8) | (rawBytes[6] << 16) | (rawBytes[7] << 24)) >>> 0;
+
+    let payload: Uint8Array;
+    if (sig === 'CWS') {
+      const decompressed = await decompressSwfPayload(rawBytes.slice(8));
+      payload = new Uint8Array(8 + decompressed.length);
+      payload.set(rawBytes.subarray(0, 8), 0);
+      payload.set(decompressed, 8);
+    } else if (sig === 'ZWS') {
+      payload = decompressZwsSwf(rawBytes);
+    } else {
+      payload = rawBytes;
+    }
+
+    const reader = new BitReader(payload, 8);
+    const frameRect = reader.readRect();
+    const frameRate = reader.readUI16() / 256;
+    const frameCount = reader.readUI16();
+    const width = Math.max(1, Math.round(frameRect.width || (frameRect.xMax - frameRect.xMin))) || 550;
+    const height = Math.max(1, Math.round(frameRect.height || (frameRect.yMax - frameRect.yMin))) || 400;
+
+    let backgroundColor: string | undefined;
+    let fileAttributes: SwfFileAttributesFlags | undefined;
+    let scriptLimits: { maxRecursionDepth: number; scriptTimeoutSeconds: number } | undefined;
+    let documentClass: string | undefined;
+    let symbolClassCount = 0;
+    let exportCount = 0;
+
+    const tagHistogram: Record<number, number> = {};
+    const unsupportedSet = new Set<number>();
+    const tagCensus: SwfTagCensusSummary = {
+      totalTags: 0,
+      configTags: 0,
+      assetTags: 0,
+      codeTags: 0,
+      displayTags: 0,
+      unknownTags: 0,
+      tagHistogram,
+      unsupportedTagIds: [],
+      binaryDataTagCount: 0,
+      binaryDataBytes: 0,
+      abcTagCount: 0,
+      abcTotalBytes: 0,
+      doActionTagCount: 0,
+      shapeTagCount: 0,
+      morphShapeTagCount: 0,
+      spriteTagCount: 0,
+      buttonTagCount: 0,
+      textTagCount: 0,
+      fontTagCount: 0,
+      bitmapTagCount: 0,
+      soundTagCount: 0,
+      videoTagCount: 0,
+    };
+
+    while (reader.offset + 2 <= payload.length) {
+      const tagCodeAndLength = reader.readUI16();
+      const tagType = tagCodeAndLength >> 6;
+      let tagLength = tagCodeAndLength & 0x3f;
+      if (tagLength === 0x3f) {
+        if (reader.offset + 4 > payload.length) break;
+        tagLength = reader.readUI32();
+      }
+      const tagBodyStart = reader.offset;
+      const nextTagOffset = Math.min(payload.length, tagBodyStart + tagLength);
+
+      if (tagType === 0) break;
+
+      tagCensus.totalTags++;
+      tagHistogram[tagType] = (tagHistogram[tagType] || 0) + 1;
+
+      if (SWF_TAG_BUCKET_CONFIG.has(tagType)) tagCensus.configTags++;
+      else if (SWF_TAG_BUCKET_ASSETS.has(tagType)) tagCensus.assetTags++;
+      else if (SWF_TAG_BUCKET_CODE.has(tagType)) tagCensus.codeTags++;
+      else if (SWF_TAG_BUCKET_DISPLAY.has(tagType)) tagCensus.displayTags++;
+      else {
+        tagCensus.unknownTags++;
+        unsupportedSet.add(tagType);
+      }
+
+      if (SWF_TAG_UNSUPPORTED_NATIVE.has(tagType)) {
+        unsupportedSet.add(tagType);
+      }
+
+      if (tagType === 9 && tagBodyStart + 3 <= nextTagOffset) {
+        backgroundColor = reader.readRGBA(false);
+      } else if (tagType === 69 && tagBodyStart + 4 <= nextTagOffset) {
+        const flags = reader.readUI32();
+        fileAttributes = {
+          useDirectBlit: (flags & 0x40) !== 0,
+          useGpu: (flags & 0x20) !== 0,
+          hasMetadata: (flags & 0x10) !== 0,
+          actionScript3: (flags & 0x08) !== 0,
+          useNetwork: (flags & 0x01) !== 0,
+        };
+      } else if (tagType === 65 && tagBodyStart + 4 <= nextTagOffset) {
+        scriptLimits = {
+          maxRecursionDepth: reader.readUI16(),
+          scriptTimeoutSeconds: reader.readUI16(),
+        };
+      } else if (tagType === 76 && tagBodyStart + 2 <= nextTagOffset) {
+        try {
+          const count = reader.readUI16();
+          symbolClassCount += count;
+          for (let i = 0; i < count && reader.offset < nextTagOffset; i++) {
+            const symCharId = reader.readUI16();
+            const symName = reader.readString();
+            if (symCharId === 0 && symName) documentClass = symName;
+          }
+        } catch {}
+      } else if (tagType === 56 && tagBodyStart + 2 <= nextTagOffset) {
+        try {
+          exportCount += reader.readUI16();
+        } catch {}
+      } else if (tagType === 87) {
+        tagCensus.binaryDataTagCount++;
+        tagCensus.binaryDataBytes += Math.max(0, nextTagOffset - tagBodyStart - 6);
+      } else if (tagType === 72 || tagType === 82) {
+        tagCensus.abcTagCount++;
+        tagCensus.abcTotalBytes += Math.max(0, nextTagOffset - tagBodyStart);
+      } else if (tagType === 12 || tagType === 59) {
+        tagCensus.doActionTagCount++;
+      } else if (tagType === 2 || tagType === 22 || tagType === 32 || tagType === 83) {
+        tagCensus.shapeTagCount++;
+      } else if (tagType === 46 || tagType === 84) {
+        tagCensus.morphShapeTagCount++;
+      } else if (tagType === 39) {
+        tagCensus.spriteTagCount++;
+      } else if (tagType === 7 || tagType === 34) {
+        tagCensus.buttonTagCount++;
+      } else if (tagType === 11 || tagType === 33 || tagType === 37) {
+        tagCensus.textTagCount++;
+      } else if (tagType === 10 || tagType === 48 || tagType === 75 || tagType === 88 || tagType === 91) {
+        tagCensus.fontTagCount++;
+      } else if (tagType === 6 || tagType === 20 || tagType === 21 || tagType === 35 || tagType === 36 || tagType === 90) {
+        tagCensus.bitmapTagCount++;
+      } else if (tagType === 14 || tagType === 18 || tagType === 45) {
+        tagCensus.soundTagCount++;
+      } else if (tagType === 60 || tagType === 61) {
+        tagCensus.videoTagCount++;
+      }
+
+      reader.offset = nextTagOffset;
+    }
+
+    tagCensus.unsupportedTagIds = Array.from(unsupportedSet).sort((a, b) => a - b);
+
+    const hasAbc = tagCensus.abcTagCount > 0 || Boolean(fileAttributes?.actionScript3);
+    const hasAvm1 = tagCensus.doActionTagCount > 0;
+    const executionModel: SwfHeaderIndexRecord['executionModel'] =
+      hasAbc && hasAvm1
+        ? 'hybrid'
+        : hasAbc
+        ? 'avm2-abc'
+        : hasAvm1
+        ? 'avm1-bytecode'
+        : 'static-vector';
+
+    const drawableAssets =
+      tagCensus.shapeTagCount +
+      tagCensus.morphShapeTagCount +
+      tagCensus.spriteTagCount +
+      tagCensus.buttonTagCount +
+      tagCensus.textTagCount +
+      tagCensus.bitmapTagCount;
+
+    const signalReasons: string[] = [];
+    const suspectReasons: string[] = [];
+    const sludgeReasons: string[] = [];
+
+    if (drawableAssets > 0) {
+      signalReasons.push(
+        `${drawableAssets} drawable asset tag(s) (${tagCensus.shapeTagCount} shapes, ${tagCensus.spriteTagCount} sprites, ${tagCensus.buttonTagCount} buttons)`
+      );
+    }
+    if (tagCensus.doActionTagCount > 0) {
+      signalReasons.push(`AVM1 logic (${tagCensus.doActionTagCount} DoAction/DoInitAction tags)`);
+    }
+    if (tagCensus.abcTagCount > 0) {
+      signalReasons.push(
+        `AS3/AVM2 bytecode (${tagCensus.abcTagCount} DoABC tag(s), ${(tagCensus.abcTotalBytes / 1024).toFixed(1)} KB)`
+      );
+    }
+    if (documentClass) {
+      signalReasons.push(`Document Class: ${documentClass}`);
+    }
+
+    if (fileAttributes?.useGpu || fileAttributes?.useDirectBlit) {
+      suspectReasons.push('FileAttributes requests GPU / DirectBlit (Stage3D/hardware compositing not supported in pure SVG)');
+    }
+    if (fileAttributes?.useNetwork) {
+      suspectReasons.push('FileAttributes sets UseNetwork=1 (may expect live external endpoints)');
+    }
+    if (tagCensus.binaryDataTagCount > 0) {
+      suspectReasons.push(
+        `Tag 87 DefineBinaryData (${tagCensus.binaryDataTagCount} payload(s), ${tagCensus.binaryDataBytes} B)`
+      );
+    }
+    if (tagCensus.videoTagCount > 0) {
+      suspectReasons.push(`Embedded Flash Video tags (${tagCensus.videoTagCount} DefineVideoStream/VideoFrame)`);
+    }
+    if (tagCensus.tagHistogram[91]) {
+      suspectReasons.push(`Tag 91 DefineFont4 (CFF/FTE text engine: ${tagCensus.tagHistogram[91]} font(s))`);
+    }
+    if (tagCensus.tagHistogram[57] || tagCensus.tagHistogram[71]) {
+      suspectReasons.push('ImportAssets/ImportAssets2 references external SWF asset libraries');
+    }
+    if (tagCensus.unknownTags > 0) {
+      suspectReasons.push(`${tagCensus.unknownTags} unrecognized/custom SWF tag(s)`);
+    }
+
+    if (drawableAssets === 0 && tagCensus.abcTagCount === 0 && tagCensus.doActionTagCount === 0) {
+      sludgeReasons.push('zero drawable assets and zero executable bytecode in SWF header census');
+    } else if (drawableAssets === 0 && tagCensus.videoTagCount === 0) {
+      sludgeReasons.push('zero displayable vector/bitmap/text assets (loader stub or code-only SWL)');
+    }
+
+    const verdict: SwfHeaderIndexRecord['verdict'] =
+      sludgeReasons.length > 0 ? 'reject-low-value' : suspectReasons.length > 0 ? 'suspect' : 'signal';
+
+    const recommendedAction: SwfHeaderIndexRecord['recommendedAction'] =
+      verdict === 'reject-low-value'
+        ? 'reject-sludge'
+        : verdict === 'suspect'
+        ? 'inspect-suspect'
+        : executionModel === 'static-vector'
+        ? 'upgrade-native-ast'
+        : 'run-live-vm';
+
+    const now = Date.now();
+    const record: SwfHeaderIndexRecord = {
+      id,
+      fileName: fileName || `${id}.swf`,
+      contentHash: computeFastSwfContentHash(rawBytes),
+      signature: sig as 'FWS' | 'CWS' | 'ZWS',
+      swfVersion,
+      compressedBytes: rawBytes.length,
+      uncompressedBytes: Math.max(fileLength, payload.length),
+      width,
+      height,
+      frameRate: Number(frameRate.toFixed(2)),
+      frameCount,
+      backgroundColor,
+      fileAttributes,
+      scriptLimits,
+      documentClass,
+      symbolClassCount,
+      exportCount,
+      executionModel,
+      tagCensus,
+      verdict,
+      signalReasons,
+      suspectReasons,
+      sludgeReasons,
+      externalDependencyHits: [],
+      sponsorSignalHits: [],
+      recommendedAction,
+      parserSchemaVersion: SWF_PARSER_SCHEMA_VERSION,
+      upgradeStatus: verdict === 'reject-low-value' ? 'rejected' : 'indexed',
+      indexedAt: now,
+      updatedAt: now,
+    };
+
+    return { success: true, record };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `SWF header scan failed: ${err?.message || String(err)}`,
+    };
+  }
+}
+
+/**
+ * Two-Stage SWF Ingestion Pipeline:
+ * Stage 1: Scans SWF header + Bucket A–D tag census and persists the compact SwfHeaderIndexRecord into IndexedDB.
+ * Stage 2: Runs full SWF -> SVG + AST transpilation and reconciles deep centrifuge findings (external hooks,
+ *          sponsor markers, bucket decode errors) back into the IndexedDB header ledger.
+ */
+export async function indexSwfHeaderAndTranspile(
+  fileData: ArrayBuffer | Uint8Array,
+  sceneId = 'imported-swf',
+  fileName?: string
+): Promise<SwfIndexedTranspileResult> {
+  const headerScan = await inspectSwfHeaderAndCensus(fileData, sceneId, fileName);
+  let headerRecord = headerScan.record;
+
+  if (headerRecord) {
+    await putSwfHeaderRecord(headerRecord);
+  }
+
+  const transpileResult = await transpileSwfToAst(fileData, sceneId);
+
+  if (headerRecord && transpileResult.success && transpileResult.metadata?.centrifuge) {
+    const deep = transpileResult.metadata.centrifuge;
+    const mergedSignals = Array.from(new Set([...headerRecord.signalReasons, ...deep.signalReasons]));
+    const mergedSuspects = Array.from(new Set([...headerRecord.suspectReasons, ...deep.suspectReasons]));
+    const mergedSludge = Array.from(new Set([...headerRecord.sludgeReasons, ...deep.sludgeReasons]));
+    const mergedVerdict: SwfHeaderIndexRecord['verdict'] =
+      mergedSludge.length > 0 ? 'reject-low-value' : mergedSuspects.length > 0 ? 'suspect' : 'signal';
+
+    headerRecord = {
+      ...headerRecord,
+      verdict: mergedVerdict,
+      signalReasons: mergedSignals,
+      suspectReasons: mergedSuspects,
+      sludgeReasons: mergedSludge,
+      externalDependencyHits: deep.externalDependencyHits,
+      sponsorSignalHits: deep.sponsorSignalHits,
+      recommendedAction:
+        mergedVerdict === 'reject-low-value'
+          ? 'reject-sludge'
+          : mergedVerdict === 'suspect'
+          ? 'inspect-suspect'
+          : headerRecord.executionModel === 'static-vector'
+          ? 'upgrade-native-ast'
+          : 'run-live-vm',
+      upgradeStatus: mergedVerdict === 'reject-low-value' ? 'rejected' : 'transpiled',
+      vaultCartridgeId: sceneId,
+      updatedAt: Date.now(),
+    };
+    await putSwfHeaderRecord(headerRecord);
+  }
+
+  return {
+    headerScan,
+    headerRecord,
+    transpileResult,
+  };
+}
+

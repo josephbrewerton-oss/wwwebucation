@@ -52,19 +52,23 @@ export async function ingestUploadedCartridgeFiles(
   for (const file of files) {
     const lowerName = file.name.toLowerCase();
 
-    // Legacy Adobe Flash (.swf) binary transpiler — MUST read as ArrayBuffer before text()
+    // Legacy Adobe Flash (.swf) binary transpiler — Stage 1: Header/Census -> IndexedDB, Stage 2: AST upgrade
     if (lowerName.endsWith('.swf')) {
       const buf = await file.arrayBuffer();
       const baseName = file.name.replace(/\.swf$/i, '');
       const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-') || `flash-${Date.now().toString(36)}`;
       const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || cleanId;
-      const { transpileSwfToAst } = await import('../../utils/swfAstParser');
-      const swfRes = await transpileSwfToAst(buf, cleanId);
-      if (!swfRes.success || !swfRes.svgMarkup || !swfRes.astSource) {
-        throw new Error(swfRes.error || `Failed to transpile legacy Flash file "${file.name}".`);
+      const { indexSwfHeaderAndTranspile } = await import('../../utils/swfAstParser');
+      const indexed = await indexSwfHeaderAndTranspile(buf, cleanId, file.name);
+      const swfRes = indexed.transpileResult;
+      if (!swfRes || !swfRes.success || !swfRes.svgMarkup || !swfRes.astSource) {
+        throw new Error(swfRes?.error || indexed.headerScan.error || `Failed to transpile legacy Flash file "${file.name}".`);
       }
 
       const meta = swfRes.metadata;
+      const verdictTag = indexed.headerRecord?.verdict
+        ? `Centrifuge: ${indexed.headerRecord.verdict.toUpperCase()}`
+        : undefined;
       const cart: CartridgeDefinition = {
         id: cleanId,
         title: `Flash: ${cleanTitle}`,
@@ -80,9 +84,11 @@ export async function ingestUploadedCartridgeFiles(
         astSource: swfRes.astSource,
         author: 'Flash Archive',
         version: `Flash v${meta?.version || 9}`,
-        invariants: meta?.isActionScript3
-          ? ['Legacy Vector Timeline', 'ActionScript 3.0 (AVM2 — Vector Stage Mode)']
-          : ['Legacy Vector Timeline', 'ActionScript AVM1 Runtime'],
+        invariants: [
+          'Legacy Vector Timeline',
+          meta?.isActionScript3 ? 'ActionScript 3.0 (AVM2)' : 'ActionScript AVM1 Runtime',
+          ...(verdictTag ? [verdictTag] : []),
+        ],
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };

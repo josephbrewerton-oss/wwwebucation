@@ -2,7 +2,7 @@
 import { DomainManifest } from '../types/learning-ast';
 
 const DB_NAME = 'EdgeLearningEngineDB';
-const DB_VERSION = 7; // Version 7: Local FileSystemDirectoryHandle persistence (Nominated Local Build Folder)
+const DB_VERSION = 8; // Version 8: SWF Header & Centrifuge Ledger (swf_headers) for 2-stage SWF->AST upgrades
 
 const STORE_MANIFESTS = 'manifests';
 const STORE_PROGRESS = 'student_progress';
@@ -14,6 +14,7 @@ export const STORE_CARTRIDGES_VAULT = 'cartridges_vault';
 export const STORE_APP_STATE = 'app_state';
 export const STORE_CURRICULUM_PACKS = 'curriculum_packs';
 export const STORE_FS_HANDLES = 'fs_handles';
+export const STORE_SWF_HEADERS = 'swf_headers';
 
 export interface AppStateRecord {
   key: string;
@@ -197,6 +198,15 @@ export function openLocalDB(): Promise<IDBDatabase> {
       // 10. Nominated Local Build Directory Handles (File System Access API)
       if (!db.objectStoreNames.contains(STORE_FS_HANDLES)) {
         db.createObjectStore(STORE_FS_HANDLES, { keyPath: 'id' });
+      }
+
+      // 11. SWF Header & Tag Census Ledger (2-stage SWF -> AST Upgrade Index)
+      if (!db.objectStoreNames.contains(STORE_SWF_HEADERS)) {
+        const swfStore = db.createObjectStore(STORE_SWF_HEADERS, { keyPath: 'id' });
+        swfStore.createIndex('verdict', 'verdict', { unique: false });
+        swfStore.createIndex('swfVersion', 'swfVersion', { unique: false });
+        swfStore.createIndex('upgradeStatus', 'upgradeStatus', { unique: false });
+        swfStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
 
@@ -1090,4 +1100,181 @@ export async function deleteDirectoryHandleRecord(
     console.warn('[dbStore] Failed to remove fs handle:', err);
   }
 }
+
+// =========================================================================
+// SWF HEADER & CENTRIFUGE LEDGER (2-Stage SWF -> AST Upgrade Index)
+// =========================================================================
+
+export interface SwfFileAttributesFlags {
+  useDirectBlit: boolean;
+  useGpu: boolean;
+  hasMetadata: boolean;
+  actionScript3: boolean;
+  useNetwork: boolean;
+}
+
+export interface SwfTagCensusSummary {
+  totalTags: number;
+  configTags: number;
+  assetTags: number;
+  codeTags: number;
+  displayTags: number;
+  unknownTags: number;
+  tagHistogram: Record<number, number>;
+  unsupportedTagIds: number[];
+  binaryDataTagCount: number;
+  binaryDataBytes: number;
+  abcTagCount: number;
+  abcTotalBytes: number;
+  doActionTagCount: number;
+  shapeTagCount: number;
+  morphShapeTagCount: number;
+  spriteTagCount: number;
+  buttonTagCount: number;
+  textTagCount: number;
+  fontTagCount: number;
+  bitmapTagCount: number;
+  soundTagCount: number;
+  videoTagCount: number;
+}
+
+export type SwfUpgradeStatus = 'indexed' | 'transpiled' | 'distilled-native' | 'rejected';
+
+export interface SwfHeaderIndexRecord {
+  id: string;
+  fileName: string;
+  contentHash: string;
+  signature: 'FWS' | 'CWS' | 'ZWS' | 'UNKNOWN';
+  swfVersion: number;
+  compressedBytes: number;
+  uncompressedBytes: number;
+  width: number;
+  height: number;
+  frameRate: number;
+  frameCount: number;
+  backgroundColor?: string;
+  fileAttributes?: SwfFileAttributesFlags;
+  scriptLimits?: { maxRecursionDepth: number; scriptTimeoutSeconds: number };
+  documentClass?: string;
+  symbolClassCount: number;
+  exportCount: number;
+  executionModel: 'avm2-abc' | 'avm1-bytecode' | 'hybrid' | 'static-vector';
+  tagCensus: SwfTagCensusSummary;
+  verdict: 'signal' | 'suspect' | 'reject-low-value';
+  signalReasons: string[];
+  suspectReasons: string[];
+  sludgeReasons: string[];
+  externalDependencyHits: string[];
+  sponsorSignalHits: string[];
+  recommendedAction: 'upgrade-native-ast' | 'run-live-vm' | 'inspect-suspect' | 'reject-sludge';
+  parserSchemaVersion: number;
+  upgradeStatus: SwfUpgradeStatus;
+  vaultCartridgeId?: string;
+  nativeCartridgeId?: string;
+  indexedAt: number;
+  updatedAt: number;
+}
+
+export async function putSwfHeaderRecord(record: SwfHeaderIndexRecord): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_SWF_HEADERS, 'readwrite');
+      const req = tx.objectStore(STORE_SWF_HEADERS).put({
+        ...record,
+        updatedAt: record.updatedAt || Date.now(),
+      });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to persist SWF header record:', err);
+  }
+}
+
+export async function getSwfHeaderRecord(id: string): Promise<SwfHeaderIndexRecord | null> {
+  if (typeof indexedDB === 'undefined') return null;
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_SWF_HEADERS, 'readonly');
+      const req = tx.objectStore(STORE_SWF_HEADERS).get(id);
+      req.onsuccess = () => resolve((req.result as SwfHeaderIndexRecord) || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function getAllSwfHeaderRecords(): Promise<SwfHeaderIndexRecord[]> {
+  if (typeof indexedDB === 'undefined') return [];
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_SWF_HEADERS, 'readonly');
+      const req = tx.objectStore(STORE_SWF_HEADERS).getAll();
+      req.onsuccess = () => {
+        const rows = (req.result as SwfHeaderIndexRecord[]) || [];
+        rows.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        resolve(rows);
+      };
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function updateSwfHeaderUpgradeStatus(
+  id: string,
+  patch: Partial<
+    Pick<
+      SwfHeaderIndexRecord,
+      | 'upgradeStatus'
+      | 'vaultCartridgeId'
+      | 'nativeCartridgeId'
+      | 'verdict'
+      | 'signalReasons'
+      | 'suspectReasons'
+      | 'sludgeReasons'
+      | 'externalDependencyHits'
+      | 'sponsorSignalHits'
+      | 'recommendedAction'
+      | 'parserSchemaVersion'
+    >
+  >
+): Promise<SwfHeaderIndexRecord | null> {
+  if (typeof indexedDB === 'undefined') return null;
+  try {
+    const existing = await getSwfHeaderRecord(id);
+    if (!existing) return null;
+    const updated: SwfHeaderIndexRecord = {
+      ...existing,
+      ...patch,
+      updatedAt: Date.now(),
+    };
+    await putSwfHeaderRecord(updated);
+    return updated;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteSwfHeaderRecord(id: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_SWF_HEADERS, 'readwrite');
+      const req = tx.objectStore(STORE_SWF_HEADERS).delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to delete SWF header record:', err);
+  }
+}
+
 

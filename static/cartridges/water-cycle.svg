@@ -1,151 +1,249 @@
-<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive Water Cycle: Evaporation, Condensation, Precipitation, Runoff and Groundwater">
   <defs>
-    <!-- Atmosphere Sky Gradient -->
+    <!-- Atmospheric Sky Gradient (multi-stop horizon warmth) -->
     <linearGradient id="wc-sky-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0284c7" />
-      <stop offset="50%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#bae6fd" />
+      <stop offset="0%" stop-color="#0369a1"/>
+      <stop offset="46%" stop-color="#38bdf8"/>
+      <stop offset="82%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#fef3c7"/>
     </linearGradient>
 
-    <!-- Deep Ocean Gradient -->
-    <linearGradient id="wc-ocean-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0284c7" />
-      <stop offset="35%" stop-color="#1e40af" />
-      <stop offset="100%" stop-color="#0f172a" />
-    </linearGradient>
-
-    <!-- Mountain Terrain Gradient -->
-    <linearGradient id="wc-mountain-grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#64748b" />
-      <stop offset="60%" stop-color="#334155" />
-      <stop offset="100%" stop-color="#1e293b" />
-    </linearGradient>
-
-    <!-- Radiant Solar Engine Gradient -->
-    <radialGradient id="grad-sun" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fef08a" />
-      <stop offset="40%" stop-color="#facc15" />
-      <stop offset="85%" stop-color="#f59e0b" />
-      <stop offset="100%" stop-color="#d97706" />
+    <!-- Off-Center Focal Solar Core (zero blur filter needed) -->
+    <radialGradient id="wc-sun-core" cx="50%" cy="50%" r="52%" fx="36%" fy="32%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="28%" stop-color="#fef08a"/>
+      <stop offset="72%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#ea580c"/>
     </radialGradient>
 
-    <!-- Volumetric Cloud Gradient -->
-    <linearGradient id="wc-cloud-grad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="60%" stop-color="#f1f5f9" />
-      <stop offset="100%" stop-color="#cbd5e1" />
+    <!-- Concentric Solar Corona Halo (replaces expensive feGaussianBlur) -->
+    <radialGradient id="wc-sun-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.72"/>
+      <stop offset="45%" stop-color="#fde047" stop-opacity="0.28"/>
+      <stop offset="78%" stop-color="#fb923c" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Mountain Facet Gradients (lit face vs cool shadow face) -->
+    <linearGradient id="wc-mtn-far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="wc-mtn-lit" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="55%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="wc-hill-grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4d7c0f"/>
+      <stop offset="48%" stop-color="#365314"/>
+      <stop offset="100%" stop-color="#1e293b"/>
     </linearGradient>
 
-    <!-- Glow Filter -->
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="4" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
+    <!-- Volumetric Cumulus Cloud Gradient + Storm Tint -->
+    <linearGradient id="wc-cloud-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="58%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="wc-cloud-storm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="65%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
 
-    <!-- Cloud Soft Shadow Filter -->
-    <filter id="cloud-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1e293b" flood-opacity="0.3" />
-    </filter>
+    <!-- Layered Ocean Depth & Specular Surface -->
+    <linearGradient id="wc-ocean-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="22%" stop-color="#0284c7"/>
+      <stop offset="65%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <!-- Subterranean Bedrock & Aquifer Strata -->
+    <linearGradient id="wc-bedrock-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="42%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <!-- Focal Specular Water Vapor Bubble (replaces blur filter on 6 animated orbs) -->
+    <radialGradient id="wc-vapor-orb" cx="50%" cy="50%" r="50%" fx="34%" fy="30%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96"/>
+      <stop offset="48%" stop-color="#bae6fd" stop-opacity="0.85"/>
+      <stop offset="85%" stop-color="#38bdf8" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Focal Glossy Raindrop -->
+    <linearGradient id="wc-drop-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+
+    <!-- Reusable Flash-Style Vector Symbols (drawn once, stamped via <use>) -->
+    <g id="sym-pine" aria-hidden="true">
+      <path d="M0 -24 L9 -7 L4 -7 L11 6 L-11 6 L-4 -7 L-9 -7 Z" fill="#14532d"/>
+      <path d="M0 -24 L9 -7 L4 -7 L11 6 L0 6 Z" fill="#22c55e" opacity="0.32"/>
+      <rect x="-1.8" y="5.5" width="3.6" height="5" rx="1" fill="#451a03"/>
+    </g>
+
+    <g id="sym-drop" aria-hidden="true">
+      <path d="M0 0 Q3.4 6.5 3.4 10 A3.4 3.4 0 1 1 -3.4 10 Q-3.4 6.5 0 0 Z" fill="url(#wc-drop-grad)"/>
+      <ellipse cx="-1.1" cy="9.5" rx="0.9" ry="1.8" fill="#ffffff" opacity="0.72"/>
+    </g>
+
+    <!-- Cloud Clip Path for Cel-Shading Shadow & Highlight Crescents -->
+    <clipPath id="wc-cloud-clip">
+      <path d="M276 148 Q276 122 304 118 Q320 92 356 96 Q382 70 426 78 Q466 68 494 98 Q530 96 544 124 Q566 132 560 156 Q556 178 524 180 L304 180 Q274 176 276 148 Z"/>
+    </clipPath>
   </defs>
 
-  <!-- Atmosphere Sky -->
-  <rect width="800" height="340" fill="url(#wc-sky-grad)" />
+  <!-- 1. Atmospheric Sky -->
+  <rect width="800" height="356" fill="url(#wc-sky-grad)" aria-hidden="true"/>
 
-  <!-- The Sun (Thermal Solar Engine) -->
-  <g transform="translate(710, 85)">
-    <circle cx="0" cy="0" r="55" fill="#facc15" opacity="0.25" filter="url(#glow)" />
-    <circle cx="0" cy="0" r="40" fill="url(#grad-sun)" filter="url(#glow)" />
-    <!-- Radiant Solar Rays -->
-    <g stroke="#fef08a" stroke-width="2" stroke-linecap="round" opacity="0.6">
-      <line x1="0" y1="-50" x2="0" y2="-62" />
-      <line x1="35" y1="-35" x2="44" y2="-44" />
-      <line x1="50" y1="0" x2="62" y2="0" />
-      <line x1="35" y1="35" x2="44" y2="44" />
-      <line x1="0" y1="50" x2="0" y2="62" />
-      <line x1="-35" y1="35" x2="-44" y2="44" />
-      <line x1="-50" y1="0" x2="-62" y2="0" />
-      <line x1="-35" y1="-35" x2="-44" y2="-44" />
+  <!-- Subtle Distant Atmospheric Haze Band -->
+  <path d="M0 286 Q220 264 460 288 T800 278 L800 356 L0 356 Z" fill="#e0f2fe" opacity="0.42" aria-hidden="true"/>
+
+  <!-- 2. The Sun (Thermal Solar Engine — zero GPU blur filters) -->
+  <g id="wc-sun-group" transform="translate(706, 84)" aria-hidden="true">
+    <circle id="wc-sun-halo-ring" cx="0" cy="0" r="88" fill="url(#wc-sun-halo)" opacity="0.85"/>
+    <g id="wc-sun-rays" transform="rotate(0)">
+      <path d="M0 -48 L4 -66 L-4 -66 Z M34 -34 L49 -44 L44 -49 Z M48 0 L66 4 L66 -4 Z M34 34 L44 49 L49 44 Z M0 48 L-4 66 L4 66 Z M-34 34 L-49 44 L-44 49 Z M-48 0 L-66 -4 L-66 4 Z M-34 -34 L-44 -49 L-49 -44 Z" fill="#fef08a" opacity="0.78"/>
+    </g>
+    <circle cx="0" cy="0" r="38" fill="url(#wc-sun-core)"/>
+    <path d="M-24 -14 Q-12 -30 10 -28 Q-4 -20 -18 -4 Z" fill="#ffffff" opacity="0.55"/>
+  </g>
+
+  <!-- 3. Distant & Midground Cel-Faceted Mountain Ranges -->
+  <g aria-hidden="true">
+    <!-- Far Hazy Range -->
+    <path d="M-10 340 L92 192 L174 268 L236 218 L340 340 Z" fill="url(#wc-mtn-far)" opacity="0.58"/>
+    <!-- Hero Alpine Peak (Lit Right Facet + Cool Shadow Left Facet) -->
+    <path d="M88 346 L248 142 L416 346 Z" fill="url(#wc-mtn-lit)"/>
+    <path d="M248 142 L264 236 L220 346 L88 346 Z" fill="#1e293b" opacity="0.42"/>
+    <!-- Faceted Snow Cap (Sunlit & Shaded Planes) -->
+    <path d="M248 142 L212 190 L236 184 L250 202 L266 186 L286 194 Z" fill="#f8fafc"/>
+    <path d="M248 142 L212 190 L236 184 L250 202 Z" fill="#bae6fd" opacity="0.55"/>
+
+    <!-- Terraced Coastal Foothills -->
+    <path d="M0 326 Q116 254 242 292 Q328 318 424 352 L424 422 L0 422 Z" fill="url(#wc-hill-grass)"/>
+    <path d="M0 346 Q128 292 276 326 Q340 340 404 358 L404 422 L0 422 Z" fill="#1e293b" opacity="0.48"/>
+
+    <!-- Instanced Alpine Forest (11 trees from 1 <defs> symbol — Flash PlaceObject2 technique) -->
+    <use href="#sym-pine" transform="matrix(0.85 0 0 0.85 32 316)"/>
+    <use href="#sym-pine" transform="matrix(1.05 0 0 1.05 56 308)"/>
+    <use href="#sym-pine" transform="matrix(0.75 0 0 0.75 84 298)"/>
+    <use href="#sym-pine" transform="matrix(0.95 0 0 0.95 112 292)"/>
+    <use href="#sym-pine" transform="matrix(0.7 0 0 0.7 142 288)"/>
+    <use href="#sym-pine" transform="matrix(0.9 0 0 0.9 168 298)"/>
+    <use href="#sym-pine" transform="matrix(0.68 0 0 0.68 198 302)"/>
+    <use href="#sym-pine" transform="matrix(0.82 0 0 0.82 224 312)"/>
+    <use href="#sym-pine" transform="matrix(0.72 0 0 0.72 308 324)"/>
+    <use href="#sym-pine" transform="matrix(0.62 0 0 0.62 332 332)"/>
+    <use href="#sym-pine" transform="matrix(0.55 0 0 0.55 352 338)"/>
+  </g>
+
+  <!-- 4. Winding Alpine Surface Runoff River (tapered ribbon + animated foam) -->
+  <g aria-hidden="true">
+    <path d="M250 198 Q266 244 300 278 Q340 318 426 352 L448 352 Q364 316 314 274 Q276 240 256 198 Z" fill="#0ea5e9" opacity="0.92"/>
+    <path id="wc-river-foam" d="M253 200 Q271 244 306 277 Q348 316 436 352" fill="none" stroke="#e0f2fe" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="9 11" opacity="0.9"/>
+  </g>
+
+  <!-- 5. Deep Ocean Reservoir + Animated Surface Shimmer -->
+  <g aria-hidden="true">
+    <path d="M362 350 Q480 338 610 348 Q710 354 800 344 L800 422 L362 422 Z" fill="url(#wc-ocean-grad)"/>
+    <!-- Coastal Shallow Shelf Glow -->
+    <path d="M362 350 Q480 338 610 348 Q710 354 800 344 L800 364 Q690 370 570 362 Q460 356 362 366 Z" fill="#38bdf8" opacity="0.45"/>
+    <!-- Animated Ocean Sunlit Wave Sheen -->
+    <g id="wc-ocean-sheen" stroke="#bae6fd" stroke-width="2" stroke-linecap="round" opacity="0.72">
+      <path d="M474 358 Q502 354 530 358"/>
+      <path d="M582 364 Q616 359 650 364"/>
+      <path d="M684 356 Q724 351 764 356"/>
+      <path d="M524 378 Q556 374 588 378" opacity="0.5"/>
+      <path d="M642 384 Q678 380 714 384" opacity="0.45"/>
     </g>
   </g>
 
-  <!-- Distant Mountain Ranges -->
-  <polygon points="120,200 0,340 260,340" fill="#475569" opacity="0.5" />
-  <polygon points="260,160 110,340 420,340" fill="url(#wc-mountain-grad)" />
-  <!-- Snow Peaks -->
-  <polygon points="260,160 230,205 260,215 290,205" fill="#ffffff" opacity="0.9" />
-
-  <!-- Foreground Mountain Landmass -->
-  <path d="M 0 340 Q 180 230, 360 300 L 360 480 L 0 480 Z" fill="#334155" />
-  <path d="M 0 340 Q 160 240, 320 310 L 320 480 L 0 480 Z" fill="#1e293b" opacity="0.7" />
-
-  <!-- Mountain Surface Runoff River -->
-  <path d="M 260 220 Q 280 270 330 310 Q 370 340 440 355" fill="none" stroke="#7dd3fc" stroke-width="4.5" stroke-linecap="round" opacity="0.85" />
-
-  <!-- Deep Ocean Reservoir -->
-  <path d="M 0 340 Q 200 320, 450 350 L 800 350 L 800 480 L 0 480 Z" fill="url(#wc-ocean-grad)" />
-
-  <!-- Subterranean Aquifer Table -->
-  <path d="M 0 420 L 800 420 L 800 480 L 0 480 Z" fill="#0f172a" opacity="0.85" />
-  <line x1="0" y1="420" x2="800" y2="420" stroke="#0284c7" stroke-width="2" stroke-dasharray="6,4" />
-  <text x="30" y="450" fill="#38bdf8" font-size="12" font-weight="700" font-family="sans-serif">Subterranean Groundwater &amp; Infiltration</text>
-
-  <!-- Condensation Cloud Structure -->
-  <g filter="url(#cloud-shadow)">
-    <path d="M 280 140 Q 320 100, 380 130 Q 420 90, 480 130 Q 520 110, 550 140 Q 560 170, 520 180 L 310 180 Z" fill="url(#wc-cloud-grad)" />
-    <!-- Secondary internal puff -->
-    <ellipse cx="370" cy="145" rx="45" ry="25" fill="#ffffff" opacity="0.6" />
-    <ellipse cx="440" cy="140" rx="55" ry="30" fill="#ffffff" opacity="0.6" />
+  <!-- 6. Subterranean Geological Strata & Porous Aquifer Table -->
+  <g aria-hidden="true">
+    <path d="M0 416 Q210 410 420 418 Q620 424 800 414 L800 480 L0 480 Z" fill="url(#wc-bedrock-grad)"/>
+    <path d="M0 416 Q210 410 420 418 Q620 424 800 414" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="7 5" opacity="0.75"/>
+    <path id="wc-aquifer-flow" d="M24 442 Q190 436 370 444 Q560 450 776 440" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 18" opacity="0.55"/>
+    <path d="M120 422 L120 436 M116 432 L120 438 L124 432 M248 422 L248 436 M244 432 L248 438 L252 432" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" opacity="0.65"/>
   </g>
+  <text x="24" y="466" fill="#7dd3fc" font-size="11.5" font-weight="700" font-family="system-ui, -apple-system, sans-serif" letter-spacing="0.03em">SUBTERRANEAN AQUIFER &amp; GROUNDWATER INFILTRATION</text>
 
-  <!-- Meteorological Stage Badges -->
-  <g font-family="sans-serif" font-size="12" font-weight="800">
-    <!-- Evaporation Indicator -->
-    <g transform="translate(560, 240)">
-      <rect width="130" height="28" rx="6" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="1.5" />
-      <text x="65" y="19" fill="#38bdf8" text-anchor="middle">↑ EVAPORATION</text>
-    </g>
-
-    <!-- Condensation Indicator -->
-    <g transform="translate(350, 70)">
-      <rect width="140" height="28" rx="6" fill="#0f172a" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1.5" />
-      <text x="70" y="19" fill="#f8fafc" text-anchor="middle">☁ CONDENSATION</text>
-    </g>
-
-    <!-- Precipitation Indicator -->
-    <g transform="translate(345, 235)">
-      <rect width="140" height="28" rx="6" fill="#0f172a" fill-opacity="0.85" stroke="#60a5fa" stroke-width="1.5" />
-      <text x="70" y="19" fill="#60a5fa" text-anchor="middle">↓ PRECIPITATION</text>
-    </g>
-
-    <!-- Runoff Indicator -->
-    <g transform="translate(180, 370)">
-      <rect width="130" height="28" rx="6" fill="#0f172a" fill-opacity="0.85" stroke="#34d399" stroke-width="1.5" />
-      <text x="65" y="19" fill="#34d399" text-anchor="middle">➔ RUNOFF</text>
+  <!-- 7. Volumetric Cel-Shaded Cumulus Cloud (clipped shadow crescent + sunlit top + storm tint, 0 filters) -->
+  <g id="wc-cloud-group" transform="translate(0,0)">
+    <!-- Soft Grounded Cloud Shadow Rim (pure vector, 0 blur cost) -->
+    <path d="M294 182 Q418 192 542 182 Q524 188 418 190 Q314 188 294 182 Z" fill="#0f172a" opacity="0.16" aria-hidden="true"/>
+    <!-- Main Cloud Body -->
+    <path d="M276 148 Q276 122 304 118 Q320 92 356 96 Q382 70 426 78 Q466 68 494 98 Q530 96 544 124 Q566 132 560 156 Q556 178 524 180 L304 180 Q274 176 276 148 Z" fill="url(#wc-cloud-grad)"/>
+    <!-- Storm Darkening Overlay (opacity driven by vars.cloudCover) -->
+    <path id="wc-cloud-storm-tint" d="M276 148 Q276 122 304 118 Q320 92 356 96 Q382 70 426 78 Q466 68 494 98 Q530 96 544 124 Q566 132 560 156 Q556 178 524 180 L304 180 Q274 176 276 148 Z" fill="url(#wc-cloud-storm)" opacity="0.24"/>
+    <!-- Clipped Cel-Shading Underside Crescent & Sunlit Top Rim -->
+    <g clip-path="url(#wc-cloud-clip)" aria-hidden="true">
+      <path d="M268 158 Q330 148 398 160 Q474 170 570 152 L570 190 L268 190 Z" fill="#334155" opacity="0.22"/>
+      <path d="M354 96 Q386 76 426 84 Q462 74 490 100 Q458 84 422 92 Q388 86 354 96 Z" fill="#ffffff" opacity="0.72"/>
+      <ellipse cx="478" cy="122" rx="44" ry="20" fill="#ffffff" opacity="0.34"/>
     </g>
   </g>
 
-  <!-- Rising Evaporation Water Vapor Droplets -->
+  <!-- 8. Rising Evaporation Vapor Droplets (focal specular orbs — 0 blur filters, #wc-vapor-0 draggable) -->
   <g id="wc-vapors">
-    <circle id="wc-vapor-0" cx="520" cy="330" r="5" fill="#93c5fd" opacity="0.75" filter="url(#glow)" />
-    <circle id="wc-vapor-1" cx="555" cy="330" r="5" fill="#93c5fd" opacity="0.75" filter="url(#glow)" />
-    <circle id="wc-vapor-2" cx="590" cy="330" r="5" fill="#93c5fd" opacity="0.75" filter="url(#glow)" />
-    <circle id="wc-vapor-3" cx="625" cy="330" r="5" fill="#93c5fd" opacity="0.75" filter="url(#glow)" />
-    <circle id="wc-vapor-4" cx="660" cy="330" r="5" fill="#93c5fd" opacity="0.75" filter="url(#glow)" />
-    <circle id="wc-vapor-5" cx="695" cy="330" r="5" fill="#93c5fd" opacity="0.75" filter="url(#glow)" />
+    <circle id="wc-vapor-0" cx="520" cy="330" r="8" fill="url(#wc-vapor-orb)" opacity="0.88" role="button" tabindex="0" aria-label="Draggable rising water vapor droplet"/>
+    <circle id="wc-vapor-1" cx="555" cy="330" r="7" fill="url(#wc-vapor-orb)" opacity="0.84" aria-hidden="true"/>
+    <circle id="wc-vapor-2" cx="590" cy="330" r="8.5" fill="url(#wc-vapor-orb)" opacity="0.88" aria-hidden="true"/>
+    <circle id="wc-vapor-3" cx="625" cy="330" r="6.5" fill="url(#wc-vapor-orb)" opacity="0.82" aria-hidden="true"/>
+    <circle id="wc-vapor-4" cx="660" cy="330" r="8" fill="url(#wc-vapor-orb)" opacity="0.86" aria-hidden="true"/>
+    <circle id="wc-vapor-5" cx="695" cy="330" r="7" fill="url(#wc-vapor-orb)" opacity="0.82" aria-hidden="true"/>
   </g>
 
-  <!-- Falling Precipitation Raindrops -->
-  <g id="wc-rains">
-    <line id="wc-rain-0" x1="320" y1="190" x2="317" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-1" x1="345" y1="190" x2="342" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-2" x1="370" y1="190" x2="367" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-3" x1="395" y1="190" x2="392" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-4" x1="420" y1="190" x2="417" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-5" x1="445" y1="190" x2="442" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-6" x1="470" y1="190" x2="467" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
-    <line id="wc-rain-7" x1="495" y1="190" x2="492" y2="202" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0" />
+  <!-- 9. Falling Precipitation Glossy Teardrops (stamped from #sym-drop) -->
+  <g id="wc-rains" aria-hidden="true">
+    <use id="wc-rain-0" href="#sym-drop" transform="translate(320, 190)" opacity="0"/>
+    <use id="wc-rain-1" href="#sym-drop" transform="translate(345, 190)" opacity="0"/>
+    <use id="wc-rain-2" href="#sym-drop" transform="translate(370, 190)" opacity="0"/>
+    <use id="wc-rain-3" href="#sym-drop" transform="translate(395, 190)" opacity="0"/>
+    <use id="wc-rain-4" href="#sym-drop" transform="translate(420, 190)" opacity="0"/>
+    <use id="wc-rain-5" href="#sym-drop" transform="translate(445, 190)" opacity="0"/>
+    <use id="wc-rain-6" href="#sym-drop" transform="translate(470, 190)" opacity="0"/>
+    <use id="wc-rain-7" href="#sym-drop" transform="translate(495, 190)" opacity="0"/>
+  </g>
+
+  <!-- 10. Clean Typographic Stage Labels & Live Telemetry Readout -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="11.5" letter-spacing="0.05em">
+    <g transform="translate(556, 236)">
+      <rect width="140" height="24" rx="4" fill="#0f172a" fill-opacity="0.76"/>
+      <rect width="3.5" height="24" rx="1.5" fill="#38bdf8"/>
+      <text x="14" y="16" fill="#e0f2fe">EVAPORATION</text>
+    </g>
+
+    <g transform="translate(348, 38)">
+      <rect width="146" height="24" rx="4" fill="#0f172a" fill-opacity="0.76"/>
+      <rect width="3.5" height="24" rx="1.5" fill="#f8fafc"/>
+      <text x="14" y="16" fill="#f8fafc">CONDENSATION</text>
+    </g>
+
+    <g transform="translate(334, 240)">
+      <rect width="144" height="24" rx="4" fill="#0f172a" fill-opacity="0.76"/>
+      <rect width="3.5" height="24" rx="1.5" fill="#60a5fa"/>
+      <text x="14" y="16" fill="#dbeafe">PRECIPITATION</text>
+    </g>
+
+    <g transform="translate(154, 368)">
+      <rect width="136" height="24" rx="4" fill="#0f172a" fill-opacity="0.76"/>
+      <rect width="3.5" height="24" rx="1.5" fill="#34d399"/>
+      <text x="14" y="16" fill="#d1fae5">SURFACE RUNOFF</text>
+    </g>
+
+    <!-- Live Hydrological Readout -->
+    <g transform="translate(20, 18)">
+      <rect width="218" height="44" rx="5" fill="#0f172a" fill-opacity="0.78"/>
+      <text x="12" y="18" fill="#7dd3fc" font-size="10" letter-spacing="0.06em">HYDROLOGICAL CYCLE TELEMETRY</text>
+      <text id="wc-rainfall-readout" x="12" y="35" fill="#f8fafc" font-size="12" font-weight="700" letter-spacing="0.01em">24°C · 70% Cloud · 5.0 mm/h</text>
+    </g>
   </g>
 </svg>
