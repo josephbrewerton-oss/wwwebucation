@@ -1,9 +1,9 @@
 <svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Background Ambient Glow -->
-    <radialGradient id="ps-bg-glow" cx="50%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="#064e3b" stop-opacity="0.4" />
-      <stop offset="60%" stop-color="#0f172a" stop-opacity="0.95" />
+    <!-- Ambient Bio-Lab Backdrop -->
+    <radialGradient id="ps-bg-glow" cx="50%" cy="48%" r="70%">
+      <stop offset="0%" stop-color="#064e3b" stop-opacity="0.48" />
+      <stop offset="60%" stop-color="#0f172a" stop-opacity="0.96" />
       <stop offset="100%" stop-color="#020617" />
     </radialGradient>
 
@@ -15,51 +15,50 @@
       <stop offset="100%" stop-color="#14532d" />
     </linearGradient>
 
-    <!-- Chloroplast Organelle Gradient -->
-    <linearGradient id="ps-chloroplast" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#4ade80" />
+    <!-- Focal Specular Chloroplast Organelle -->
+    <radialGradient id="ps-chloroplast" cx="42%" cy="38%" r="62%" fx="30%" fy="26%">
+      <stop offset="0%" stop-color="#bbf7d0" />
+      <stop offset="45%" stop-color="#4ade80" />
       <stop offset="100%" stop-color="#15803d" />
-    </linearGradient>
+    </radialGradient>
 
-    <!-- Sun Glow Gradient -->
+    <!-- Zero-GPU Concentric Solar Corona Gradient -->
     <radialGradient id="ps-sun-grad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fef08a" />
-      <stop offset="40%" stop-color="#facc15" />
+      <stop offset="0%" stop-color="#fef9c3" stop-opacity="1" />
+      <stop offset="32%" stop-color="#facc15" stop-opacity="0.9" />
+      <stop offset="68%" stop-color="#eab308" stop-opacity="0.3" />
       <stop offset="100%" stop-color="#ca8a04" stop-opacity="0" />
     </radialGradient>
 
-    <!-- Photon Glow Bloom Filter -->
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="3.5" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
+    <!-- Zero-GPU Specular Photon Orb -->
+    <radialGradient id="ps-photon-grad" cx="42%" cy="38%" r="58%" fx="32%" fy="28%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="45%" stop-color="#fef08a" />
+      <stop offset="85%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </radialGradient>
 
-    <!-- Leaf Cuticle Filter -->
-    <filter id="leaf-shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#052e16" flood-opacity="0.6" />
-    </filter>
+    <!-- Arrowhead Marker (fixes previously undefined url(#arrow)) -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+    </marker>
+
+    <!-- Instanced Chloroplast Thylakoid Symbol (<use> Reuse) -->
+    <g id="ps-organelle-sym">
+      <ellipse cx="0" cy="0" rx="20" ry="11" fill="url(#ps-chloroplast)" stroke="#86efac" stroke-width="0.9" />
+      <line x1="-10" y1="-2" x2="10" y2="-2" stroke="#14532d" stroke-width="1.3" opacity="0.6" />
+      <line x1="-8" y1="2.5" x2="8" y2="2.5" stroke="#14532d" stroke-width="1.3" opacity="0.6" />
+    </g>
   </defs>
 
   <!-- Dark Ambient Bio-Lab Backdrop -->
-  <rect width="800" height="480" fill="url(#ps-bg-glow)" />
+  <rect width="800" height="480" fill="url(#ps-bg-glow)" aria-hidden="true" />
 
-  <!-- Top Glassmorphic Chemical Equation Banner -->
-  <g transform="translate(140, 16)">
-    <rect width="520" height="42" rx="10" fill="#0f172a" fill-opacity="0.9" stroke="#10b981" stroke-width="1.5" />
-    <text id="ps-formula-txt" x="260" y="27" fill="#4ade80" font-size="16" font-weight="800" text-anchor="middle" font-family="sans-serif">
-      <tspan fill="#38bdf8">6CO₂</tspan> + <tspan fill="#60a5fa">6H₂O</tspan> + <tspan fill="#facc15">Light ⚡</tspan> ➔ <tspan fill="#f59e0b">C₆H₁₂O₆ (Glucose)</tspan> + <tspan fill="#34d399">6O₂</tspan>
-    </text>
-  </g>
-
-  <!-- Sun Solar Engine in Upper Sky -->
-  <g id="ps-sun-engine" transform="translate(400, 15)">
-    <circle id="ps-sun-glow" cx="0" cy="0" r="45" fill="url(#ps-sun-grad)" filter="url(#glow)" opacity="0.85" />
-    <circle cx="0" cy="0" r="18" fill="#fef08a" filter="url(#glow)" />
-    <!-- Coronal Solar Flare Rays (Illustrator Trim & Pivot) -->
-    <g id="ps-sun-rays" stroke="#facc15" stroke-width="2" stroke-linecap="round" opacity="0.75">
+  <!-- Sun Solar Engine in Upper Sky (Zero GPU Blurs) -->
+  <g id="ps-sun-engine" transform="translate(400, 15)" aria-hidden="true">
+    <circle id="ps-sun-glow" cx="0" cy="0" r="45" fill="url(#ps-sun-grad)" opacity="0.9" />
+    <circle cx="0" cy="0" r="20" fill="#fef08a" stroke="#facc15" stroke-width="2" />
+    <g id="ps-sun-rays" stroke="#facc15" stroke-width="2.2" stroke-linecap="round" opacity="0.8">
       <line x1="0" y1="-26" x2="0" y2="-42" />
       <line x1="0" y1="26" x2="0" y2="42" />
       <line x1="-26" y1="0" x2="-42" y2="0" />
@@ -71,52 +70,65 @@
     </g>
   </g>
 
-  <!-- Botanical Leaf Structure -->
-  <g filter="url(#leaf-shadow)">
+  <!-- Top Chemical Equation Banner -->
+  <g transform="translate(140, 16)">
+    <rect x="3" y="4" width="520" height="42" rx="10" fill="#020617" opacity="0.55" aria-hidden="true" />
+    <rect width="520" height="42" rx="10" fill="#0f172a" fill-opacity="0.94" stroke="#10b981" stroke-width="1.5" />
+    <text id="ps-formula-txt" x="260" y="27" fill="#4ade80" font-size="16" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">
+      <tspan fill="#38bdf8">6CO₂</tspan> + <tspan fill="#60a5fa">6H₂O</tspan> + <tspan fill="#facc15">Light ⚡</tspan> ➔ <tspan fill="#f59e0b">C₆H₁₂O₆ (Glucose)</tspan> + <tspan fill="#34d399">6O₂</tspan>
+    </text>
+  </g>
+
+  <!-- Botanical Leaf Structure (Crisp Cel-Shadow, 0 GPU Filters) -->
+  <g>
+    <!-- Hard Cel Drop Shadow Beneath Leaf -->
+    <path d="M 124 252 C 204 92, 604 92, 684 252 C 604 412, 204 412, 124 252 Z" fill="#02180c" opacity="0.58" aria-hidden="true" />
     <!-- Main Leaf Body -->
     <path id="ps-leaf" d="M 120 240 C 200 80, 600 80, 680 240 C 600 400, 200 400, 120 240 Z" fill="url(#grad-leaf)" stroke="#4ade80" stroke-width="3" />
+    <!-- Upper Cuticle Specular Rim Highlight -->
+    <path d="M 164 226 C 240 116, 540 114, 626 218 C 520 138, 260 138, 164 226 Z" fill="#bbf7d0" opacity="0.16" aria-hidden="true" />
 
-    <!-- Mesophyll Cellular Chloroplast Organelles inside Leaf -->
-    <g id="ps-chloroplasts" opacity="0.35">
-      <ellipse cx="260" cy="200" rx="18" ry="10" fill="url(#ps-chloroplast)" />
-      <ellipse cx="340" cy="180" rx="20" ry="11" fill="url(#ps-chloroplast)" />
-      <ellipse cx="440" cy="185" rx="22" ry="12" fill="url(#ps-chloroplast)" />
-      <ellipse cx="520" cy="205" rx="18" ry="10" fill="url(#ps-chloroplast)" />
-      <ellipse cx="270" cy="275" rx="19" ry="11" fill="url(#ps-chloroplast)" />
-      <ellipse cx="360" cy="290" rx="22" ry="12" fill="url(#ps-chloroplast)" />
-      <ellipse cx="460" cy="285" rx="20" ry="11" fill="url(#ps-chloroplast)" />
-      <ellipse cx="540" cy="270" rx="18" ry="10" fill="url(#ps-chloroplast)" />
+    <!-- Instanced Mesophyll Chloroplast Organelles (<use>) -->
+    <g id="ps-chloroplasts" opacity="0.45" aria-hidden="true">
+      <use href="#ps-organelle-sym" x="260" y="200" />
+      <use href="#ps-organelle-sym" x="340" y="180" />
+      <use href="#ps-organelle-sym" x="440" y="185" />
+      <use href="#ps-organelle-sym" x="520" y="205" />
+      <use href="#ps-organelle-sym" x="270" y="275" />
+      <use href="#ps-organelle-sym" x="360" y="290" />
+      <use href="#ps-organelle-sym" x="460" y="285" />
+      <use href="#ps-organelle-sym" x="540" y="270" />
     </g>
 
-    <!-- Vascular Vein Network (Xylem &amp; Phloem) with Trim Paths -->
-    <path id="ps-veins" d="M 120 240 L 680 240 M 260 240 L 340 160 M 380 240 L 460 160 M 500 240 L 570 175 M 260 240 L 340 320 M 380 240 L 460 320 M 500 240 L 570 305" stroke="#86efac" stroke-width="2.5" fill="none" opacity="0.85" stroke-linecap="round" stroke-dasharray="1205" stroke-dashoffset="0" />
+    <!-- Vascular Vein Network (Xylem & Phloem) with Trim Paths -->
+    <path id="ps-veins" d="M 120 240 L 680 240 M 260 240 L 340 160 M 380 240 L 460 160 M 500 240 L 570 175 M 260 240 L 340 320 M 380 240 L 460 320 M 500 240 L 570 305" stroke="#86efac" stroke-width="2.5" fill="none" opacity="0.88" stroke-linecap="round" stroke-dasharray="1205" stroke-dashoffset="0" />
   </g>
 
   <!-- Cellular Anatomy Labels -->
-  <g font-family="sans-serif" font-size="12" font-weight="700">
+  <g font-family="system-ui, sans-serif" font-size="12" font-weight="700">
     <!-- Water Uptake via Petiole -->
-    <path d="M 50 240 L 110 240" stroke="#38bdf8" stroke-width="3" stroke-dasharray="4,3" marker-end="url(#arrow)" />
-    <text x="45" y="232" fill="#38bdf8" text-anchor="start">H₂O from Roots</text>
+    <path d="M 46 240 L 110 240" stroke="#38bdf8" stroke-width="3" stroke-dasharray="5,3" marker-end="url(#arrow)" />
+    <text x="38" y="228" fill="#38bdf8" text-anchor="start">H₂O from Roots</text>
 
     <!-- Stomata CO2 Influx -->
-    <text x="300" y="380" fill="#a7f3d0" text-anchor="middle">CO₂ Influx (Stomata)</text>
-    <path d="M 300 365 L 300 320" stroke="#34d399" stroke-width="2.5" stroke-dasharray="3,3" />
+    <text x="300" y="388" fill="#a7f3d0" text-anchor="middle">CO₂ Influx (Stomata)</text>
+    <path d="M 300 370 L 300 322" stroke="#34d399" stroke-width="2.5" stroke-dasharray="4,3" />
 
     <!-- Oxygen Release -->
-    <text x="500" y="380" fill="#67e8f9" text-anchor="middle">O₂ Released</text>
-    <path d="M 500 320 L 500 365" stroke="#67e8f9" stroke-width="2.5" stroke-dasharray="3,3" />
+    <text x="500" y="388" fill="#67e8f9" text-anchor="middle">O₂ Released</text>
+    <path d="M 500 322 L 500 370" stroke="#67e8f9" stroke-width="2.5" stroke-dasharray="4,3" />
 
     <!-- Glucose Formation -->
-    <text x="695" y="244" fill="#fbbf24" text-anchor="start">C₆H₁₂O₆ (Sugar)</text>
+    <text x="692" y="244" fill="#fbbf24" text-anchor="start">C₆H₁₂O₆ (Sugar)</text>
   </g>
 
-  <!-- Radiant Light Photon Particles Streaming into Chloroplasts -->
+  <!-- Radiant Light Photon Particles Streaming into Chloroplasts (Zero GPU Blurs) -->
   <g id="ps-photons">
-    <circle id="ps-photon-0" cx="200" cy="30" r="5" fill="#facc15" filter="url(#glow)" />
-    <circle id="ps-photon-1" cx="270" cy="30" r="5" fill="#facc15" filter="url(#glow)" />
-    <circle id="ps-photon-2" cx="340" cy="30" r="5" fill="#facc15" filter="url(#glow)" />
-    <circle id="ps-photon-3" cx="410" cy="30" r="5" fill="#facc15" filter="url(#glow)" />
-    <circle id="ps-photon-4" cx="480" cy="30" r="5" fill="#facc15" filter="url(#glow)" />
-    <circle id="ps-photon-5" cx="550" cy="30" r="5" fill="#facc15" filter="url(#glow)" />
+    <circle id="ps-photon-0" cx="200" cy="30" r="6" fill="url(#ps-photon-grad)" stroke="#fef9c3" stroke-width="1" style="cursor: grab;" role="button" tabindex="0" aria-label="Draggable sunlight photon" />
+    <circle id="ps-photon-1" cx="270" cy="30" r="6" fill="url(#ps-photon-grad)" stroke="#fef9c3" stroke-width="1" aria-hidden="true" />
+    <circle id="ps-photon-2" cx="340" cy="30" r="6" fill="url(#ps-photon-grad)" stroke="#fef9c3" stroke-width="1" aria-hidden="true" />
+    <circle id="ps-photon-3" cx="410" cy="30" r="6" fill="url(#ps-photon-grad)" stroke="#fef9c3" stroke-width="1" aria-hidden="true" />
+    <circle id="ps-photon-4" cx="480" cy="30" r="6" fill="url(#ps-photon-grad)" stroke="#fef9c3" stroke-width="1" aria-hidden="true" />
+    <circle id="ps-photon-5" cx="550" cy="30" r="6" fill="url(#ps-photon-grad)" stroke="#fef9c3" stroke-width="1" aria-hidden="true" />
   </g>
 </svg>

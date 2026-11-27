@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "compositeHash": "497d884c9e75",
-  "generatedAt": "2026-11-27T09:04:51.807Z",
+  "compositeHash": "0eec9e8e235d",
+  "generatedAt": "2026-11-27T09:23:41.820Z",
   "files": {
     "nano-map.ast": "568a99c10f2f08b8",
     "manifest.json": "5b581a737ccec74d",
@@ -18,7 +18,7 @@
     "player/ast-audio-speech.js": "2297de54da6d41cd",
     "player/ast-physics.js": "d864e5c7ae2f7a5e",
     "player/ast-expr.js": "7357b1b9d5d10a49",
-    "player/ast-bytecode-decoder.js": "6bb06ad93f18eb4f",
+    "player/ast-bytecode-decoder.js": "469058a6c0eca1b4",
     "player/ast-parser.js": "91c4730f6e6c6921",
     "player/ast-3d.js": "e042ca7a0e3ce8e3",
     "player/ast-bridge-playback.js": "928ec7f59e26c05f",
