@@ -119,6 +119,125 @@
           if (svgStr) scene.svgMarkup = svgStr;
           break;
         }
+        case 0x82: { // OP_STYLE_TABLE (length-framed binary color/gradient dictionary)
+          const payloadLen = view.getUint32(offset, true); offset += 4;
+          const endOff = Math.min(len, offset + payloadLen);
+          if (!scene.vectorDict) scene.vectorDict = { styles: [], shapes: [], stamps: [] };
+          const styleCount = view.getUint16(offset, true); offset += 2;
+          for (let i = 0; i < styleCount && offset < endOff; i++) {
+            const kind = bytes[offset++];
+            if (kind === 1) {
+              const r = bytes[offset++], g = bytes[offset++], b = bytes[offset++], a = bytes[offset++];
+              scene.vectorDict.styles.push({ kind: 'solid', color: { r, g, b, a } });
+            } else if (kind === 2) {
+              const id = getStr(view.getUint16(offset, true)); offset += 2;
+              const x1 = view.getInt16(offset, true) / 1000; offset += 2;
+              const y1 = view.getInt16(offset, true) / 1000; offset += 2;
+              const x2 = view.getInt16(offset, true) / 1000; offset += 2;
+              const y2 = view.getInt16(offset, true) / 1000; offset += 2;
+              const stopCount = bytes[offset++];
+              const stops = [];
+              for (let s = 0; s < stopCount; s++) {
+                const off = bytes[offset++] / 255;
+                const r = bytes[offset++], g = bytes[offset++], b = bytes[offset++], a = bytes[offset++];
+                stops.push({ offset: off, color: { r, g, b, a } });
+              }
+              scene.vectorDict.styles.push({ kind: 'linear', id, x1, y1, x2, y2, stops });
+            } else if (kind === 3) {
+              const id = getStr(view.getUint16(offset, true)); offset += 2;
+              const cx = view.getInt16(offset, true) / 1000; offset += 2;
+              const cy = view.getInt16(offset, true) / 1000; offset += 2;
+              const r = view.getInt16(offset, true) / 1000; offset += 2;
+              const fx = view.getInt16(offset, true) / 1000; offset += 2;
+              const fy = view.getInt16(offset, true) / 1000; offset += 2;
+              const stopCount = bytes[offset++];
+              const stops = [];
+              for (let s = 0; s < stopCount; s++) {
+                const off = bytes[offset++] / 255;
+                const sr = bytes[offset++], sg = bytes[offset++], sb = bytes[offset++], sa = bytes[offset++];
+                stops.push({ offset: off, color: { r: sr, g: sg, b: sb, a: sa } });
+              }
+              scene.vectorDict.styles.push({ kind: 'radial', id, cx, cy, r, fx, fy, stops });
+            }
+          }
+          offset = endOff;
+          break;
+        }
+        case 0x83: { // OP_SHAPE_DEF (length-framed delta-encoded decipixel M/L/Q/C/Z vector symbol)
+          const payloadLen = view.getUint32(offset, true); offset += 4;
+          const endOff = Math.min(len, offset + payloadLen);
+          if (!scene.vectorDict) scene.vectorDict = { styles: [], shapes: [], stamps: [] };
+          const id = getStr(view.getUint16(offset, true)); offset += 2;
+          const layerCount = bytes[offset++];
+          const layers = [];
+          for (let l = 0; l < layerCount && offset < endOff; l++) {
+            const fillIdx = view.getUint16(offset, true); offset += 2;
+            const strokeIdx = view.getUint16(offset, true); offset += 2;
+            const strokeW = view.getUint16(offset, true) / 10; offset += 2;
+            const lFlags = bytes[offset++];
+            const cmdCount = view.getUint16(offset, true); offset += 2;
+            const commands = [];
+            let penX = 0, penY = 0;
+            for (let c = 0; c < cmdCount && offset < endOff; c++) {
+              const cop = bytes[offset++];
+              if (cop === 1) {
+                penX += view.getInt16(offset, true); offset += 2;
+                penY += view.getInt16(offset, true); offset += 2;
+                commands.push({ op: 'M', x: penX / 10, y: penY / 10 });
+              } else if (cop === 2) {
+                penX += view.getInt16(offset, true); offset += 2;
+                penY += view.getInt16(offset, true); offset += 2;
+                commands.push({ op: 'L', x: penX / 10, y: penY / 10 });
+              } else if (cop === 3) {
+                const qx = penX + view.getInt16(offset, true); offset += 2;
+                const qy = penY + view.getInt16(offset, true); offset += 2;
+                penX += view.getInt16(offset, true); offset += 2;
+                penY += view.getInt16(offset, true); offset += 2;
+                commands.push({ op: 'Q', cx: qx / 10, cy: qy / 10, x: penX / 10, y: penY / 10 });
+              } else if (cop === 4) {
+                const x1 = penX + view.getInt16(offset, true); offset += 2;
+                const y1 = penY + view.getInt16(offset, true); offset += 2;
+                const x2 = penX + view.getInt16(offset, true); offset += 2;
+                const y2 = penY + view.getInt16(offset, true); offset += 2;
+                penX += view.getInt16(offset, true); offset += 2;
+                penY += view.getInt16(offset, true); offset += 2;
+                commands.push({ op: 'C', x1: x1 / 10, y1: y1 / 10, x2: x2 / 10, y2: y2 / 10, x: penX / 10, y: penY / 10 });
+              } else if (cop === 5) {
+                commands.push({ op: 'Z' });
+              }
+            }
+            const layerObj = { commands };
+            if (fillIdx !== 0xffff) layerObj.fillStyle = fillIdx;
+            if (strokeIdx !== 0xffff) { layerObj.strokeStyle = strokeIdx; layerObj.strokeWidth = strokeW; }
+            if (lFlags & 0x01) layerObj.evenOdd = true;
+            if (lFlags & 0x02) layerObj.roundCap = true;
+            if (lFlags & 0x04) layerObj.roundJoin = true;
+            if (lFlags & 0x08) layerObj.ariaHidden = true;
+            layers.push(layerObj);
+          }
+          scene.vectorDict.shapes.push({ id, layers });
+          offset = endOff;
+          break;
+        }
+        case 0x84: { // OP_STAMP (fixed 32-byte 6-float affine display-list stamp)
+          if (!scene.vectorDict) scene.vectorDict = { styles: [], shapes: [], stamps: [] };
+          const depth = view.getUint16(offset, true); offset += 2;
+          const symbolId = getStr(view.getUint16(offset, true)); offset += 2;
+          const instanceId = getStr(view.getUint16(offset, true)); offset += 2;
+          const a = view.getFloat32(offset, true); offset += 4;
+          const b = view.getFloat32(offset, true); offset += 4;
+          const c = view.getFloat32(offset, true); offset += 4;
+          const d = view.getFloat32(offset, true); offset += 4;
+          const e = view.getFloat32(offset, true); offset += 4;
+          const f = view.getFloat32(offset, true); offset += 4;
+          const opacity = bytes[offset++] / 255;
+          const sFlags = bytes[offset++];
+          const stObj = { depth, symbolId, matrix: [a, b, c, d, e, f], opacity };
+          if (instanceId) stObj.instanceId = instanceId;
+          if (sFlags & 0x01) stObj.ariaHidden = true;
+          scene.vectorDict.stamps.push(stObj);
+          break;
+        }
         case 0x10: { // OP_KEYFRAME
           const normT = view.getUint16(offset, true); offset += 2;
           const titleIdx = view.getUint16(offset, true); offset += 2;
@@ -554,6 +673,10 @@
       }
     }
 
+    if (scene.vectorDict && !scene.svgMarkup) {
+      scene.svgMarkup = hydrateVectorDictionaryToSvg(scene.vectorDict);
+    }
+
     if (scene.checkpoints.length > 0) {
       scene.interactive = {
         checkpoints: scene.checkpoints,
@@ -564,13 +687,86 @@
     return scene;
   }
 
+  function rgbaToHex(c) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return '#' + h(c.r) + h(c.g) + h(c.b);
+  }
+
+  function fmtDeci(v) {
+    const r = Number(v.toFixed(1));
+    return Object.is(r, -0) ? '0' : String(r);
+  }
+
+  function hydrateVectorDictionaryToSvg(dict, viewBox) {
+    const vb = viewBox || dict.viewBox || '0 0 800 480';
+    const defsParts = [];
+    for (let i = 0; i < dict.styles.length; i++) {
+      const st = dict.styles[i];
+      if (st.kind === 'linear') {
+        const stops = st.stops.map((s) => '<stop offset="' + Math.round(s.offset * 100) + '%" stop-color="' + rgbaToHex(s.color) + '"' + (s.color.a < 255 ? ' stop-opacity="' + (s.color.a / 255).toFixed(2) + '"' : '') + '/>').join('');
+        defsParts.push('<linearGradient id="' + st.id + '" x1="' + st.x1 + '" y1="' + st.y1 + '" x2="' + st.x2 + '" y2="' + st.y2 + '">' + stops + '</linearGradient>');
+      } else if (st.kind === 'radial') {
+        const stops = st.stops.map((s) => '<stop offset="' + Math.round(s.offset * 100) + '%" stop-color="' + rgbaToHex(s.color) + '"' + (s.color.a < 255 ? ' stop-opacity="' + (s.color.a / 255).toFixed(2) + '"' : '') + '/>').join('');
+        defsParts.push('<radialGradient id="' + st.id + '" cx="' + st.cx + '" cy="' + st.cy + '" r="' + st.r + '" fx="' + st.fx + '" fy="' + st.fy + '">' + stops + '</radialGradient>');
+      }
+    }
+    for (let i = 0; i < dict.shapes.length; i++) {
+      const sh = dict.shapes[i];
+      const layerXml = sh.layers.map((layer) => {
+        const dParts = [];
+        for (let k = 0; k < layer.commands.length; k++) {
+          const c = layer.commands[k];
+          if (c.op === 'M') dParts.push('M' + fmtDeci(c.x) + ' ' + fmtDeci(c.y));
+          else if (c.op === 'L') dParts.push('L' + fmtDeci(c.x) + ' ' + fmtDeci(c.y));
+          else if (c.op === 'Q') dParts.push('Q' + fmtDeci(c.cx) + ' ' + fmtDeci(c.cy) + ' ' + fmtDeci(c.x) + ' ' + fmtDeci(c.y));
+          else if (c.op === 'C') dParts.push('C' + fmtDeci(c.x1) + ' ' + fmtDeci(c.y1) + ' ' + fmtDeci(c.x2) + ' ' + fmtDeci(c.y2) + ' ' + fmtDeci(c.x) + ' ' + fmtDeci(c.y));
+          else if (c.op === 'Z') dParts.push('Z');
+        }
+        let fillAttr = ' fill="none"';
+        if (layer.fillStyle !== undefined && layer.fillStyle >= 0 && layer.fillStyle < dict.styles.length) {
+          const fs = dict.styles[layer.fillStyle];
+          if (fs.kind === 'solid') {
+            fillAttr = ' fill="' + rgbaToHex(fs.color) + '"' + (fs.color.a < 255 ? ' fill-opacity="' + (fs.color.a / 255).toFixed(2) + '"' : '');
+          } else {
+            fillAttr = ' fill="url(#' + fs.id + ')"';
+          }
+        }
+        let strokeAttr = '';
+        if (layer.strokeStyle !== undefined && layer.strokeStyle >= 0 && layer.strokeStyle < dict.styles.length) {
+          const ss = dict.styles[layer.strokeStyle];
+          const sw = layer.strokeWidth !== undefined ? layer.strokeWidth : 1;
+          const colorStr = ss.kind === 'solid' ? rgbaToHex(ss.color) : 'url(#' + ss.id + ')';
+          const sop = ss.kind === 'solid' && ss.color.a < 255 ? ' stroke-opacity="' + (ss.color.a / 255).toFixed(2) + '"' : '';
+          strokeAttr = ' stroke="' + colorStr + '"' + sop + ' stroke-width="' + fmtDeci(sw) + '"';
+          if (layer.roundCap) strokeAttr += ' stroke-linecap="round"';
+          if (layer.roundJoin) strokeAttr += ' stroke-linejoin="round"';
+        }
+        const eo = layer.evenOdd ? ' fill-rule="evenodd"' : '';
+        const ah = layer.ariaHidden ? ' aria-hidden="true"' : '';
+        return '<path d="' + dParts.join('') + '"' + fillAttr + strokeAttr + eo + ah + '/>';
+      }).join('');
+      defsParts.push('<g id="' + sh.id + '">' + layerXml + '</g>');
+    }
+    const sorted = dict.stamps.slice().sort((a, b) => a.depth - b.depth);
+    const stampXml = sorted.map((st) => {
+      const idAttr = st.instanceId ? ' id="' + st.instanceId + '"' : '';
+      const m = st.matrix.map((n) => Number(n.toFixed(3))).join(' ');
+      const op = st.opacity !== undefined && st.opacity < 0.999 ? ' opacity="' + Number(st.opacity.toFixed(2)) + '"' : '';
+      const ah = st.ariaHidden ? ' aria-hidden="true"' : '';
+      return '<use' + idAttr + ' href="#' + st.symbolId + '" transform="matrix(' + m + ')"' + op + ah + '/>';
+    }).join('');
+    return '<svg viewBox="' + vb + '" xmlns="http://www.w3.org/2000/svg"><defs>' + defsParts.join('') + '</defs>' + stampXml + '</svg>';
+  }
+
   global.isAstBytecode = isAstBytecode;
   global.decompileBytecode = decompileBytecode;
+  global.hydrateVectorDictionaryToSvg = hydrateVectorDictionaryToSvg;
   if (typeof window !== 'undefined') {
     window.isAstBytecode = isAstBytecode;
     window.decompileBytecode = decompileBytecode;
+    window.hydrateVectorDictionaryToSvg = hydrateVectorDictionaryToSvg;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { isAstBytecode, decompileBytecode };
+    module.exports = { isAstBytecode, decompileBytecode, hydrateVectorDictionaryToSvg };
   }
 })(typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : this));

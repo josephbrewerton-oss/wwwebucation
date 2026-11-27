@@ -701,6 +701,23 @@
           br $opLoop
         end
 
+        ;; 0x82 OP_STYLE_TABLE & 0x83 OP_SHAPE_DEF: length-framed [payload_len: u32] [bytes...]
+        local.get $op i32.const 130 i32.eq
+        local.get $op i32.const 131 i32.eq
+        i32.or
+        if
+          local.get $cur i32.load align=1 local.set $cnt
+          local.get $cur i32.const 4 i32.add local.get $cnt i32.add local.set $cur
+          br $opLoop
+        end
+
+        ;; 0x84 OP_STAMP: fixed 32-byte display-list stamp (depth:2, sym:2, inst:2, matrix:24, op:1, flags:1)
+        local.get $op i32.const 132 i32.eq
+        if
+          local.get $cur i32.const 32 i32.add local.set $cur
+          br $opLoop
+        end
+
         ;; 0x10 OP_KEYFRAME: t_u16(2) title_str(2) rule_str(2)
         local.get $op i32.const 16 i32.eq
         if
