@@ -57,7 +57,9 @@ This document defines the canonical binary wire format, opcode allocation table,
 | Bindings | `0x31` | `OP_BINDING_WHEN` | Fixed `8 B` | v1.0 | Guarded conditional binding (`:when`) |
 | Bindings | `0x32` | `OP_BINDING_VAR` | Fixed `6 B` | v1.0 | Reactive variable mutation (`:var-update` / `@enter`) |
 | 3D | `0x33` | `OP_3D_LINE` | Flagged `33–41 B` | v1.0 | Native binary 3D spline/line descriptor (0 `JSON.parse`) |
-| 3D | `0x34..0x36` | `OP_3D_NODE` / `RING` / `POLY` | Length-framed `u32` | Planned v1.2 | Replace remaining JSON-encoded 3D bindings |
+| **3D** | **`0x34`** | **`OP_3D_NODE`** | **Flagged `17–25 B`** | **v1.1 (Live)** | **Native binary 3D node descriptor (0 `JSON.parse`)** |
+| **3D** | **`0x35`** | **`OP_3D_RING`** | **Flagged `21–29 B`** | **v1.1 (Live)** | **Native binary 3D orbital ring descriptor (0 `JSON.parse`)** |
+| 3D | `0x36` | `OP_3D_POLY` | Length-framed `u32` | Planned v1.2 | Replace remaining JSON-encoded 3D polygon bindings |
 | Quiz | `0x40` | `OP_CHECKPOINT` | Counted | v1.0 | Formative multiple-choice checkpoint |
 | Quiz | `0x41` | `OP_CHECKPOINT_GOAL` | Counted | v1.0 | Manipulation `:pass-expr`, `:hold-duration`, `:on-wrong` |
 | Input | `0x50` | `OP_GESTURE` | Fixed `11 B` | v1.0 | Direct-manipulation draggable axis & bounds |

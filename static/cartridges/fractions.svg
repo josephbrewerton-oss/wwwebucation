@@ -1,118 +1,93 @@
 <svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Background Ambient Glow -->
-    <radialGradient id="frac-stage-glow" cx="50%" cy="50%" r="65%">
-      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.8" />
-      <stop offset="60%" stop-color="#0f172a" stop-opacity="0.95" />
+    <!-- Studio Radial Backdrop -->
+    <radialGradient id="frac-stage-glow" cx="50%" cy="50%" r="68%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.88" />
+      <stop offset="60%" stop-color="#0f172a" stop-opacity="0.96" />
       <stop offset="100%" stop-color="#020617" stop-opacity="1" />
     </radialGradient>
 
-    <!-- 3D Glassmorphic Blue Slice 1 (Half Circle) -->
-    <radialGradient id="frac-blue-half" cx="48%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.95" />
-      <stop offset="25%" stop-color="#60a5fa" stop-opacity="0.9" />
-      <stop offset="70%" stop-color="#2563eb" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.95" />
+    <!-- Focal Specular 3D Sapphire & Emerald Slices (Zero-GPU-Filter Craft) -->
+    <radialGradient id="frac-blue-half" cx="46%" cy="34%" r="70%" fx="34%" fy="24%">
+      <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.98" />
+      <stop offset="28%" stop-color="#60a5fa" stop-opacity="0.94" />
+      <stop offset="72%" stop-color="#2563eb" stop-opacity="0.92" />
+      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.98" />
+    </radialGradient>
+    <radialGradient id="frac-blue-qa" cx="40%" cy="35%" r="75%" fx="30%" fy="25%">
+      <stop offset="0%" stop-color="#dbeafe" stop-opacity="0.98" />
+      <stop offset="30%" stop-color="#3b82f6" stop-opacity="0.94" />
+      <stop offset="76%" stop-color="#1d4ed8" stop-opacity="0.92" />
+      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.98" />
+    </radialGradient>
+    <radialGradient id="frac-blue-qb" cx="40%" cy="62%" r="75%" fx="32%" fy="50%">
+      <stop offset="0%" stop-color="#bfdbfe" stop-opacity="0.98" />
+      <stop offset="30%" stop-color="#2563eb" stop-opacity="0.94" />
+      <stop offset="76%" stop-color="#1e40af" stop-opacity="0.92" />
+      <stop offset="100%" stop-color="#172554" stop-opacity="0.98" />
+    </radialGradient>
+    <radialGradient id="frac-emerald-gem" cx="35%" cy="35%" r="75%" fx="25%" fy="25%">
+      <stop offset="0%" stop-color="#d1fae5" stop-opacity="0.98" />
+      <stop offset="30%" stop-color="#34d399" stop-opacity="0.94" />
+      <stop offset="72%" stop-color="#059669" stop-opacity="0.92" />
+      <stop offset="100%" stop-color="#064e3b" stop-opacity="0.98" />
     </radialGradient>
 
-    <!-- 3D Glassmorphic Quarter A (Top Quarter) -->
-    <radialGradient id="frac-blue-qa" cx="40%" cy="35%" r="75%">
-      <stop offset="0%" stop-color="#bfdbfe" stop-opacity="0.95" />
-      <stop offset="30%" stop-color="#3b82f6" stop-opacity="0.9" />
-      <stop offset="75%" stop-color="#1d4ed8" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.95" />
+    <!-- Zero-GPU Radial Flare for Cutting Laser Spark -->
+    <radialGradient id="frac-spark-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="35%" stop-color="#fda4af" stop-opacity="0.9" />
+      <stop offset="70%" stop-color="#f43f5e" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#f43f5e" stop-opacity="0" />
     </radialGradient>
 
-    <!-- 3D Glassmorphic Quarter B (Bottom Quarter) -->
-    <radialGradient id="frac-blue-qb" cx="40%" cy="65%" r="75%">
-      <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.95" />
-      <stop offset="30%" stop-color="#2563eb" stop-opacity="0.9" />
-      <stop offset="75%" stop-color="#1e40af" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#172554" stop-opacity="0.95" />
-    </radialGradient>
-
-    <!-- 3D Glassmorphic Emerald Slice (Green Quarter) -->
-    <radialGradient id="frac-emerald-gem" cx="30%" cy="35%" r="75%">
-      <stop offset="0%" stop-color="#a7f3d0" stop-opacity="0.95" />
-      <stop offset="30%" stop-color="#34d399" stop-opacity="0.9" />
-      <stop offset="70%" stop-color="#059669" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#064e3b" stop-opacity="0.95" />
-    </radialGradient>
-
-    <!-- Intense Sci-Fi Neon Laser Bloom Filter -->
-    <filter id="frac-laser-bloom" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blurWide" />
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blurTight" />
-      <feMerge>
-        <feMergeNode in="blurWide" />
-        <feMergeNode in="blurTight" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-
-    <!-- Laser Dot Focal Glare Filter -->
-    <filter id="frac-glare-filter" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="flare" />
-      <feMerge>
-        <feMergeNode in="flare" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-
-    <!-- Crisp Drop Shadow for Typography -->
-    <filter id="frac-text-shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.7" />
-    </filter>
-
-    <!-- Frosted HUD Card Shadow -->
-    <filter id="frac-hud-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.5" />
-    </filter>
-
-    <!-- Glass HUD Border Gradient -->
+    <!-- HUD Border & Background Gradients -->
     <linearGradient id="frac-hud-border" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.8" />
-      <stop offset="50%" stop-color="#64748b" stop-opacity="0.3" />
-      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.8" />
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#64748b" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.9" />
     </linearGradient>
-
-    <!-- Frosted HUD Background Gradient -->
     <linearGradient id="frac-hud-bg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9" />
-      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.98" />
     </linearGradient>
   </defs>
 
   <!-- Ambient Backdrop -->
-  <rect width="800" height="480" fill="url(#frac-stage-glow)" />
+  <rect width="800" height="480" fill="url(#frac-stage-glow)" aria-hidden="true" />
 
-  <!-- Holographic Reticle Grid &amp; Circular Compass -->
-  <circle cx="400" cy="240" r="150" fill="none" stroke="#334155" stroke-width="1" stroke-dasharray="3 9" opacity="0.6" />
-  <circle id="frac-guide" cx="400" cy="240" r="140" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6 6" opacity="0.45" />
-  <circle cx="400" cy="240" r="140" fill="#0f172a" fill-opacity="0.4" />
-  <!-- Compass crosshairs -->
-  <line x1="250" y1="240" x2="550" y2="240" stroke="#334155" stroke-width="1" stroke-dasharray="4 6" opacity="0.5" />
-  <line x1="400" y1="90" x2="400" y2="390" stroke="#334155" stroke-width="1" stroke-dasharray="4 6" opacity="0.5" />
+  <!-- Calibrated Reticle Grid & Circular Compass -->
+  <g aria-hidden="true">
+    <circle cx="400" cy="240" r="158" fill="none" stroke="#1e293b" stroke-width="1.5" />
+    <circle cx="400" cy="240" r="150" fill="none" stroke="#334155" stroke-width="1" stroke-dasharray="3 9" opacity="0.7" />
+    <circle id="frac-guide" cx="400" cy="240" r="140" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6 6" opacity="0.5" />
+    <circle cx="400" cy="240" r="140" fill="#090f1e" fill-opacity="0.55" />
+    <line x1="244" y1="240" x2="556" y2="240" stroke="#334155" stroke-width="1" stroke-dasharray="4 6" opacity="0.55" />
+    <line x1="400" y1="84" x2="400" y2="396" stroke="#334155" stroke-width="1" stroke-dasharray="4 6" opacity="0.55" />
+  </g>
 
-  <!-- Original 1/2 Slice (Rendered as 3D Glossy Sapphire Gem) -->
+  <!-- Original 1/2 Slice -->
   <path
     id="frac-slice1"
     d="M 400 100 A 140 140 0 0 1 400 380 Z"
     fill="url(#frac-blue-half)"
     stroke="#93c5fd"
     stroke-width="2.5"
-    opacity="0.8"
+    opacity="0.88"
   />
   <text
     id="frac-slice1-txt"
     x="465"
     y="248"
     fill="#ffffff"
+    stroke="#0f172a"
+    stroke-width="0.8"
+    paint-order="stroke"
     font-size="26"
     font-weight="800"
     text-anchor="middle"
-    filter="url(#frac-text-shadow)"
     letter-spacing="1"
+    font-family="system-ui, sans-serif"
   >
     1/2
   </text>
@@ -131,11 +106,14 @@
     x="455"
     y="198"
     fill="#ffffff"
+    stroke="#0f172a"
+    stroke-width="0.7"
+    paint-order="stroke"
     font-size="20"
     font-weight="800"
     text-anchor="middle"
-    filter="url(#frac-text-shadow)"
     opacity="0"
+    font-family="system-ui, sans-serif"
   >
     1/4
   </text>
@@ -153,11 +131,14 @@
     x="455"
     y="298"
     fill="#ffffff"
+    stroke="#0f172a"
+    stroke-width="0.7"
+    paint-order="stroke"
     font-size="20"
     font-weight="800"
     text-anchor="middle"
-    filter="url(#frac-text-shadow)"
     opacity="0"
+    font-family="system-ui, sans-serif"
   >
     1/4
   </text>
@@ -169,21 +150,28 @@
     fill="url(#frac-emerald-gem)"
     stroke="#6ee7b7"
     stroke-width="2.5"
+    style="cursor: grab;"
+    role="button"
+    tabindex="0"
+    aria-label="Draggable 1/4 emerald fraction slice"
   />
   <text
     id="frac-qgreen-txt"
     x="165"
     y="195"
     fill="#ffffff"
+    stroke="#064e3b"
+    stroke-width="0.8"
+    paint-order="stroke"
     font-size="22"
     font-weight="800"
     text-anchor="middle"
-    filter="url(#frac-text-shadow)"
+    font-family="system-ui, sans-serif"
   >
     1/4
   </text>
 
-  <!-- High-Energy Equivalence Cutting Laser Beam -->
+  <!-- Crisp Zero-GPU Equivalence Cutting Laser Beam & Radial Spark -->
   <line
     id="frac-laser-line"
     x1="395"
@@ -191,27 +179,24 @@
     x2="400"
     y2="240"
     stroke="#f43f5e"
-    stroke-width="4.5"
+    stroke-width="5.5"
     stroke-linecap="round"
-    filter="url(#frac-laser-bloom)"
     opacity="0"
   />
-
-  <!-- Laser Cutting Focal Point Glare Spark -->
   <circle
     id="frac-laser-dot"
     cx="400"
     cy="240"
-    r="7"
-    fill="#ffffff"
-    stroke="#fb7185"
-    stroke-width="3"
-    filter="url(#frac-glare-filter)"
+    r="14"
+    fill="url(#frac-spark-grad)"
+    stroke="#ffffff"
+    stroke-width="1.5"
     opacity="0"
   />
 
-  <!-- Top Formula HUD Pill (Frosted Glassmorphism) -->
-  <g filter="url(#frac-hud-shadow)">
+  <!-- Top Formula HUD Pill (Hard Cel-Shadow, 0 GPU Blur) -->
+  <g>
+    <rect x="203" y="27" width="400" height="46" rx="23" fill="#020617" opacity="0.6" aria-hidden="true" />
     <rect
       x="200"
       y="22"
@@ -222,6 +207,7 @@
       stroke="url(#frac-hud-border)"
       stroke-width="1.5"
     />
+    <rect x="220" y="25" width="360" height="2" rx="1" fill="#e0f2fe" opacity="0.22" aria-hidden="true" />
     <text
       id="frac-math-txt"
       x="400"
@@ -231,7 +217,7 @@
       font-weight="800"
       text-anchor="middle"
       letter-spacing="0.5"
-      filter="url(#frac-text-shadow)"
+      font-family="system-ui, sans-serif"
     >
       1/2 + 1/4 = ?
     </text>

@@ -780,6 +780,38 @@
           br $opLoop
         end
 
+        ;; 0x34 OP_3D_NODE: 6*u16(12) + baseR(4) + flags(1) = 17 B (+4 if flags&2, +4 if flags&4)
+        local.get $op i32.const 52 i32.eq
+        if
+          local.get $cur i32.load8_u offset=16 local.set $cnt
+          local.get $cur i32.const 17 i32.add local.set $cur
+          local.get $cnt i32.const 2 i32.and
+          if
+            local.get $cur i32.const 4 i32.add local.set $cur
+          end
+          local.get $cnt i32.const 4 i32.and
+          if
+            local.get $cur i32.const 4 i32.add local.set $cur
+          end
+          br $opLoop
+        end
+
+        ;; 0x35 OP_3D_RING: 9*u16(18) + segments(2) + flags(1) = 21 B (+4 if flags&2, +4 if flags&4)
+        local.get $op i32.const 53 i32.eq
+        if
+          local.get $cur i32.load8_u offset=20 local.set $cnt
+          local.get $cur i32.const 21 i32.add local.set $cur
+          local.get $cnt i32.const 2 i32.and
+          if
+            local.get $cur i32.const 4 i32.add local.set $cur
+          end
+          local.get $cnt i32.const 4 i32.and
+          if
+            local.get $cur i32.const 4 i32.add local.set $cur
+          end
+          br $opLoop
+        end
+
         ;; 0x40 OP_CHECKPOINT: t(2) prompt(2) ans(1) expl(2) opt_count(1) + opt_count * 2
         local.get $op i32.const 64 i32.eq
         if

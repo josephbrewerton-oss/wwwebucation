@@ -436,6 +436,63 @@
           scene.bindings.push(lineBinding);
           break;
         }
+        case 0x34: { // OP_3D_NODE (native binary descriptor, zero JSON.parse)
+          const target = getStr(view.getUint16(offset, true)); offset += 2;
+          const x = getStr(view.getUint16(offset, true)); offset += 2;
+          const y = getStr(view.getUint16(offset, true)); offset += 2;
+          const z = getStr(view.getUint16(offset, true)); offset += 2;
+          const label = getStr(view.getUint16(offset, true)); offset += 2;
+          const sortAfter = getStr(view.getUint16(offset, true)); offset += 2;
+          const baseR = view.getFloat32(offset, true); offset += 4;
+          const nFlags = bytes[offset++];
+          let zLayer;
+          let zBias;
+          if (nFlags & 0x02) { zLayer = view.getFloat32(offset, true); offset += 4; }
+          if (nFlags & 0x04) { zBias = view.getFloat32(offset, true); offset += 4; }
+          const nodeBinding = {
+            type: '3d-node',
+            target,
+            x, y, z,
+            baseR,
+            label: label || '',
+            depthFog: Boolean(nFlags & 0x01)
+          };
+          if (sortAfter) nodeBinding.sortAfter = sortAfter;
+          if (zLayer !== undefined) nodeBinding.zLayer = zLayer;
+          if (zBias !== undefined) nodeBinding.zBias = zBias;
+          scene.bindings.push(nodeBinding);
+          break;
+        }
+        case 0x35: { // OP_3D_RING (native binary descriptor, zero JSON.parse)
+          const target = getStr(view.getUint16(offset, true)); offset += 2;
+          const r = getStr(view.getUint16(offset, true)); offset += 2;
+          const cx = getStr(view.getUint16(offset, true)); offset += 2;
+          const cy = getStr(view.getUint16(offset, true)); offset += 2;
+          const cz = getStr(view.getUint16(offset, true)); offset += 2;
+          const tiltX = getStr(view.getUint16(offset, true)); offset += 2;
+          const tiltY = getStr(view.getUint16(offset, true)); offset += 2;
+          const tiltZ = getStr(view.getUint16(offset, true)); offset += 2;
+          const sortAfter = getStr(view.getUint16(offset, true)); offset += 2;
+          const segments = view.getUint16(offset, true); offset += 2;
+          const rFlags = bytes[offset++];
+          let zLayer;
+          let zBias;
+          if (rFlags & 0x02) { zLayer = view.getFloat32(offset, true); offset += 4; }
+          if (rFlags & 0x04) { zBias = view.getFloat32(offset, true); offset += 4; }
+          const ringBinding = {
+            type: '3d-ring',
+            target,
+            r, cx, cy, cz,
+            tiltX, tiltY, tiltZ,
+            segments,
+            depthFog: Boolean(rFlags & 0x01)
+          };
+          if (sortAfter) ringBinding.sortAfter = sortAfter;
+          if (zLayer !== undefined) ringBinding.zLayer = zLayer;
+          if (zBias !== undefined) ringBinding.zBias = zBias;
+          scene.bindings.push(ringBinding);
+          break;
+        }
         case 0x40: { // OP_CHECKPOINT
           const normT = view.getUint16(offset, true); offset += 2;
           const promptIdx = view.getUint16(offset, true); offset += 2;

@@ -49,6 +49,8 @@ export const OP_BINDING    = 0x30; // [target_str: u16] [attr_str: u16] [expr_st
 export const OP_BINDING_WHEN = 0x31; // [target_str: u16] [attr_str: u16] [expr_str: u16] [when_str: u16]
 export const OP_BINDING_VAR  = 0x32; // [var_str: u16] [expr_str: u16] [when_str: u16]
 export const OP_3D_LINE      = 0x33; // [target,x1,y1,z1,x2,y2,z2,cap1,cap2,splitExpr,splineA,splineB,sortAfter: 13*u16] [baseR: f32] [splineIndex: u16 (0xFFFF=none)] [flags: u8] [zLayer?: f32] [zBias?: f32]
+export const OP_3D_NODE      = 0x34; // [target,x,y,z,label,sortAfter: 6*u16] [baseR: f32] [flags: u8] [zLayer?: f32] [zBias?: f32]
+export const OP_3D_RING      = 0x35; // [target,r,cx,cy,cz,tiltX,tiltY,tiltZ,sortAfter: 9*u16] [segments: u16] [flags: u8] [zLayer?: f32] [zBias?: f32]
 export const OP_CHECKPOINT      = 0x40; // [t_u16] [prompt_str: u16] [correct_idx: u8] [expl_str: u16] [opt_count: u8] { [opt_str: u16] }*
 export const OP_CHECKPOINT_GOAL = 0x41; // [cp_idx: u16] [title_str: u16] [pass_expr_str: u16] [hold_dur: f32] [wrong_count: u8] { [opt_idx: u8] [hint_str: u16] }*
 export const OP_GESTURE         = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y, 3:xy)] [min_f32] [max_f32]
@@ -841,7 +843,50 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
         if (hasZBias) appendF32(Number(b.zBias));
         continue;
       }
-      if (b.type !== '3d-node' && b.type !== '3d-ring' && b.type !== '3d-polygon' && b.when) {
+      if (b.type === '3d-node') {
+        const hasZLayer = b.zLayer !== undefined && b.zLayer !== null && Number.isFinite(Number(b.zLayer));
+        const hasZBias = b.zBias !== undefined && b.zBias !== null && Number.isFinite(Number(b.zBias));
+        const nFlags =
+          (b.depthFog !== false ? 0x01 : 0) |
+          (hasZLayer ? 0x02 : 0) |
+          (hasZBias ? 0x04 : 0);
+        appendU8(OP_3D_NODE);
+        appendU16(strTable.intern(b.target));
+        appendU16(strTable.intern(b.x !== undefined ? String(b.x) : '0'));
+        appendU16(strTable.intern(b.y !== undefined ? String(b.y) : '0'));
+        appendU16(strTable.intern(b.z !== undefined ? String(b.z) : '0'));
+        appendU16(strTable.intern(b.label || ''));
+        appendU16(strTable.intern(b.sortAfter || ''));
+        appendF32(Number.isFinite(Number(b.baseR)) ? Number(b.baseR) : 8);
+        appendU8(nFlags);
+        if (hasZLayer) appendF32(Number(b.zLayer));
+        if (hasZBias) appendF32(Number(b.zBias));
+        continue;
+      }
+      if (b.type === '3d-ring') {
+        const hasZLayer = b.zLayer !== undefined && b.zLayer !== null && Number.isFinite(Number(b.zLayer));
+        const hasZBias = b.zBias !== undefined && b.zBias !== null && Number.isFinite(Number(b.zBias));
+        const rFlags =
+          (b.depthFog !== false ? 0x01 : 0) |
+          (hasZLayer ? 0x02 : 0) |
+          (hasZBias ? 0x04 : 0);
+        appendU8(OP_3D_RING);
+        appendU16(strTable.intern(b.target));
+        appendU16(strTable.intern(b.r !== undefined ? String(b.r) : '100'));
+        appendU16(strTable.intern(b.cx !== undefined ? String(b.cx) : '0'));
+        appendU16(strTable.intern(b.cy !== undefined ? String(b.cy) : '0'));
+        appendU16(strTable.intern(b.cz !== undefined ? String(b.cz) : '0'));
+        appendU16(strTable.intern(b.tiltX !== undefined ? String(b.tiltX) : '0'));
+        appendU16(strTable.intern(b.tiltY !== undefined ? String(b.tiltY) : '0'));
+        appendU16(strTable.intern(b.tiltZ !== undefined ? String(b.tiltZ) : '0'));
+        appendU16(strTable.intern(b.sortAfter || ''));
+        appendU16(Math.max(3, Math.min(65535, Math.round(Number(b.segments) || 24))));
+        appendU8(rFlags);
+        if (hasZLayer) appendF32(Number(b.zLayer));
+        if (hasZBias) appendF32(Number(b.zBias));
+        continue;
+      }
+      if (b.type !== '3d-polygon' && b.when) {
         appendU8(OP_BINDING_WHEN);
         appendU16(strTable.intern(b.target));
         appendU16(strTable.intern(b.attr || 'attr'));
@@ -851,36 +896,7 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       }
       appendU8(OP_BINDING);
       appendU16(strTable.intern(b.target));
-      if (b.type === '3d-node') {
-        appendU16(strTable.intern(':3d-node'));
-        appendU16(strTable.intern(JSON.stringify({
-          x: b.x,
-          y: b.y,
-          z: b.z,
-          baseR: b.baseR || 8,
-          label: b.label || '',
-          depthFog: b.depthFog !== false,
-          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
-          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
-          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
-        })));
-      } else if (b.type === '3d-ring') {
-        appendU16(strTable.intern(':3d-ring'));
-        appendU16(strTable.intern(JSON.stringify({
-          r: b.r,
-          cx: b.cx || 0,
-          cy: b.cy || 0,
-          cz: b.cz || 0,
-          tiltX: b.tiltX || 0,
-          tiltY: b.tiltY || 0,
-          tiltZ: b.tiltZ || 0,
-          segments: b.segments || 24,
-          depthFog: b.depthFog !== false,
-          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
-          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
-          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
-        })));
-      } else if (b.type === '3d-polygon') {
+      if (b.type === '3d-polygon') {
         appendU16(strTable.intern(':3d-polygon'));
         appendU16(strTable.intern(JSON.stringify({
           depthFog: b.depthFog !== false,
@@ -1533,6 +1549,63 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         if (zLayer !== undefined) lineBinding.zLayer = zLayer;
         if (zBias !== undefined) lineBinding.zBias = zBias;
         scene.bindings.push(lineBinding);
+        break;
+      }
+      case OP_3D_NODE: {
+        const target = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const x = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const y = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const z = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const label = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const sortAfter = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const baseR = view.getFloat32(offset, true); offset += 4;
+        const nFlags = bytes[offset++];
+        let zLayer: number | undefined;
+        let zBias: number | undefined;
+        if (nFlags & 0x02) { zLayer = view.getFloat32(offset, true); offset += 4; }
+        if (nFlags & 0x04) { zBias = view.getFloat32(offset, true); offset += 4; }
+        const nodeBinding: any = {
+          type: '3d-node',
+          target,
+          x, y, z,
+          baseR,
+          label: label || '',
+          depthFog: Boolean(nFlags & 0x01),
+        };
+        if (sortAfter) nodeBinding.sortAfter = sortAfter;
+        if (zLayer !== undefined) nodeBinding.zLayer = zLayer;
+        if (zBias !== undefined) nodeBinding.zBias = zBias;
+        scene.bindings.push(nodeBinding);
+        break;
+      }
+      case OP_3D_RING: {
+        const target = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const r = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const cx = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const cy = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const cz = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const tiltX = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const tiltY = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const tiltZ = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const sortAfter = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const segments = view.getUint16(offset, true); offset += 2;
+        const rFlags = bytes[offset++];
+        let zLayer: number | undefined;
+        let zBias: number | undefined;
+        if (rFlags & 0x02) { zLayer = view.getFloat32(offset, true); offset += 4; }
+        if (rFlags & 0x04) { zBias = view.getFloat32(offset, true); offset += 4; }
+        const ringBinding: any = {
+          type: '3d-ring',
+          target,
+          r, cx, cy, cz,
+          tiltX, tiltY, tiltZ,
+          segments,
+          depthFog: Boolean(rFlags & 0x01),
+        };
+        if (sortAfter) ringBinding.sortAfter = sortAfter;
+        if (zLayer !== undefined) ringBinding.zLayer = zLayer;
+        if (zBias !== undefined) ringBinding.zBias = zBias;
+        scene.bindings.push(ringBinding);
         break;
       }
       case OP_CHECKPOINT: {
