@@ -2615,6 +2615,12 @@
       this._traces = [];
       this._warnings = [];
       this._budgetHits = 0;
+      this._rtUnhandledOpcodes = new Set();
+      this._rtMissingApis = new Set();
+      this._rtExternalCalls = new Set();
+      this._rtErrors = new Set();
+      this._rtVerdictSent = false;
+      this._rtLastSeverity = 0;
       this._budgetRemaining = MAX_OPS_PER_TICK;
       this._callDepth = 0;
       this._timers = new Set();
@@ -2768,10 +2774,44 @@
       this._registerBuiltin('flash.net.URLLoader', function () {
         const d = new BaseDispatcher();
         d.load = (req) => {
-          self._warnings.push(`Blocked offline network request: ${(req && req.url) || 'unknown'}`);
+          const url = (req && req.url) || 'unknown';
+          self._warnings.push(`Blocked offline network request: ${url}`);
+          if (self._rtExternalCalls.size < 16) self._rtExternalCalls.add(`URLLoader(${String(url).slice(0, 64)})`);
         };
         return d;
       }, {}, 'flash.events.EventDispatcher');
+
+      // Explicit diagnostic stubs for unsupported AS3/GPU/network APIs so failures are reported cleanly
+      const regUnsupported = (qname, bucket = 'api') => {
+        const stubFactory = function () {
+          if (bucket === 'ext') {
+            if (self._rtExternalCalls.size < 16) self._rtExternalCalls.add(qname);
+          } else if (self._rtMissingApis.size < 16) {
+            self._rtMissingApis.add(qname);
+          }
+          self._warnings.push(`Unsupported Flash API: ${qname}`);
+          return new BaseDispatcher();
+        };
+        const staticProxy = {
+          available: false,
+          call: (fn) => {
+            if (self._rtExternalCalls.size < 16) self._rtExternalCalls.add(`${qname}.call(${String(fn || '').slice(0, 48)})`);
+            return null;
+          },
+          addCallback: () => {
+            if (self._rtExternalCalls.size < 16) self._rtExternalCalls.add(`${qname}.addCallback`);
+          },
+        };
+        this._registerBuiltin(qname, stubFactory, staticProxy, 'flash.events.EventDispatcher');
+      };
+      regUnsupported('flash.external.ExternalInterface', 'ext');
+      regUnsupported('flash.display.Stage3D', 'api');
+      regUnsupported('flash.display.Shader', 'api');
+      regUnsupported('flash.net.Socket', 'ext');
+      regUnsupported('flash.net.XMLSocket', 'ext');
+      regUnsupported('flash.net.NetStream', 'api');
+      regUnsupported('flash.net.NetConnection', 'ext');
+      regUnsupported('flash.net.FileReference', 'api');
     }
 
     _resolveClass(name) {
@@ -2792,7 +2832,9 @@
           this._parsedAbcs.push(abc);
           this._registerAbcBlueprintTraits(abc);
         } catch (err) {
-          this._warnings.push(`ABC parse error (${b.n || i}): ${err.message}`);
+          const msg = `ABC parse error (${b.n || i}): ${err.message}`;
+          this._warnings.push(msg);
+          if (this._rtErrors.size < 16) this._rtErrors.add(msg.slice(0, 120));
         }
       }
 
@@ -3635,9 +3677,12 @@
               case 0xf0: { readU30(); break; }
               case 0xf1: { readU30(); break; }
 
-              default:
-                this._warnings.push(`Unsupported AVM2 opcode 0x${op.toString(16)} at pc=${opPc}`);
+              default: {
+                const hexOp = `0x${op.toString(16).toUpperCase().padStart(2, '0')}`;
+                if (this._rtUnhandledOpcodes.size < 32) this._rtUnhandledOpcodes.add(hexOp);
+                this._warnings.push(`Unsupported AVM2 opcode ${hexOp} at pc=${opPc}`);
                 break;
+              }
             }
           } catch (innerErr) {
             if (innerErr instanceof AVM2BudgetExceededError) throw innerErr;
@@ -3656,7 +3701,9 @@
               }
             }
             if (!caught) {
-              this._warnings.push(`AVM2 runtime exception: ${innerErr && innerErr.message ? innerErr.message : String(innerErr)}`);
+              const errMsg = `AVM2 runtime exception: ${innerErr && innerErr.message ? innerErr.message : String(innerErr)}`;
+              this._warnings.push(errMsg);
+              if (this._rtErrors.size < 16) this._rtErrors.add(errMsg.slice(0, 120));
               return undefined;
             }
           }
@@ -4437,6 +4484,125 @@
       if (this._doc) {
         this.stage._syncSvg(this._doc);
       }
+      this._maybeEmitRuntimeVerdict();
+    }
+
+    _countVisibleStageNodes() {
+      if (this._rootGroup && typeof this._rootGroup.querySelectorAll === 'function') {
+        try {
+          const leaves = this._rootGroup.querySelectorAll('path, rect, circle, ellipse, polygon, polyline, line, text, image, use');
+          let visible = 0;
+          for (let i = 0; i < leaves.length; i++) {
+            const el = leaves[i];
+            if (typeof el.getAttribute === 'function') {
+              const disp = el.getAttribute('display');
+              const vis = el.getAttribute('visibility');
+              const op = el.getAttribute('opacity');
+              if (disp === 'none' || vis === 'hidden' || op === '0') continue;
+            }
+            visible++;
+            if (visible >= 12) return visible;
+          }
+          return visible;
+        } catch (_) {}
+      }
+      // Headless / minimal DOM fallback: count display tree descendants
+      let count = 0;
+      const walk = (node) => {
+        if (!node || count >= 12) return;
+        if (node._graphics && node._graphics._cmds && node._graphics._cmds.length > 0) count++;
+        if (node._text) count++;
+        if (node._shapeId) count++;
+        if (Array.isArray(node._children)) {
+          for (let i = 0; i < node._children.length; i++) walk(node._children[i]);
+        }
+      };
+      walk(this.stage);
+      return count;
+    }
+
+    getRuntimeHealthReport() {
+      const visibleNodes = this._countVisibleStageNodes();
+      const unhandledOpcodes = Array.from(this._rtUnhandledOpcodes);
+      const missingApis = Array.from(this._rtMissingApis);
+      const externalCalls = Array.from(this._rtExternalCalls);
+      const runtimeErrors = Array.from(this._rtErrors);
+      const totalFrames = (this.rootDoc && this.rootDoc.totalFrames) || 1;
+      const curFrame = (this.rootDoc && this.rootDoc.currentFrame) || 1;
+      const stalledPreloader = totalFrames > 2 && curFrame <= 2 && visibleNodes <= 2 && (this._tickCount >= 24 || this._elapsedMs >= 1800);
+
+      const reasons = [];
+      let verdict = 'playable';
+
+      if (visibleNodes === 0 && (this._tickCount >= 18 || this._elapsedMs >= 1500)) {
+        verdict = 'cannot-play';
+        reasons.push('Blank stage: 0 visible vector shapes rendered after AS3 startup.');
+      }
+      if (stalledPreloader) {
+        verdict = 'cannot-play';
+        reasons.push(`Stalled on preloader frame ${curFrame}/${totalFrames} with almost no stage geometry.`);
+      }
+      if (missingApis.length > 0) {
+        if (visibleNodes <= 2 || missingApis.some((a) => a.includes('Stage3D') || a.includes('NetStream') || a.includes('Shader'))) {
+          verdict = 'cannot-play';
+        } else if (verdict === 'playable') {
+          verdict = 'degraded';
+        }
+        reasons.push(`Unsupported AS3 Flash API(s): ${missingApis.slice(0, 4).join(', ')}`);
+      }
+      if (externalCalls.length > 0) {
+        const preview = externalCalls.slice(0, 3).join(', ');
+        if (visibleNodes <= 2 || stalledPreloader) {
+          verdict = 'cannot-play';
+          reasons.push(`Blocked offline external dependency: ${preview}`);
+        } else {
+          if (verdict === 'playable') verdict = 'degraded';
+          reasons.push(`External AS3 call ignored offline: ${preview}`);
+        }
+      }
+      if (unhandledOpcodes.length >= 2 && visibleNodes <= 2) {
+        verdict = 'cannot-play';
+        reasons.push(`Unsupported AVM2 opcodes (${unhandledOpcodes.slice(0, 6).join(', ')}) prevented rendering.`);
+      } else if (unhandledOpcodes.length > 0) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`Encountered ${unhandledOpcodes.length} unsupported AVM2 opcode(s): ${unhandledOpcodes.slice(0, 5).join(', ')}`);
+      }
+      if (runtimeErrors.length >= 2 && visibleNodes <= 2) {
+        verdict = 'cannot-play';
+        reasons.push(`AS3 startup/runtime failure: ${runtimeErrors[0]}`);
+      } else if (runtimeErrors.length > 0) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`AS3 runtime warning: ${runtimeErrors[0]}`);
+      }
+
+      return {
+        vm: 'avm2',
+        verdict,
+        reasons,
+        framesElapsed: this._tickCount || 0,
+        visibleNodes,
+        unhandledOpcodes,
+        missingApis,
+        externalCalls,
+        runtimeErrors,
+        scriptThrottled: (this._budgetHits || 0) >= 8,
+        stalledPreloader,
+        checkedAt: Date.now(),
+      };
+    }
+
+    _maybeEmitRuntimeVerdict(forceCheck = false) {
+      if (!forceCheck && this._tickCount < 24 && this._elapsedMs < 1800) return;
+      const report = this.getRuntimeHealthReport();
+      const severity = report.verdict === 'cannot-play' ? 3 : report.verdict === 'degraded' ? 2 : 1;
+      if (this._rtVerdictSent && severity <= this._rtLastSeverity) return;
+      this._rtVerdictSent = true;
+      this._rtLastSeverity = severity;
+      try {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+          window.parent.postMessage({ type: 'SWF_RUNTIME_VERDICT', report }, '*');
+        }
+      } catch (_) {}
     }
 
     reset() {
@@ -4451,6 +4617,12 @@
       this._traces = [];
       this._warnings = [];
       this._budgetHits = 0;
+      this._rtUnhandledOpcodes.clear();
+      this._rtMissingApis.clear();
+      this._rtExternalCalls.clear();
+      this._rtErrors.clear();
+      this._rtVerdictSent = false;
+      this._rtLastSeverity = 0;
       this._filterCache.clear();
       this._filterSeq = 0;
       this._maskSeq = 0;

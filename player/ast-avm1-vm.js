@@ -3232,6 +3232,12 @@
       this._dbgActiveDynamicNodes = 0;
       this._dbgRuntimeErrors = [];
       this._dbgRuntimeErrorSet = new Set();
+      // Always-on lightweight runtime failure watchdog (bounded Sets, 0 hot-loop allocations)
+      this._rtExternalCalls = new Set();
+      this._rtMissingApis = new Set();
+      this._rtErrors = new Set();
+      this._rtVerdictSent = false;
+      this._rtLastSeverity = 0; // 0=none, 1=playable, 2=degraded, 3=cannot-play
       this._dbgImportSummary = {
         totalTagsParsed: (this.program.dbg && this.program.dbg.tt) || 0,
         cachedDefsShapes: (this.program.dbg && this.program.dbg.ds) || 0,
@@ -4006,8 +4012,18 @@
       g.trace = (m) => { vm._pushTrace(String(m)); };
       g.updateAfterEvent = () => {};
       g.ASSetPropFlags = () => {};
-      g.fscommand = () => {};
-      g.getURL = () => {};
+      g.fscommand = (cmd) => {
+        if (cmd && vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(`fscommand(${String(cmd).slice(0, 48)})`);
+      };
+      g.getURL = (url) => {
+        if (url && vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(`getURL(${String(url).slice(0, 64)})`);
+      };
+      g.loadMovieNum = (url) => {
+        if (vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(`loadMovieNum(${String(url || '').slice(0, 64)})`);
+      };
+      g.loadVariablesNum = (url) => {
+        if (vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(`loadVariablesNum(${String(url || '').slice(0, 64)})`);
+      };
       g.stopAllSounds = () => { vm.stopAllSounds(); };
       g.duplicateMovieClip = function (target, newName, depth) {
         const src = vm._resolveTargetPath(target, (this && this._isMovieClip) ? this : vm.rootClip);
@@ -4604,6 +4620,11 @@
 
       this._shapeDefsMap.clear();
       this._targetPathCache.clear();
+      this._rtExternalCalls.clear();
+      this._rtMissingApis.clear();
+      this._rtErrors.clear();
+      this._rtVerdictSent = false;
+      this._rtLastSeverity = 0;
       this._treeVersion++;
       this._loadAstKeyBindings();
 
@@ -5868,13 +5889,134 @@
         }
 
         this._syncTelemetry(false);
+        this._maybeEmitRuntimeVerdict();
       } catch (err) {
         this._dbgActiveThisTick = false;
+        const msg = err && err.message ? err.message : String(err);
+        if (this._rtErrors.size < 16) this._rtErrors.add(msg.slice(0, 120));
+        this._maybeEmitRuntimeVerdict(true);
         if (!this._warnedStepErr) {
           this._warnedStepErr = true;
           console.warn('[AST AVM1] Non-fatal frame step exception:', err);
         }
       }
+    }
+
+    _countVisibleStageNodes() {
+      const rootEl = this.rootClip && this.rootClip.svgEl;
+      if (!rootEl) return 0;
+      if (typeof rootEl.querySelectorAll === 'function') {
+        try {
+          const leaves = rootEl.querySelectorAll('path, rect, circle, ellipse, polygon, polyline, line, text, image, use');
+          let visible = 0;
+          for (let i = 0; i < leaves.length; i++) {
+            const el = leaves[i];
+            if (typeof el.getAttribute === 'function') {
+              const disp = el.getAttribute('display');
+              const vis = el.getAttribute('visibility');
+              const op = el.getAttribute('opacity');
+              if (disp === 'none' || vis === 'hidden' || op === '0') continue;
+            }
+            visible++;
+            if (visible >= 12) return visible;
+          }
+          return visible;
+        } catch (_) {}
+      }
+      // Headless / minimal DOM fallback: inspect active children on rootClip
+      let count = 0;
+      if (this.rootClip && this.rootClip._children) {
+        count += this.rootClip._children.size || 0;
+      }
+      if (this._staticLayerEl && this._staticLayerEl.childNodes) {
+        count += this._staticLayerEl.childNodes.length || 0;
+      }
+      return count;
+    }
+
+    getRuntimeHealthReport() {
+      const visibleNodes = this._countVisibleStageNodes();
+      const unhandledOpcodes = Array.from(this._dbgUnhandledOpcodes);
+      const missingApis = Array.from(this._rtMissingApis);
+      const externalCalls = Array.from(this._rtExternalCalls);
+      const runtimeErrors = Array.from(this._rtErrors);
+      const totalFrames = (this.rootClip && this.rootClip._totalframes) || 1;
+      const curFrame = (this.rootClip && this.rootClip._currentframe) || 1;
+      const stalledPreloader = totalFrames > 2 && curFrame <= 2 && visibleNodes <= 2 && (this._tickCount >= 24 || this._elapsedMs >= 1800);
+
+      const reasons = [];
+      let verdict = 'playable';
+
+      if (visibleNodes === 0 && (this._tickCount >= 18 || this._elapsedMs >= 1500)) {
+        verdict = 'cannot-play';
+        reasons.push('Blank stage: 0 visible vector shapes rendered after startup.');
+      }
+      if (stalledPreloader) {
+        verdict = 'cannot-play';
+        reasons.push(`Stalled on preloader frame ${curFrame}/${totalFrames} with almost no stage geometry.`);
+      }
+      if (externalCalls.length > 0) {
+        const preview = externalCalls.slice(0, 3).join(', ');
+        if (visibleNodes <= 2 || stalledPreloader) {
+          verdict = 'cannot-play';
+          reasons.push(`Blocked offline external dependency: ${preview}`);
+        } else {
+          if (verdict === 'playable') verdict = 'degraded';
+          reasons.push(`External call ignored offline: ${preview}`);
+        }
+      }
+      if (unhandledOpcodes.length >= 3 && visibleNodes <= 2) {
+        verdict = 'cannot-play';
+        reasons.push(`Unsupported AVM1 opcodes (${unhandledOpcodes.slice(0, 6).join(', ')}) prevented rendering.`);
+      } else if (unhandledOpcodes.length > 0) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`Encountered ${unhandledOpcodes.length} unsupported AVM1 opcode(s): ${unhandledOpcodes.slice(0, 5).join(', ')}`);
+      }
+      if (missingApis.length > 0) {
+        if (visibleNodes <= 2) verdict = 'cannot-play';
+        else if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`Unsupported Flash API(s): ${missingApis.slice(0, 4).join(', ')}`);
+      }
+      if (runtimeErrors.length >= 3 && visibleNodes <= 2) {
+        verdict = 'cannot-play';
+        reasons.push(`Repeated runtime script errors: ${runtimeErrors[0]}`);
+      } else if (runtimeErrors.length > 0) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`Runtime script error: ${runtimeErrors[0]}`);
+      }
+      if (this._scriptThrottled) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push('Runaway ActionScript loop detected and throttled to keep browser responsive.');
+      }
+
+      return {
+        vm: 'avm1',
+        verdict,
+        reasons,
+        framesElapsed: this._tickCount || 0,
+        visibleNodes,
+        unhandledOpcodes,
+        missingApis,
+        externalCalls,
+        runtimeErrors,
+        scriptThrottled: Boolean(this._scriptThrottled),
+        stalledPreloader,
+        checkedAt: Date.now(),
+      };
+    }
+
+    _maybeEmitRuntimeVerdict(forceCheck = false) {
+      if (!forceCheck && this._tickCount < 24 && this._elapsedMs < 1800) return;
+      const report = this.getRuntimeHealthReport();
+      const severity = report.verdict === 'cannot-play' ? 3 : report.verdict === 'degraded' ? 2 : 1;
+      if (this._rtVerdictSent && severity <= this._rtLastSeverity) return;
+      this._rtVerdictSent = true;
+      this._rtLastSeverity = severity;
+      try {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+          window.parent.postMessage({ type: 'SWF_RUNTIME_VERDICT', report }, '*');
+        }
+      } catch (_) {}
     }
 
     /**
@@ -6700,8 +6842,12 @@
         case 'createTextField': return (nm, d, x, y, w, h) => clip.createTextField(nm, d, x, y, w, h);
         case 'removeMovieClip': return () => clip.removeMovieClip();
         case 'unloadMovie': return () => clip.removeMovieClip();
-        case 'loadMovie': return () => {};
-        case 'loadVariables': return () => {};
+        case 'loadMovie': return (url) => {
+          if (vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(`loadMovie(${String(url || '').slice(0, 64)})`);
+        };
+        case 'loadVariables': return (url) => {
+          if (vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(`loadVariables(${String(url || '').slice(0, 64)})`);
+        };
         case 'swapDepths': return (t) => clip.swapDepths(t);
         case 'getNextHighestDepth': return () => clip.getNextHighestDepth();
         case 'getInstanceAtDepth': return (d) => clip.getInstanceAtDepth(d);
