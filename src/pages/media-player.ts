@@ -9,6 +9,7 @@ import {
   type CartridgeDefinition,
 } from '../services/cartridgeStore';
 import type { SupportedPhetPreset } from '../utils/phetBridge';
+import type { SwfRuntimeHealthReport } from '../services/dbStore';
 import {
   toggleBsl,
   setBslEnabled,
@@ -455,6 +456,7 @@ export function renderPlayerPage(): HTMLElement {
   let swfSelectedMode: 'run' | 'run-to-convert' | 'quick-transform' = 'run-to-convert';
   let isParsingSwf = false;
   let swfError: string | null = null;
+  let swfRuntimeHealth: SwfRuntimeHealthReport | null = null;
   let swfDragActive = false;
   let swfDrawerModulePromise: Promise<typeof import('../components/player/SwfTranspilerDrawer')> | null = null;
   let swfDistillerStripModulePromise: Promise<typeof import('../components/player/SwfDistillerStrip')> | null = null;
@@ -811,6 +813,7 @@ export function renderPlayerPage(): HTMLElement {
     rawName: string,
     mode: 'run' | 'run-to-convert' | 'quick-transform' = 'run'
   ) {
+    swfRuntimeHealth = null;
     const cleanId = (rawName || 'imported-swf')
       .replace(/\.swf$/i, '')
       .toLowerCase()
@@ -941,8 +944,10 @@ export function renderPlayerPage(): HTMLElement {
         };
         const drawerEl = renderSwfTranspilerDrawer({
           swfResult,
+          swfRuntimeHealth,
           setSwfResult: (val) => {
             swfResult = val;
+            swfRuntimeHealth = null;
             rerender();
           },
           isParsingSwf,
@@ -1994,6 +1999,41 @@ export function renderPlayerPage(): HTMLElement {
     }
     if (e.data.type === 'CARTRIDGE_LOAD_ERROR' && e.data.message) {
       showImportStatus(`⚠️ Stage failed to load cartridge: ${String(e.data.message)}`, 'error');
+    }
+    if (e.data.type === 'SWF_RUNTIME_VERDICT' && e.data.report && typeof e.data.report === 'object') {
+      if (iframe?.contentWindow && e.source && e.source !== iframe.contentWindow) {
+        return;
+      }
+      const report = e.data.report as SwfRuntimeHealthReport;
+      swfRuntimeHealth = report;
+      const targetId = (swfFileName || activePreset || '').replace(/\.swf$/i, '').toLowerCase();
+      if (targetId) {
+        void import('../services/dbStore')
+          .then(({ updateSwfHeaderUpgradeStatus }) =>
+            updateSwfHeaderUpgradeStatus(targetId, {
+              runtimeHealth: report,
+              ...(report.verdict === 'cannot-play' ? { upgradeStatus: 'rejected' as const } : {}),
+            })
+          )
+          .catch(() => {});
+      }
+      if (report.verdict === 'cannot-play') {
+        const primaryReason = report.reasons?.[0] || 'Stage rendered no playable Flash visuals.';
+        showImportStatus(
+          `Cannot play this SWF (${report.vm.toUpperCase()}): ${primaryReason} Open the SWF Drawer to rescue SVG symbols or copy the Recode Brief.`,
+          'error'
+        );
+      } else if (report.verdict === 'degraded' && report.reasons?.length) {
+        showImportStatus(
+          `Partial SWF playback (${report.vm.toUpperCase()}): ${report.reasons[0]}`,
+          'error'
+        );
+      }
+      if (activeDrawer === 'swf') {
+        renderActiveDrawer(true);
+      } else if (launcherImportPanel === 'swf') {
+        renderLauncherImportPanel();
+      }
     }
     if (e.data.type === 'BRIDGE_COMMAND_ERROR' && e.data.message) {
       console.warn('[media-player] Player bridge command error:', e.data.command, e.data.message);

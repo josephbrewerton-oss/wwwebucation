@@ -18,6 +18,7 @@ import {
   getAllSwfHeaderRecords,
   updateSwfHeaderUpgradeStatus,
   type SwfHeaderIndexRecord,
+  type SwfRuntimeHealthReport,
 } from '../../services/dbStore';
 import { harvestSwfSymbols } from '../../utils/swfSymbolHarvester';
 import {
@@ -74,12 +75,50 @@ export interface SwfTranspilerDrawerProps {
   onUpdateDistillReview?: (patch: Partial<SwfDistillReviewState>) => void;
   onBackToLiveCapture?: () => void;
   onSavePromotedCartridge?: (cart: DistilledNativeCartridge) => void;
+  swfRuntimeHealth?: SwfRuntimeHealthReport | null;
   onClose?: () => void;
 }
 
 function formatKb(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0.0 KB';
   return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function buildSwfRecodeBrief(
+  fileName: string,
+  swfResult: SwfTranspileResult,
+  runtimeHealth: SwfRuntimeHealthReport | null | undefined,
+  harvestedIds: string[]
+): string {
+  const m = swfResult.metadata;
+  const lines: string[] = [
+    `# SWF → Native .astb Recode Brief: ${fileName}.swf`,
+  ];
+  if (m) {
+    lines.push(
+      `- **Header**: SWF v${m.version} (${m.signature}), ${m.width}×${m.height}px, ${m.frameCount} frame(s) @ ${Math.round(m.frameRate)} FPS`,
+      `- **Execution Model**: ${m.isActionScript3 ? 'AS3 / AVM2' : 'AS1/2 / AVM1'} (${m.executionModel || 'vector'})${m.documentClass ? `, DocClass: ${m.documentClass}` : ''}`,
+      `- **Assets**: ${m.shapeCount} shapes, ${m.spriteCount || 0} sprites, ${m.buttonCount || 0} buttons, ${m.staticTextCount || 0} text blocks`,
+    );
+    if (m.centrifuge) {
+      lines.push(`- **Static Centrifuge**: ${m.centrifuge.verdict.toUpperCase()}`);
+      if (m.centrifuge.sludgeReasons.length > 0) lines.push(`  - Blockers/Sludge: ${m.centrifuge.sludgeReasons.join('; ')}`);
+      if (m.centrifuge.suspectReasons.length > 0) lines.push(`  - Watch items: ${m.centrifuge.suspectReasons.join('; ')}`);
+      if (m.centrifuge.externalDependencyHits.length > 0) lines.push(`  - External URLs/Deps: ${m.centrifuge.externalDependencyHits.join(', ')}`);
+    }
+  }
+  if (runtimeHealth) {
+    lines.push(`- **Live Runtime Watchdog (${runtimeHealth.vm.toUpperCase()})**: ${runtimeHealth.verdict.toUpperCase()} (frames=${runtimeHealth.framesElapsed}, visibleNodes=${runtimeHealth.visibleNodes})`);
+    if (runtimeHealth.reasons.length > 0) lines.push(`  - Reasons: ${runtimeHealth.reasons.join('; ')}`);
+    if (runtimeHealth.unhandledOpcodes.length > 0) lines.push(`  - Unhandled opcodes: ${runtimeHealth.unhandledOpcodes.join(', ')}`);
+    if (runtimeHealth.missingApis.length > 0) lines.push(`  - Unsupported Flash APIs: ${runtimeHealth.missingApis.join(', ')}`);
+    if (runtimeHealth.externalCalls.length > 0) lines.push(`  - Blocked external calls: ${runtimeHealth.externalCalls.join(', ')}`);
+    if (runtimeHealth.runtimeErrors.length > 0) lines.push(`  - Runtime errors: ${runtimeHealth.runtimeErrors.slice(0, 4).join(' | ')}`);
+  }
+  if (harvestedIds.length > 0) {
+    lines.push(`- **Salvaged SVG Symbols (${harvestedIds.length})**: ${harvestedIds.map((id) => `#${id}`).join(', ')}`);
+  }
+  return lines.join('\n');
 }
 
 function renderPromotionReviewPanel(
@@ -422,6 +461,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     onUpdateDistillReview,
     onBackToLiveCapture,
     onSavePromotedCartridge,
+    swfRuntimeHealth,
     onClose,
   } = props;
 
@@ -749,17 +789,81 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       resBox.appendChild(diagBox);
     }
 
+    const isPreFlightBlocked = meta.centrifuge?.verdict === 'reject-low-value';
+
+    // 5a. Honest Pre-Flight "Cannot Play" Gate & Live Runtime Watchdog Banner
+    if (isPreFlightBlocked) {
+      const blockBox = document.createElement('div');
+      blockBox.style.cssText =
+        'padding:10px 12px; border-radius:8px; background:rgba(127, 29, 29, 0.35); border:1.5px solid #ef4444; color:#fecaca; font-size:0.76rem; line-height:1.45; display:flex; flex-direction:column; gap:5px;';
+      const bTitle = document.createElement('strong');
+      bTitle.style.cssText = 'font-size:0.82rem; color:#ffffff;';
+      bTitle.textContent = 'No — We Cannot Reliably Play This SWF (Blocked at Pre-Flight)';
+      const bReasons = document.createElement('div');
+      const allReasons = [
+        ...(meta.centrifuge?.sludgeReasons || []),
+        ...(meta.centrifuge?.suspectReasons || []),
+      ];
+      bReasons.textContent =
+        allReasons.length > 0
+          ? `Why: ${allReasons.join(' · ')}`
+          : 'Why: No playable vector stage or supported offline ActionScript loop was detected.';
+      const bHint = document.createElement('div');
+      bHint.style.cssText = 'color:#fde68a; font-size:0.72rem;';
+      bHint.textContent =
+        'Next step: Rescue any usable vector symbols below or click "Copy Recode Brief" to rebuild this lesson natively in .astb.';
+      blockBox.appendChild(bTitle);
+      blockBox.appendChild(bReasons);
+      blockBox.appendChild(bHint);
+      resBox.appendChild(blockBox);
+    }
+
+    if (swfRuntimeHealth) {
+      const rt = swfRuntimeHealth;
+      const rtStyle =
+        rt.verdict === 'cannot-play'
+          ? { bg: 'rgba(127, 29, 29, 0.38)', border: '#ef4444', fg: '#fecaca', heading: 'Cannot Play — Runtime Failure Detected' }
+          : rt.verdict === 'degraded'
+          ? { bg: 'rgba(146, 64, 14, 0.3)', border: '#f59e0b', fg: '#fde68a', heading: 'Partial Playback — Degraded SWF Runtime' }
+          : { bg: 'rgba(6, 78, 59, 0.3)', border: '#10b981', fg: '#a7f3d0', heading: 'Verified Playable on Pure-SVG Runtime' };
+
+      const rtBox = document.createElement('div');
+      rtBox.style.cssText = `padding:10px 12px; border-radius:8px; background:${rtStyle.bg}; border:1.5px solid ${rtStyle.border}; color:${rtStyle.fg}; font-size:0.74rem; line-height:1.45; display:flex; flex-direction:column; gap:4px;`;
+      const rtTitle = document.createElement('strong');
+      rtTitle.style.cssText = 'font-size:0.79rem; color:#ffffff;';
+      rtTitle.textContent = `${rtStyle.heading} (${rt.vm.toUpperCase()} · ${rt.framesElapsed} frames · ${rt.visibleNodes} visible SVG nodes)`;
+      rtBox.appendChild(rtTitle);
+
+      if (rt.reasons.length > 0) {
+        const rLine = document.createElement('div');
+        rLine.textContent = rt.reasons.join(' · ');
+        rtBox.appendChild(rLine);
+      }
+
+      const techBits: string[] = [];
+      if (rt.unhandledOpcodes.length > 0) techBits.push(`Opcodes: ${rt.unhandledOpcodes.slice(0, 8).join(', ')}`);
+      if (rt.missingApis.length > 0) techBits.push(`Missing APIs: ${rt.missingApis.slice(0, 4).join(', ')}`);
+      if (rt.externalCalls.length > 0) techBits.push(`Blocked external: ${rt.externalCalls.slice(0, 3).join(', ')}`);
+      if (techBits.length > 0) {
+        const tLine = document.createElement('div');
+        tLine.style.cssText = 'font-family:monospace; font-size:0.7rem; color:#e2e8f0; opacity:0.95;';
+        tLine.textContent = techBits.join(' | ');
+        rtBox.appendChild(tLine);
+      }
+      resBox.appendChild(rtBox);
+    }
+
     // Three-Path Workflow Selector (Run Live | Run-to-Convert | Quick Transform)
     let activeMode: SwfLaunchMode = selectedMode;
     const modeDescriptions: Record<SwfLaunchMode, { cta: string; desc: string }> = {
       run: {
-        cta: 'Run Live on Stage',
+        cta: isPreFlightBlocked ? 'Force Try Anyway (Likely Broken)' : 'Run Live on Stage',
         desc: hasLiveAbc
           ? 'Play immediately on the lazy-loaded pure-SVG AVM2 (ActionScript 3) micro-VM with original Flash interaction.'
           : 'Play immediately on the pure-SVG AVM1 micro-VM with original Flash interaction.',
       },
       'run-to-convert': {
-        cta: 'Launch Run-to-Convert Studio',
+        cta: isPreFlightBlocked ? 'Force Launch Run-to-Convert' : 'Launch Run-to-Convert Studio',
         desc: 'Play live on stage while capturing screens, buttons, and variables to promote into a tiny bytecode-free native AST cartridge.',
       },
       'quick-transform': {
@@ -782,8 +886,9 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
 
     const primaryCtaBtn = document.createElement('button');
     primaryCtaBtn.type = 'button';
-    primaryCtaBtn.style.cssText =
-      'padding:7px 14px; border-radius:6px; background:#0284c7; color:#ffffff; border:1px solid #38bdf8; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap;';
+    primaryCtaBtn.style.cssText = isPreFlightBlocked
+      ? 'padding:7px 14px; border-radius:6px; background:#334155; color:#fde68a; border:1px solid #f59e0b; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap;'
+      : 'padding:7px 14px; border-radius:6px; background:#0284c7; color:#ffffff; border:1px solid #38bdf8; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap;';
 
     const modeItems: Array<{ id: SwfLaunchMode; label: string }> = [
       { id: 'run', label: 'Run Live' },
@@ -825,6 +930,13 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     modeSection.appendChild(modeDescEl);
     resBox.appendChild(modeSection);
 
+    // Pre-harvest clean vector props so we can include their IDs in the Recode Brief
+    const harvestedSymbols = harvestSwfSymbols(swfResult.svgMarkup, {
+      idPrefix: swfFileName || 'swf',
+      quantizeStep: 0.5,
+      maxSymbols: 16,
+    });
+
     // Primary CTA + Secondary Actions Row
     const actionsRow = document.createElement('div');
     actionsRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;';
@@ -844,6 +956,26 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
 
     const secGroup = document.createElement('div');
     secGroup.style.cssText = 'display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
+
+    const recodeBriefBtn = document.createElement('button');
+    recodeBriefBtn.type = 'button';
+    recodeBriefBtn.style.cssText =
+      'padding:6px 10px; border-radius:6px; background:#0f172a; color:#38bdf8; border:1px solid #0284c7; font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;';
+    recodeBriefBtn.textContent = 'Copy Recode Brief';
+    recodeBriefBtn.title = 'Copy header, runtime failure diagnostics, and salvaged SVG symbol IDs for rebuilding natively in .astb';
+    recodeBriefBtn.onclick = () => {
+      const brief = buildSwfRecodeBrief(
+        swfFileName || 'imported-swf',
+        swfResult,
+        swfRuntimeHealth,
+        harvestedSymbols.map((s) => s.id)
+      );
+      navigator.clipboard?.writeText(brief);
+      recodeBriefBtn.textContent = 'Brief Copied';
+      setTimeout(() => {
+        recodeBriefBtn.textContent = 'Copy Recode Brief';
+      }, 1500);
+    };
 
     const downloadBtn = document.createElement('button');
     downloadBtn.type = 'button';
@@ -873,6 +1005,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       }, 1500);
     };
 
+    secGroup.appendChild(recodeBriefBtn);
     secGroup.appendChild(downloadBtn);
     secGroup.appendChild(copyBtn);
 
@@ -881,13 +1014,11 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     resBox.appendChild(actionsRow);
 
     // 5b. Harvest Clean Zero-Bytecode SVG Symbols for Native .astb Cartridges
-    const harvestedSymbols = harvestSwfSymbols(swfResult.svgMarkup, {
-      idPrefix: swfFileName || 'swf',
-      quantizeStep: 0.5,
-      maxSymbols: 16,
-    });
     if (harvestedSymbols.length > 0) {
       const harvestDetails = document.createElement('details');
+      if (isPreFlightBlocked || swfRuntimeHealth?.verdict === 'cannot-play') {
+        harvestDetails.open = true;
+      }
       harvestDetails.style.cssText =
         'background:#0f172a; border:1px solid #1e293b; border-radius:8px; padding:8px 10px; font-size:0.74rem; color:#cbd5e1;';
       const harvestSum = document.createElement('summary');
@@ -1024,6 +1155,21 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       statusSpan.textContent = `(${rec.upgradeStatus}${outdatedNote})`;
       top.appendChild(fileNameSpan);
       top.appendChild(verdictSpan);
+      if (rec.runtimeHealth) {
+        const rtSpan = document.createElement('span');
+        const rtColor =
+          rec.runtimeHealth.verdict === 'cannot-play'
+            ? '#f87171'
+            : rec.runtimeHealth.verdict === 'degraded'
+            ? '#fbbf24'
+            : '#34d399';
+        rtSpan.style.cssText = `color:${rtColor}; font-weight:700; margin-left:6px;`;
+        rtSpan.textContent = `· LIVE: ${rec.runtimeHealth.verdict.toUpperCase()}`;
+        if (rec.runtimeHealth.reasons.length > 0) {
+          rtSpan.title = rec.runtimeHealth.reasons.join(' | ');
+        }
+        top.appendChild(rtSpan);
+      }
       top.appendChild(statusSpan);
 
       const details = document.createElement('div');

@@ -1816,6 +1816,138 @@ async function testAvm1PreloaderSelfCompletion() {
   console.log('✓ Test 8 passed: AVM1 Frame-1 Preloader Self-Completion, Exact Play/Stop Semantics & Stalled Preloader Cleanup');
 }
 
+// ============================================================================
+// Test 9: Always-On AVM1 & AVM2 Runtime Failure Watchdog & Honest "Cannot Play" Gate
+// ============================================================================
+async function testSwfRuntimeFailureWatchdog() {
+  // 1) AVM1 Sandbox with mock parent.postMessage capture
+  const avm1Posted: any[] = [];
+  const avm1Code = fs.readFileSync(path.resolve('static/player/ast-avm1-vm.js'), 'utf8');
+  const mockDoc = {
+    createElementNS: (_ns: string, tag: string) => new MockSvgNode(tag),
+    createElement: (tag: string) => new MockSvgNode(tag),
+  };
+  const avm1Parent = { postMessage: (msg: any) => avm1Posted.push(msg) };
+  const avm1Sandbox: any = {
+    console, Math, Date, Number, String, Boolean, Array, Object, Map, Set, RegExp, JSON,
+    Uint8Array, Float32Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
+    atob: (s: string) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s: string) => Buffer.from(s, 'binary').toString('base64'),
+    performance: { now: () => Date.now() },
+    document: mockDoc,
+    parent: avm1Parent,
+  };
+  avm1Sandbox.globalThis = avm1Sandbox;
+  avm1Sandbox.window = avm1Sandbox;
+  vm.runInNewContext(avm1Code, avm1Sandbox);
+
+  // 1a. Healthy AVM1 SWF with a visible placed shape -> verdict: 'playable'
+  const healthyAvm1Prog = {
+    v: 1, swfVer: 8, fps: 30, w: 400, h: 300, bg: '#0f172a', fc: 1,
+    l: [],
+    sh: { 1: { p: [['M 10 10 L 110 10 L 110 90 L 10 90 Z', '#38bdf8', 'none', 0]], bb: [10, 10, 110, 90] } },
+    et: {}, bt: {}, sp: {},
+    fr: [[{ d: 1, c: 1, m: [1, 0, 0, 1, 0, 0] }]],
+    ac: [{ f: 1, b64: Buffer.from([0x07, 0x00]).toString('base64') }],
+  };
+  const stageOk1 = new MockSvgNode('svg');
+  const rtOk1 = new avm1Sandbox.ASTAVM1Runtime(Buffer.from(JSON.stringify(healthyAvm1Prog)).toString('base64'), { engine: { vars: {} } });
+  rtOk1.mount(stageOk1, stageOk1);
+  for (let i = 0; i < 25; i++) rtOk1.step(1 / 30);
+  const ok1Msg = avm1Posted.find((m) => m?.type === 'SWF_RUNTIME_VERDICT');
+  assert.ok(ok1Msg && ok1Msg.report, 'Healthy AVM1 SWF must emit SWF_RUNTIME_VERDICT');
+  assert.equal(ok1Msg.report.verdict, 'playable', `Expected healthy AVM1 verdict "playable", got ${JSON.stringify(ok1Msg.report)}`);
+  assert.ok(ok1Msg.report.visibleNodes > 0, 'Healthy AVM1 SWF must report visibleNodes > 0');
+  rtOk1.destroy();
+
+  // 1b. Blank + external-dependent AVM1 SWF (0 shapes + getURL) -> verdict: 'cannot-play'
+  avm1Posted.length = 0;
+  // Frame 1 DoAction: getURL("http://example.invalid/shell.swf", "_self"); stop();
+  const blockedUrlAction = [
+    ...actionPush([{ t: 'str', v: '_self' }, { t: 'str', v: 'http://example.invalid/shell.swf' }, { t: 'int', v: 2 }, { t: 'str', v: 'getURL' }]),
+    0x3d, 0x17, // ActionCallFunction getURL + Pop
+    0x07, 0x00,
+  ];
+  const brokenAvm1Prog = {
+    v: 1, swfVer: 8, fps: 30, w: 400, h: 300, bg: '#000000', fc: 1,
+    l: [], sh: {}, et: {}, bt: {}, sp: {},
+    fr: [[]],
+    ac: [{ f: 1, b64: Buffer.from(blockedUrlAction).toString('base64') }],
+  };
+  const stageBad1 = new MockSvgNode('svg');
+  const rtBad1 = new avm1Sandbox.ASTAVM1Runtime(Buffer.from(JSON.stringify(brokenAvm1Prog)).toString('base64'), { engine: { vars: {} } });
+  rtBad1.mount(stageBad1, stageBad1);
+  for (let i = 0; i < 25; i++) rtBad1.step(1 / 30);
+  const bad1Msg = avm1Posted.find((m) => m?.type === 'SWF_RUNTIME_VERDICT');
+  assert.ok(bad1Msg && bad1Msg.report, 'Broken AVM1 SWF must emit SWF_RUNTIME_VERDICT');
+  assert.equal(bad1Msg.report.verdict, 'cannot-play', `Expected broken AVM1 verdict "cannot-play", got ${JSON.stringify(bad1Msg.report)}`);
+  assert.equal(bad1Msg.report.visibleNodes, 0, 'Blank AVM1 SWF must report visibleNodes === 0');
+  assert.ok(bad1Msg.report.externalCalls.some((c: string) => c.includes('getURL')), 'Broken AVM1 SWF must record blocked getURL call');
+  assert.ok(bad1Msg.report.reasons.length >= 1, 'Broken AVM1 SWF must include human-readable reasons');
+  rtBad1.destroy();
+
+  // 2) AVM2 Sandbox with mock parent.postMessage capture
+  const avm2Posted: any[] = [];
+  const avm2Code = fs.readFileSync(path.resolve('static/player/ast-avm2-vm.js'), 'utf8');
+  const avm2Parent = { postMessage: (msg: any) => avm2Posted.push(msg) };
+  const avm2Sandbox: any = {
+    console, Math, Date, Number, String, Boolean, Array, Object, Map, Set, RegExp, JSON,
+    Uint8Array, Float32Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
+    atob: (s: string) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s: string) => Buffer.from(s, 'binary').toString('base64'),
+    performance: { now: () => Date.now() },
+    document: mockDoc,
+    parent: avm2Parent,
+  };
+  avm2Sandbox.globalThis = avm2Sandbox;
+  avm2Sandbox.window = avm2Sandbox;
+  vm.runInNewContext(avm2Code, avm2Sandbox);
+
+  // 2a. Healthy AVM2 SWF with a placed shape -> verdict: 'playable'
+  const healthyAvm2Prog = {
+    v: 2, swfVer: 10, fps: 30, w: 500, h: 400, bg: '#0f172a', fc: 1,
+    dc: '', l: [],
+    sh: { 1: { p: [['M 20 20 L 200 20 L 200 120 L 20 120 Z', '#22c55e', 'none', 0]], bb: [20, 20, 200, 120] } },
+    et: {}, bt: {}, sp: {}, sc: {}, abc: [],
+    fr: [[{ d: 1, c: 1, m: [1, 0, 0, 1, 0, 0] }]],
+  };
+  const stageOk2 = new MockSvgNode('svg');
+  const rtOk2 = new avm2Sandbox.ASTAVM2Runtime(Buffer.from(JSON.stringify(healthyAvm2Prog)).toString('base64'), { engine: { vars: {} } });
+  rtOk2.mount(stageOk2, stageOk2);
+  for (let i = 0; i < 25; i++) rtOk2.step(1 / 30);
+  const ok2Msg = avm2Posted.find((m) => m?.type === 'SWF_RUNTIME_VERDICT');
+  assert.ok(ok2Msg && ok2Msg.report, 'Healthy AVM2 SWF must emit SWF_RUNTIME_VERDICT');
+  assert.equal(ok2Msg.report.verdict, 'playable', `Expected healthy AVM2 verdict "playable", got ${JSON.stringify(ok2Msg.report)}`);
+  assert.ok(ok2Msg.report.visibleNodes > 0, 'Healthy AVM2 SWF must report visibleNodes > 0');
+  rtOk2.destroy();
+
+  // 2b. Unsupported API (Stage3D) + Blocked External URLLoader + Blank Stage -> verdict: 'cannot-play'
+  avm2Posted.length = 0;
+  const brokenAvm2Prog = {
+    v: 2, swfVer: 11, fps: 30, w: 500, h: 400, bg: '#000000', fc: 1,
+    dc: '', l: [], sh: {}, et: {}, bt: {}, sp: {}, sc: {}, abc: [], fr: [[]],
+  };
+  const stageBad2 = new MockSvgNode('svg');
+  const rtBad2 = new avm2Sandbox.ASTAVM2Runtime(Buffer.from(JSON.stringify(brokenAvm2Prog)).toString('base64'), { engine: { vars: {} } });
+  rtBad2.mount(stageBad2, stageBad2);
+  // Trigger Stage3D + URLLoader.load via registered AS3 classes
+  const stage3dCls = rtBad2._classes.get('flash.display.Stage3D');
+  const urlLoaderCls = rtBad2._classes.get('flash.net.URLLoader');
+  assert.ok(stage3dCls && urlLoaderCls, 'AVM2 runtime must expose Stage3D and URLLoader diagnostic stubs');
+  stage3dCls.nativeCtor();
+  const loader = urlLoaderCls.nativeCtor();
+  loader.load({ url: 'https://cdn.example.invalid/level1.swf' });
+  for (let i = 0; i < 25; i++) rtBad2.step(1 / 30);
+  const bad2Msg = avm2Posted.find((m) => m?.type === 'SWF_RUNTIME_VERDICT');
+  assert.ok(bad2Msg && bad2Msg.report, 'Broken AVM2 SWF must emit SWF_RUNTIME_VERDICT');
+  assert.equal(bad2Msg.report.verdict, 'cannot-play', `Expected broken AVM2 verdict "cannot-play", got ${JSON.stringify(bad2Msg.report)}`);
+  assert.ok(bad2Msg.report.missingApis.some((a: string) => a.includes('Stage3D')), 'AVM2 watchdog must capture unsupported Stage3D API');
+  assert.ok(bad2Msg.report.externalCalls.some((c: string) => c.includes('URLLoader(')), 'AVM2 watchdog must capture blocked URLLoader call');
+  rtBad2.destroy();
+
+  console.log('✓ Test 9 passed: Always-On AVM1 & AVM2 Runtime Failure Watchdog & Honest "Cannot Play" Verdict');
+}
+
 (async () => {
   await testSwfSoundEngine();
   await testPureSvgVisualFx();
@@ -1825,8 +1957,10 @@ async function testAvm1PreloaderSelfCompletion() {
   await testAvm1ExtendedCompliance();
   await testAvm1AndAvm2LifecycleCompliance();
   await testAvm1PreloaderSelfCompletion();
+  await testSwfRuntimeFailureWatchdog();
   console.log('ALL RUFFLE-PARITY SWF ENGINE TESTS PASSED!');
   process.exit(0);
 })();
+
 
 

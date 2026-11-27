@@ -1140,6 +1140,23 @@ export interface SwfTagCensusSummary {
 
 export type SwfUpgradeStatus = 'indexed' | 'transpiled' | 'distilled-native' | 'rejected';
 
+export type SwfRuntimeVerdict = 'untested' | 'playable' | 'degraded' | 'cannot-play';
+
+export interface SwfRuntimeHealthReport {
+  vm: 'avm1' | 'avm2';
+  verdict: SwfRuntimeVerdict;
+  reasons: string[];
+  framesElapsed: number;
+  visibleNodes: number;
+  unhandledOpcodes: string[];
+  missingApis: string[];
+  externalCalls: string[];
+  runtimeErrors: string[];
+  scriptThrottled: boolean;
+  stalledPreloader: boolean;
+  checkedAt: number;
+}
+
 export interface SwfHeaderIndexRecord {
   id: string;
   fileName: string;
@@ -1169,6 +1186,7 @@ export interface SwfHeaderIndexRecord {
   recommendedAction: 'upgrade-native-ast' | 'run-live-vm' | 'inspect-suspect' | 'reject-sludge';
   parserSchemaVersion: number;
   upgradeStatus: SwfUpgradeStatus;
+  runtimeHealth?: SwfRuntimeHealthReport;
   vaultCartridgeId?: string;
   nativeCartridgeId?: string;
   indexedAt: number;
@@ -1243,6 +1261,7 @@ export async function updateSwfHeaderUpgradeStatus(
       | 'sponsorSignalHits'
       | 'recommendedAction'
       | 'parserSchemaVersion'
+      | 'runtimeHealth'
     >
   >
 ): Promise<SwfHeaderIndexRecord | null> {
