@@ -1636,6 +1636,17 @@
       this._lastTransform = '';
       this._lastOpacity = '';
       this._lastVis = '';
+      // Per-clip transform/BBox epoch caches & deferred SVG dirty flag (zero-GC hot-loop speedup)
+      this._localTransformEpoch = 1;
+      this._subtreeEpoch = 1;
+      this._worldMatSeq = 1;
+      this._worldMatCachedEpoch = 0;
+      this._worldMatParentSeq = 0;
+      this._wbCachedSubtree = 0;
+      this._wbCachedWorldSeq = 0;
+      this._wbCachedTreeVer = 0;
+      this._wbCachedHidden = false;
+      this._svgDirty = true;
 
       // Label map (case-insensitive per Flash spec)
       this._labelMap = new Map();
@@ -1869,10 +1880,52 @@
       return this._rawMatrix || IDENTITY_MAT;
     }
 
+    _markSubtreeDirty() {
+      let p = this;
+      while (p) {
+        p._subtreeEpoch++;
+        p = p._parent;
+      }
+    }
+
+    _markTransformDirty() {
+      this._localTransformEpoch++;
+      this._markSubtreeDirty();
+    }
+
+    _markSvgDirty() {
+      if (this._vm && this._vm._deferSvgCommit) {
+        if (!this._svgDirty) {
+          this._svgDirty = true;
+          this._vm._dirtySvgClips.push(this);
+        }
+      } else {
+        this.commitSvg();
+      }
+    }
+
     getWorldMatrix() {
+      if (!this._parent) {
+        if (this._worldMatCachedEpoch === this._localTransformEpoch) return this._worldMatBuf;
+        const local = this.getLocalMatrix();
+        const buf = this._worldMatBuf;
+        buf[0] = local[0]; buf[1] = local[1]; buf[2] = local[2];
+        buf[3] = local[3]; buf[4] = local[4]; buf[5] = local[5];
+        this._worldMatCachedEpoch = this._localTransformEpoch;
+        this._worldMatSeq++;
+        return buf;
+      }
+      const pm = this._parent.getWorldMatrix();
+      const pSeq = this._parent._worldMatSeq;
+      if (this._worldMatCachedEpoch === this._localTransformEpoch && this._worldMatParentSeq === pSeq) {
+        return this._worldMatBuf;
+      }
       const local = this.getLocalMatrix();
-      if (!this._parent) return local;
-      return mulMatInto(this._worldMatBuf, this._parent.getWorldMatrix(), local);
+      mulMatInto(this._worldMatBuf, pm, local);
+      this._worldMatCachedEpoch = this._localTransformEpoch;
+      this._worldMatParentSeq = pSeq;
+      this._worldMatSeq++;
+      return this._worldMatBuf;
     }
 
     getLocalBBox(depth = 0, includeHidden = false) {
@@ -1945,12 +1998,26 @@
     }
 
     getWorldBBox(includeHidden = false) {
-      const bb = this.getLocalBBox(0, includeHidden);
-      const bx = bb.x, by = bb.y, bw = bb.w, bh = bb.h;
       const wm = this.getWorldMatrix();
+      const incH = Boolean(includeHidden);
+      const treeVer = this._vm ? this._vm._treeVersion : 0;
+      if (
+        this._wbCachedSubtree === this._subtreeEpoch &&
+        this._wbCachedWorldSeq === this._worldMatSeq &&
+        this._wbCachedTreeVer === treeVer &&
+        this._wbCachedHidden === incH
+      ) {
+        return this._worldBBoxBuf;
+      }
+      const bb = this.getLocalBBox(0, incH);
+      const bx = bb.x, by = bb.y, bw = bb.w, bh = bb.h;
       const out = this._worldBBoxBuf;
       if (bw <= 0 && bh <= 0) {
         out.x = wm[4]; out.y = wm[5]; out.w = 0; out.h = 0;
+        this._wbCachedSubtree = this._subtreeEpoch;
+        this._wbCachedWorldSeq = this._worldMatSeq;
+        this._wbCachedTreeVer = treeVer;
+        this._wbCachedHidden = incH;
         return out;
       }
       const m0 = wm[0], m1 = wm[1], m2 = wm[2], m3 = wm[3], m4 = wm[4], m5 = wm[5];
@@ -1967,6 +2034,10 @@
       if (y3 < minY) minY = y3; if (y3 > maxY) maxY = y3;
       if (y4 < minY) minY = y4; if (y4 > maxY) maxY = y4;
       out.x = minX; out.y = minY; out.w = maxX - minX; out.h = maxY - minY;
+      this._wbCachedSubtree = this._subtreeEpoch;
+      this._wbCachedWorldSeq = this._worldMatSeq;
+      this._wbCachedTreeVer = treeVer;
+      this._wbCachedHidden = incH;
       return out;
     }
 
@@ -2078,22 +2149,32 @@
     }
 
     applyMatrix(m, alpha) {
+      let changed = false;
       if (!this._scriptModifiedTransform) {
-        this._rawMatrix = m ? m.slice() : null;
-        const dec = decomposeMat(m);
-        this._x = dec.x;
-        this._y = dec.y;
-        this._xscale = dec.xscale;
-        this._yscale = dec.yscale;
-        this._rotation = dec.rotation;
+        if (!matEquals(m || null, this._rawMatrix)) {
+          this._rawMatrix = m ? m.slice() : null;
+          const dec = decomposeMat(m);
+          this._x = dec.x;
+          this._y = dec.y;
+          this._xscale = dec.xscale;
+          this._yscale = dec.yscale;
+          this._rotation = dec.rotation;
+          this._markTransformDirty();
+          changed = true;
+        }
       }
       if (alpha !== undefined && !this._scriptModifiedAlpha) {
-        this._alpha = alpha * 100;
+        const nextAlpha = alpha * 100;
+        if (nextAlpha !== this._alpha) {
+          this._alpha = nextAlpha;
+          changed = true;
+        }
       }
-      this.commitSvg();
+      if (changed || this._svgDirty) this._markSvgDirty();
     }
 
     commitSvg() {
+      this._svgDirty = false;
       const dbgT0 = this._vm && this._vm._dbgActiveThisTick ? _nowMs() : 0;
       const mat = this.getLocalMatrix();
       if (
@@ -2261,6 +2342,7 @@
           } else if (slot.svgEl) {
             if (!matEquals(e.m || null, slot.matrix)) {
               slot.matrix = e.m || null;
+              this._markSubtreeDirty();
               const mat = e.m || [1, 0, 0, 1, 0, 0];
               const tStr = `matrix(${fmtNum(mat[0])} ${fmtNum(mat[1])} ${fmtNum(mat[2])} ${fmtNum(mat[3])} ${fmtNum(mat[4])} ${fmtNum(mat[5])})`;
               if (tStr !== slot._lastTransform) {
@@ -2288,6 +2370,7 @@
       }
 
       if (childrenMutated) {
+        this._markSubtreeDirty();
         this._reorderSvgChildren();
       }
       if (dbgT0) {
@@ -2536,7 +2619,9 @@
           }
         }
       }
-      this.commitSvg();
+      if (!this._vm._deferSvgCommit && this._svgDirty) {
+        this.commitSvg();
+      }
     }
 
     // --- MovieClip Dynamic Manipulation APIs ---
@@ -3024,6 +3109,7 @@
         const y1 = Math.min(this._drawBBox.y, y);
         this._drawBBox = { x: x1, y: y1, w: Math.max(1, x2 - x1), h: Math.max(1, y2 - y1) };
       }
+      this._markSubtreeDirty();
     }
 
     _flushDrawPath() {
@@ -3087,6 +3173,7 @@
       if (this._drawGroup) this._drawGroup.replaceChildren();
       this._drawState = null;
       this._drawBBox = null;
+      this._markSubtreeDirty();
     }
 
     lineStyle(thickness, rgb, alpha) {
@@ -3219,6 +3306,8 @@
       this._reconcilePool = [];
       this._argsPool = [];
       this._reorderScratch = [];
+      this._dirtySvgClips = [];
+      this._deferSvgCommit = false;
 
       // Zero-overhead diagnostic collector state (active ONLY when window.__SWF_DEBUG__ === true)
       this._dbgActiveThisTick = false;
@@ -3238,6 +3327,11 @@
       this._rtErrors = new Set();
       this._rtVerdictSent = false;
       this._rtLastSeverity = 0; // 0=none, 1=playable, 2=degraded, 3=cannot-play
+      this._rtFrameMsBuf = new Float64Array(60);
+      this._rtFrameBufIdx = 0;
+      this._rtFrameBufCount = 0;
+      this._rtLastSvgNodes = 0;
+      this._rtPeakSvgNodes = 0;
       this._dbgImportSummary = {
         totalTagsParsed: (this.program.dbg && this.program.dbg.tt) || 0,
         cachedDefsShapes: (this.program.dbg && this.program.dbg.ds) || 0,
@@ -4072,8 +4166,86 @@
         return id;
       };
       g.clearTimeout = g.clearInterval;
+
+      // Diagnostic stubs for unsupported Flash 6-8 / AS2 APIs so silent missing-API failures surface in watchdog telemetry
+      const makeMissingApiCtor = (apiName, bucket) => {
+        return function UnsupportedFlashApiStub() {
+          if (bucket === 'ext') {
+            if (vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add(apiName);
+          } else {
+            vm._recordMissingApi(apiName);
+          }
+          return this;
+        };
+      };
+      g.LocalConnection = makeMissingApiCtor('LocalConnection', 'api');
+      g.XMLSocket = makeMissingApiCtor('XMLSocket', 'ext');
+      g.NetConnection = makeMissingApiCtor('NetConnection', 'ext');
+      g.NetStream = makeMissingApiCtor('NetStream', 'api');
+      g.Camera = { get: () => { vm._recordMissingApi('Camera.get'); return null; } };
+      g.Microphone = { get: () => { vm._recordMissingApi('Microphone.get'); return null; } };
+      g.PrintJob = makeMissingApiCtor('PrintJob', 'api');
+      g.FileReference = makeMissingApiCtor('FileReference', 'api');
+      g.FileReferenceList = makeMissingApiCtor('FileReferenceList', 'api');
+
+      const makeFlashPkgStub = (pkgPrefix, names, bucket) => {
+        const pkg = {};
+        for (let i = 0; i < names.length; i++) {
+          const n = names[i];
+          const full = `${pkgPrefix}.${n}`;
+          const ctor = makeMissingApiCtor(full, bucket);
+          ctor.loadBitmap = () => { vm._recordMissingApi(`${full}.loadBitmap`); return {}; };
+          pkg[n] = ctor;
+        }
+        return pkg;
+      };
+      g.flash = {
+        display: makeFlashPkgStub('flash.display', ['BitmapData'], 'api'),
+        geom: makeFlashPkgStub('flash.geom', ['Point', 'Rectangle', 'Matrix', 'ColorTransform', 'Transform'], 'api'),
+        filters: makeFlashPkgStub('flash.filters', [
+          'BlurFilter', 'GlowFilter', 'DropShadowFilter', 'BevelFilter',
+          'ColorMatrixFilter', 'ConvolutionFilter', 'DisplacementMapFilter',
+          'GradientGlowFilter', 'GradientBevelFilter', 'BitmapFilter',
+        ], 'api'),
+        net: makeFlashPkgStub('flash.net', ['FileReference', 'FileReferenceList'], 'api'),
+        text: makeFlashPkgStub('flash.text', ['TextRenderer'], 'api'),
+        external: {
+          ExternalInterface: {
+            available: false,
+            call: (fn) => {
+              if (vm._rtExternalCalls.size < 16) {
+                vm._rtExternalCalls.add(`ExternalInterface.call(${String(fn || '').slice(0, 48)})`);
+              }
+              return null;
+            },
+            addCallback: () => {
+              if (vm._rtExternalCalls.size < 16) vm._rtExternalCalls.add('ExternalInterface.addCallback');
+              return false;
+            },
+          },
+        },
+      };
+
       g._global = g;
       return g;
+    }
+
+    _recordMissingApi(apiName) {
+      if (!apiName) return;
+      if (this._rtMissingApis.size < 24) {
+        this._rtMissingApis.add(String(apiName).slice(0, 72));
+      }
+    }
+
+    _recordRtFrameTiming(ms) {
+      this._rtFrameMsBuf[this._rtFrameBufIdx] = ms >= 0 ? ms : 0;
+      this._rtFrameBufIdx = (this._rtFrameBufIdx + 1) % 60;
+      if (this._rtFrameBufCount < 60) this._rtFrameBufCount++;
+      if ((this._tickCount & 7) === 1 || this._rtPeakSvgNodes === 0) {
+        const nodes = _countSubtreeElements(this.rootClip && this.rootClip.svgEl);
+        this._rtLastSvgNodes = nodes;
+        if (nodes > this._rtPeakSvgNodes) this._rtPeakSvgNodes = nodes;
+      }
     }
 
     _pushTrace(msg) {
@@ -4625,6 +4797,12 @@
       this._rtErrors.clear();
       this._rtVerdictSent = false;
       this._rtLastSeverity = 0;
+      this._rtFrameBufIdx = 0;
+      this._rtFrameBufCount = 0;
+      this._rtLastSvgNodes = 0;
+      this._rtPeakSvgNodes = 0;
+      this._dirtySvgClips.length = 0;
+      this._deferSvgCommit = false;
       this._treeVersion++;
       this._loadAstKeyBindings();
 
@@ -5577,7 +5755,8 @@
         }
       };
       syncTextSubtree(this.rootClip);
-      this.rootClip.commitSvg();
+      this._flushDirtySvgClips();
+      if (this.rootClip._svgDirty) this.rootClip.commitSvg();
       this._syncTelemetry(true);
       const frameChanged = prevFrame !== undefined && this.rootClip._currentframe !== prevFrame;
       const startedPlaying = !prevPlaying && this.rootClip._playing;
@@ -5707,7 +5886,8 @@
       mc._x = nx;
       mc._y = ny;
       mc._scriptModifiedTransform = true;
-      mc.commitSvg();
+      mc._markTransformDirty();
+      mc._markSvgDirty();
       mc._droptarget = this._computeDropTarget(mc);
     }
 
@@ -5858,16 +6038,26 @@
           }
           this._frameAcc -= this.frameStepSec;
           this._tickCount++;
-          if (dbgEnabled) {
-            this._dbgActiveThisTick = true;
-            this._tickSvgRenderMs = 0;
-            const t0 = _nowMs();
-            this.rootClip.stepFrame();
-            const totalMs = _nowMs() - t0;
-            this._dbgActiveThisTick = false;
-            this._recordDbgFrameTiming(totalMs, this._tickSvgRenderMs);
-          } else {
-            this.rootClip.stepFrame();
+          const rtT0 = _nowMs();
+          this._deferSvgCommit = true;
+          try {
+            if (dbgEnabled) {
+              this._dbgActiveThisTick = true;
+              this._tickSvgRenderMs = 0;
+              this.rootClip.stepFrame();
+              this._flushDirtySvgClips();
+              const totalMs = _nowMs() - rtT0;
+              this._dbgActiveThisTick = false;
+              this._recordDbgFrameTiming(totalMs, this._tickSvgRenderMs);
+              this._recordRtFrameTiming(totalMs);
+            } else {
+              this.rootClip.stepFrame();
+              this._flushDirtySvgClips();
+              this._recordRtFrameTiming(_nowMs() - rtT0);
+            }
+          } finally {
+            this._deferSvgCommit = false;
+            this._flushDirtySvgClips();
           }
           steps++;
         }
@@ -5989,12 +6179,47 @@
         reasons.push('Runaway ActionScript loop detected and throttled to keep browser responsive.');
       }
 
+      // Compute frame budget & SVG DOM complexity telemetry
+      const svgNodeCount = _countSubtreeElements(this.rootClip && this.rootClip.svgEl);
+      this._rtLastSvgNodes = svgNodeCount;
+      if (svgNodeCount > this._rtPeakSvgNodes) this._rtPeakSvgNodes = svgNodeCount;
+      const peakSvgNodes = this._rtPeakSvgNodes;
+
+      const sampleCount = this._rtFrameBufCount;
+      let avgFrameMs = 0;
+      let p95FrameMs = 0;
+      if (sampleCount > 0) {
+        let sum = 0;
+        const sorted = [];
+        for (let i = 0; i < sampleCount; i++) {
+          const v = this._rtFrameMsBuf[i];
+          sum += v;
+          sorted.push(v);
+        }
+        sorted.sort((a, b) => a - b);
+        avgFrameMs = Math.round((sum / sampleCount) * 100) / 100;
+        const p95Idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+        p95FrameMs = Math.round(sorted[p95Idx] * 100) / 100;
+      }
+      if (sampleCount >= 12 && p95FrameMs > 33) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`Heavy frame time (p95 ${p95FrameMs.toFixed(1)}ms > 33ms budget).`);
+      }
+      if (peakSvgNodes > 2500) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`High SVG DOM complexity (${peakSvgNodes} peak SVG nodes).`);
+      }
+
       return {
         vm: 'avm1',
         verdict,
         reasons,
         framesElapsed: this._tickCount || 0,
         visibleNodes,
+        svgNodeCount,
+        peakSvgNodes,
+        avgFrameMs,
+        p95FrameMs,
         unhandledOpcodes,
         missingApis,
         externalCalls,
@@ -6019,6 +6244,20 @@
       } catch (_) {}
     }
 
+    _flushDirtySvgClips() {
+      const list = this._dirtySvgClips;
+      const len = list.length;
+      if (len === 0) return;
+      for (let i = 0; i < len; i++) {
+        const clip = list[i];
+        list[i] = null;
+        if (clip && !clip._removed && clip._svgDirty) {
+          clip.commitSvg();
+        }
+      }
+      list.length = 0;
+    }
+
     /**
      * Executes exactly one SWF frame step synchronously (handy for deterministic tests).
      */
@@ -6028,17 +6267,27 @@
       this._tickCount++;
       this._skipBgScriptsThisTick = false;
       this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
-      this._updateDrag();
-      if (_isSwfDebugEnabled()) {
-        this._dbgActiveThisTick = true;
-        this._tickSvgRenderMs = 0;
-        const t0 = _nowMs();
-        this.rootClip.stepFrame();
-        const totalMs = _nowMs() - t0;
-        this._dbgActiveThisTick = false;
-        this._recordDbgFrameTiming(totalMs, this._tickSvgRenderMs);
-      } else {
-        this.rootClip.stepFrame();
+      const rtT0 = _nowMs();
+      this._deferSvgCommit = true;
+      try {
+        this._updateDrag();
+        if (_isSwfDebugEnabled()) {
+          this._dbgActiveThisTick = true;
+          this._tickSvgRenderMs = 0;
+          this.rootClip.stepFrame();
+          this._flushDirtySvgClips();
+          const totalMs = _nowMs() - rtT0;
+          this._dbgActiveThisTick = false;
+          this._recordDbgFrameTiming(totalMs, this._tickSvgRenderMs);
+          this._recordRtFrameTiming(totalMs);
+        } else {
+          this.rootClip.stepFrame();
+          this._flushDirtySvgClips();
+          this._recordRtFrameTiming(_nowMs() - rtT0);
+        }
+      } finally {
+        this._deferSvgCommit = false;
+        this._flushDirtySvgClips();
       }
       this._syncTelemetry(true);
     }
@@ -6783,13 +7032,13 @@
     _setClipProp(clip, prop, val) {
       const pl = String(prop).toLowerCase();
       switch (pl) {
-        case '_x': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_x'); clip._x = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
-        case '_y': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_y'); clip._y = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
-        case '_xscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_xscale'); clip._xscale = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
-        case '_yscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_yscale'); clip._yscale = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
-        case '_rotation': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_rotation'); clip._rotation = n; clip._scriptModifiedTransform = true; clip.commitSvg(); return true; }
-        case '_alpha': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_alpha'); clip._alpha = n; clip._scriptModifiedAlpha = true; clip.commitSvg(); return true; }
-        case '_visible': clip._visible = this._toBool(val); clip.commitSvg(); return true;
+        case '_x': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_x'); if (clip._x !== n || !clip._scriptModifiedTransform) { clip._x = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case '_y': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_y'); if (clip._y !== n || !clip._scriptModifiedTransform) { clip._y = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case '_xscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_xscale'); if (clip._xscale !== n || !clip._scriptModifiedTransform) { clip._xscale = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case '_yscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_yscale'); if (clip._yscale !== n || !clip._scriptModifiedTransform) { clip._yscale = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case '_rotation': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_rotation'); if (clip._rotation !== n || !clip._scriptModifiedTransform) { clip._rotation = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case '_alpha': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_alpha'); if (clip._alpha !== n || !clip._scriptModifiedAlpha) { clip._alpha = n; clip._scriptModifiedAlpha = true; if (clip._markSvgDirty) clip._markSvgDirty(); else clip.commitSvg(); } return true; }
+        case '_visible': { const b = this._toBool(val); if (clip._visible !== b) { clip._visible = b; if (clip._markSubtreeDirty) { clip._markSubtreeDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
         case '_name': clip._name = this._toStr(val); this._treeVersion++; return true;
         case '_width': {
           if (clip._isMovieClip) {
@@ -6799,7 +7048,8 @@
               if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_width');
               clip._xscale = (n / bb.w) * 100;
               clip._scriptModifiedTransform = true;
-              clip.commitSvg();
+              clip._markTransformDirty();
+              clip._markSvgDirty();
             }
           }
           return true;
@@ -6812,7 +7062,8 @@
               if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_height');
               clip._yscale = (n / bb.h) * 100;
               clip._scriptModifiedTransform = true;
-              clip.commitSvg();
+              clip._markTransformDirty();
+              clip._markSvgDirty();
             }
           }
           return true;
@@ -8497,6 +8748,9 @@
                   try { instance = new ctor(...args); } catch (_) { instance = {}; }
                 }
               } else {
+                if (ctorName && /^(BitmapData|LocalConnection|XMLSocket|NetConnection|NetStream|Camera|Microphone|PrintJob|FileReference|FileReferenceList|ContextMenu|ContextMenuItem|TextSnapshot|ExternalInterface)$/i.test(ctorName)) {
+                  this._recordMissingApi(`new ${ctorName}()`);
+                }
                 instance = {};
               }
             } finally {
@@ -8532,6 +8786,10 @@
                   try { instance = new ctor(...args); } catch (_) { instance = {}; }
                 }
               } else {
+                const mStr = methodName ? String(methodName) : '';
+                if (mStr && /^(BitmapData|Point|Rectangle|Matrix|ColorTransform|Transform|BlurFilter|GlowFilter|DropShadowFilter|BevelFilter|ColorMatrixFilter|ConvolutionFilter|DisplacementMapFilter|FileReference|ExternalInterface)$/i.test(mStr)) {
+                  this._recordMissingApi(`new ${mStr}()`);
+                }
                 instance = {};
               }
             } finally {

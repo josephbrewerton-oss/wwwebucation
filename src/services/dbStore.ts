@@ -1148,6 +1148,10 @@ export interface SwfRuntimeHealthReport {
   reasons: string[];
   framesElapsed: number;
   visibleNodes: number;
+  svgNodeCount?: number;
+  peakSvgNodes?: number;
+  avgFrameMs?: number;
+  p95FrameMs?: number;
   unhandledOpcodes: string[];
   missingApis: string[];
   externalCalls: string[];

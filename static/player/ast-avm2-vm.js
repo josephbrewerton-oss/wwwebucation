@@ -2621,6 +2621,11 @@
       this._rtErrors = new Set();
       this._rtVerdictSent = false;
       this._rtLastSeverity = 0;
+      this._rtFrameMsBuf = new Float64Array(60);
+      this._rtFrameBufIdx = 0;
+      this._rtFrameBufCount = 0;
+      this._rtLastSvgNodes = 0;
+      this._rtPeakSvgNodes = 0;
       this._budgetRemaining = MAX_OPS_PER_TICK;
       this._callDepth = 0;
       this._timers = new Set();
@@ -2807,11 +2812,67 @@
       regUnsupported('flash.external.ExternalInterface', 'ext');
       regUnsupported('flash.display.Stage3D', 'api');
       regUnsupported('flash.display.Shader', 'api');
+      regUnsupported('flash.display.BitmapData', 'api');
+      regUnsupported('flash.display.Bitmap', 'api');
+      regUnsupported('flash.display.Loader', 'api');
+      regUnsupported('flash.media.Video', 'api');
+      regUnsupported('flash.media.Camera', 'api');
+      regUnsupported('flash.media.Microphone', 'api');
+      regUnsupported('flash.net.LocalConnection', 'api');
       regUnsupported('flash.net.Socket', 'ext');
       regUnsupported('flash.net.XMLSocket', 'ext');
       regUnsupported('flash.net.NetStream', 'api');
       regUnsupported('flash.net.NetConnection', 'ext');
       regUnsupported('flash.net.FileReference', 'api');
+      this._globalScope.navigateToURL = (req) => {
+        const url = req && req.url ? req.url : String(req || '');
+        if (self._rtExternalCalls.size < 16) self._rtExternalCalls.add(`navigateToURL(${url.slice(0, 64)})`);
+      };
+    }
+
+    _nowMs() {
+      return (typeof performance !== 'undefined' && typeof performance.now === 'function')
+        ? performance.now()
+        : Date.now();
+    }
+
+    _isFlashPackageQName(qname) {
+      if (!qname || typeof qname !== 'string') return false;
+      return /^(flash|fl|mx|spark|air|com\.adobe)\./.test(qname);
+    }
+
+    _recordMissingApi(apiName) {
+      if (!apiName) return;
+      if (this._rtMissingApis.size < 24) {
+        this._rtMissingApis.add(String(apiName).slice(0, 80));
+      }
+    }
+
+    _countTotalSvgNodes() {
+      const root = this._rootGroup;
+      if (!root) return 0;
+      let count = 0;
+      const walk = (el) => {
+        if (!el || count >= 10000) return;
+        count++;
+        const kids = el.children || el.childNodes;
+        if (kids && kids.length) {
+          for (let i = 0; i < kids.length; i++) walk(kids[i]);
+        }
+      };
+      walk(root);
+      return count;
+    }
+
+    _recordRtFrameTiming(ms) {
+      this._rtFrameMsBuf[this._rtFrameBufIdx] = ms >= 0 ? ms : 0;
+      this._rtFrameBufIdx = (this._rtFrameBufIdx + 1) % 60;
+      if (this._rtFrameBufCount < 60) this._rtFrameBufCount++;
+      if ((this._tickCount & 7) === 1 || this._rtPeakSvgNodes === 0) {
+        const nodes = this._countTotalSvgNodes();
+        this._rtLastSvgNodes = nodes;
+        if (nodes > this._rtPeakSvgNodes) this._rtPeakSvgNodes = nodes;
+      }
     }
 
     _resolveClass(name) {
@@ -3136,6 +3197,9 @@
         if (name in this._globalScope) return this._globalScope[name];
         const c = this._resolveClass(qname) || this._resolveClass(name);
         if (c) return c;
+        if (this._isFlashPackageQName(qname)) {
+          this._recordMissingApi(qname);
+        }
       }
       if (obj instanceof Map) return obj.get(name);
       if (obj instanceof AS3Vector) {
@@ -3437,6 +3501,25 @@
                 } else if (fn instanceof AS3ClassDescriptor) {
                   // AS3 cast / conversion call e.g. Number(x) / int(x) / String(x)
                   ret = this._coerceType(callArgs[0], fn.simpleName);
+                } else if (mn.name) {
+                  if (receiver === this._globalScope && this._isFlashPackageQName(mn.qname)) {
+                    this._recordMissingApi(`${mn.qname}()`);
+                  } else if (receiver instanceof AS3ClassDescriptor && this._isFlashPackageQName(receiver.qname)) {
+                    this._recordMissingApi(`${receiver.qname}.${mn.name}()`);
+                  } else if (receiver && receiver._as3Class && this._isFlashPackageQName(receiver._as3Class.qname)) {
+                    this._recordMissingApi(`${receiver._as3Class.qname}.${mn.name}()`);
+                  } else if (receiver && (
+                    receiver instanceof AS3DisplayObject ||
+                    receiver instanceof AS3Graphics ||
+                    receiver instanceof AS3TextField ||
+                    receiver instanceof AS3ByteArray ||
+                    receiver instanceof AS3Sound
+                  )) {
+                    const clsLabel = (receiver.constructor && receiver.constructor.name)
+                      ? receiver.constructor.name.replace(/^AS3/, 'flash.')
+                      : 'flash.Object';
+                    this._recordMissingApi(`${clsLabel}.${mn.name}()`);
+                  }
                 }
                 if (op !== 0x4f) stack.push(ret);
                 break;
@@ -3459,6 +3542,9 @@
                 const callArgs = argc > 0 ? stack.splice(stack.length - argc, argc) : [];
                 const obj = stack.pop();
                 const ctor = this._getProp(obj, mn.name, mn.qname) || this._resolveClass(mn.qname) || this._resolveClass(mn.name);
+                if (!ctor && this._isFlashPackageQName(mn.qname)) {
+                  this._recordMissingApi(`new ${mn.qname}()`);
+                }
                 stack.push(this._instantiateClass(ctor, callArgs));
                 break;
               }
@@ -4510,16 +4596,30 @@
         this._frameAccSec -= framePeriod;
         this._tickCount++;
         steps++;
+        const rtT0 = this._nowMs();
         if (this.rootDoc && typeof this.rootDoc._stepTimeline === 'function') {
           this.rootDoc._stepTimeline();
         }
         this._dispatchEnterFrameSubtree(this.stage);
+        if (this._doc) {
+          this.stage._syncSvg(this._doc);
+        }
+        this._recordRtFrameTiming(this._nowMs() - rtT0);
       }
 
-      if (this._doc) {
+      if (steps === 0 && this._doc) {
         this.stage._syncSvg(this._doc);
       }
       this._maybeEmitRuntimeVerdict();
+    }
+
+    /**
+     * Executes exactly one AS3 SWF frame step synchronously (for deterministic tests & corpus benchmarks).
+     */
+    stepOneSwfFrame() {
+      if (!this._mounted) return;
+      const framePeriod = 1 / Math.max(1, Math.min(60, this.fps || 24));
+      this.step(framePeriod);
     }
 
     _countVisibleStageNodes() {
@@ -4610,12 +4710,46 @@
         reasons.push(`AS3 runtime warning: ${runtimeErrors[0]}`);
       }
 
+      const svgNodeCount = this._countTotalSvgNodes();
+      this._rtLastSvgNodes = svgNodeCount;
+      if (svgNodeCount > this._rtPeakSvgNodes) this._rtPeakSvgNodes = svgNodeCount;
+      const peakSvgNodes = this._rtPeakSvgNodes;
+
+      const sampleCount = this._rtFrameBufCount;
+      let avgFrameMs = 0;
+      let p95FrameMs = 0;
+      if (sampleCount > 0) {
+        let sum = 0;
+        const sorted = [];
+        for (let i = 0; i < sampleCount; i++) {
+          const v = this._rtFrameMsBuf[i];
+          sum += v;
+          sorted.push(v);
+        }
+        sorted.sort((a, b) => a - b);
+        avgFrameMs = Math.round((sum / sampleCount) * 100) / 100;
+        const p95Idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+        p95FrameMs = Math.round(sorted[p95Idx] * 100) / 100;
+      }
+      if (sampleCount >= 12 && p95FrameMs > 33) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`Heavy frame time (p95 ${p95FrameMs.toFixed(1)}ms > 33ms budget).`);
+      }
+      if (peakSvgNodes > 2500) {
+        if (verdict === 'playable') verdict = 'degraded';
+        reasons.push(`High SVG DOM complexity (${peakSvgNodes} peak SVG nodes).`);
+      }
+
       return {
         vm: 'avm2',
         verdict,
         reasons,
         framesElapsed: this._tickCount || 0,
         visibleNodes,
+        svgNodeCount,
+        peakSvgNodes,
+        avgFrameMs,
+        p95FrameMs,
         unhandledOpcodes,
         missingApis,
         externalCalls,
@@ -4658,6 +4792,10 @@
       this._rtErrors.clear();
       this._rtVerdictSent = false;
       this._rtLastSeverity = 0;
+      this._rtFrameBufIdx = 0;
+      this._rtFrameBufCount = 0;
+      this._rtLastSvgNodes = 0;
+      this._rtPeakSvgNodes = 0;
       this._filterCache.clear();
       this._filterSeq = 0;
       this._maskSeq = 0;

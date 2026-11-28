@@ -25,6 +25,7 @@
     "test:ast": "npx tsx scripts/test-ast-manifests.ts",
     "test:simulations": "npx tsx scripts/simulate-questions.ts",
     "test:swf": "npx tsx scripts/simulate-swf-import.ts",
+    "bench:swf": "npx tsx scripts/benchmark-swf-corpus.ts",
     "test:ink": "npx tsx scripts/simulate-whiteboard-ink.ts",
     "test:invariants": "npx tsx scripts/simulate-sim-engine-invariants.ts",
     "test:extended": "npx tsx scripts/test-swf-avm2-parity.ts && npx tsx scripts/test-swf-ruffle-parity.ts && npx tsx scripts/test-skill-inheritance.ts && npx tsx scripts/test-phet-import.ts && npx tsx scripts/test-crypto-and-swf-input.ts && npx tsx scripts/test-swf-distiller.ts && npx tsx scripts/test-swf-legacy-gaps.ts && npx tsx tests/test-lisp-curriculum.ts && npx tsx scripts/test-security-boundaries.ts",

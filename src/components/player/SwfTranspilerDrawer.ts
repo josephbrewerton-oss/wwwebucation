@@ -108,7 +108,18 @@ function buildSwfRecodeBrief(
     }
   }
   if (runtimeHealth) {
-    lines.push(`- **Live Runtime Watchdog (${runtimeHealth.vm.toUpperCase()})**: ${runtimeHealth.verdict.toUpperCase()} (frames=${runtimeHealth.framesElapsed}, visibleNodes=${runtimeHealth.visibleNodes})`);
+    const perfParts: string[] = [];
+    if (typeof runtimeHealth.avgFrameMs === 'number') {
+      perfParts.push(`avg=${runtimeHealth.avgFrameMs.toFixed(2)}ms`);
+    }
+    if (typeof runtimeHealth.p95FrameMs === 'number') {
+      perfParts.push(`p95=${runtimeHealth.p95FrameMs.toFixed(2)}ms`);
+    }
+    if (typeof runtimeHealth.peakSvgNodes === 'number') {
+      perfParts.push(`peakSvgNodes=${runtimeHealth.peakSvgNodes}`);
+    }
+    const perfSuffix = perfParts.length > 0 ? `, ${perfParts.join(', ')}` : '';
+    lines.push(`- **Live Runtime Watchdog (${runtimeHealth.vm.toUpperCase()})**: ${runtimeHealth.verdict.toUpperCase()} (frames=${runtimeHealth.framesElapsed}, visibleNodes=${runtimeHealth.visibleNodes}${perfSuffix})`);
     if (runtimeHealth.reasons.length > 0) lines.push(`  - Reasons: ${runtimeHealth.reasons.join('; ')}`);
     if (runtimeHealth.unhandledOpcodes.length > 0) lines.push(`  - Unhandled opcodes: ${runtimeHealth.unhandledOpcodes.join(', ')}`);
     if (runtimeHealth.missingApis.length > 0) lines.push(`  - Unsupported Flash APIs: ${runtimeHealth.missingApis.join(', ')}`);
@@ -905,7 +916,16 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       rtBox.style.cssText = `padding:10px 12px; border-radius:8px; background:${rtStyle.bg}; border:1.5px solid ${rtStyle.border}; color:${rtStyle.fg}; font-size:0.74rem; line-height:1.45; display:flex; flex-direction:column; gap:4px;`;
       const rtTitle = document.createElement('strong');
       rtTitle.style.cssText = 'font-size:0.79rem; color:#ffffff;';
-      rtTitle.textContent = `${rtStyle.heading} (${rt.vm.toUpperCase()} · ${rt.framesElapsed} frames · ${rt.visibleNodes} visible SVG nodes)`;
+      const perfSummary: string[] = [];
+      if (typeof rt.avgFrameMs === 'number') {
+        const p95Part = typeof rt.p95FrameMs === 'number' ? ` / p95 ${rt.p95FrameMs.toFixed(1)}ms` : '';
+        perfSummary.push(`${rt.avgFrameMs.toFixed(1)}ms${p95Part}`);
+      }
+      const nodeLabel = typeof rt.peakSvgNodes === 'number' && rt.peakSvgNodes > 0
+        ? `${rt.svgNodeCount ?? rt.visibleNodes} SVG nodes (peak ${rt.peakSvgNodes})`
+        : `${rt.visibleNodes} visible SVG nodes`;
+      const headerStats = [rt.vm.toUpperCase(), `${rt.framesElapsed} frames`, nodeLabel, ...perfSummary];
+      rtTitle.textContent = `${rtStyle.heading} (${headerStats.join(' · ')})`;
       rtBox.appendChild(rtTitle);
 
       if (rt.reasons.length > 0) {

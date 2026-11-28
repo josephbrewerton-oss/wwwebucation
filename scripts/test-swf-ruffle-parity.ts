@@ -1858,12 +1858,23 @@ async function testSwfRuntimeFailureWatchdog() {
   assert.ok(ok1Msg && ok1Msg.report, 'Healthy AVM1 SWF must emit SWF_RUNTIME_VERDICT');
   assert.equal(ok1Msg.report.verdict, 'playable', `Expected healthy AVM1 verdict "playable", got ${JSON.stringify(ok1Msg.report)}`);
   assert.ok(ok1Msg.report.visibleNodes > 0, 'Healthy AVM1 SWF must report visibleNodes > 0');
+  assert.ok(typeof ok1Msg.report.avgFrameMs === 'number' && ok1Msg.report.avgFrameMs >= 0, 'Healthy AVM1 SWF must report avgFrameMs');
+  assert.ok(typeof ok1Msg.report.p95FrameMs === 'number' && ok1Msg.report.p95FrameMs >= 0, 'Healthy AVM1 SWF must report p95FrameMs');
+  assert.ok(typeof ok1Msg.report.peakSvgNodes === 'number' && ok1Msg.report.peakSvgNodes > 0, 'Healthy AVM1 SWF must report peakSvgNodes > 0');
   rtOk1.destroy();
 
-  // 1b. Blank + external-dependent AVM1 SWF (0 shapes + getURL) -> verdict: 'cannot-play'
+  // 1b. Blank + external-dependent + unsupported Flash API AVM1 SWF -> verdict: 'cannot-play' + missingApis populated
   avm1Posted.length = 0;
-  // Frame 1 DoAction: getURL("http://example.invalid/shell.swf", "_self"); stop();
+  // Frame 1 DoAction: new LocalConnection(); new flash.display.BitmapData(10, 10); getURL("http://example.invalid/shell.swf", "_self"); stop();
   const blockedUrlAction = [
+    ...actionPush([{ t: 'int', v: 0 }, { t: 'str', v: 'LocalConnection' }]),
+    0x40, 0x17, // ActionNewObject LocalConnection + Pop
+    ...actionPush([{ t: 'int', v: 10 }, { t: 'int', v: 10 }, { t: 'int', v: 2 }, { t: 'str', v: 'flash' }]),
+    0x1c, // ActionGetVariable flash
+    ...actionPush([{ t: 'str', v: 'display' }]),
+    0x4e, // ActionGetMember display
+    ...actionPush([{ t: 'str', v: 'BitmapData' }]),
+    0x53, 0x17, // ActionNewMethod BitmapData + Pop
     ...actionPush([{ t: 'str', v: '_self' }, { t: 'str', v: 'http://example.invalid/shell.swf' }, { t: 'int', v: 2 }, { t: 'str', v: 'getURL' }]),
     0x3d, 0x17, // ActionCallFunction getURL + Pop
     0x07, 0x00,
@@ -1883,6 +1894,8 @@ async function testSwfRuntimeFailureWatchdog() {
   assert.equal(bad1Msg.report.verdict, 'cannot-play', `Expected broken AVM1 verdict "cannot-play", got ${JSON.stringify(bad1Msg.report)}`);
   assert.equal(bad1Msg.report.visibleNodes, 0, 'Blank AVM1 SWF must report visibleNodes === 0');
   assert.ok(bad1Msg.report.externalCalls.some((c: string) => c.includes('getURL')), 'Broken AVM1 SWF must record blocked getURL call');
+  assert.ok(bad1Msg.report.missingApis.includes('LocalConnection'), `AVM1 watchdog must record LocalConnection in missingApis, got ${JSON.stringify(bad1Msg.report.missingApis)}`);
+  assert.ok(bad1Msg.report.missingApis.includes('flash.display.BitmapData'), `AVM1 watchdog must record flash.display.BitmapData in missingApis, got ${JSON.stringify(bad1Msg.report.missingApis)}`);
   assert.ok(bad1Msg.report.reasons.length >= 1, 'Broken AVM1 SWF must include human-readable reasons');
   rtBad1.destroy();
 
@@ -1892,7 +1905,7 @@ async function testSwfRuntimeFailureWatchdog() {
   const avm2Parent = { postMessage: (msg: any) => avm2Posted.push(msg) };
   const avm2Sandbox: any = {
     console, Math, Date, Number, String, Boolean, Array, Object, Map, Set, RegExp, JSON,
-    Uint8Array, Float32Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
+    Uint8Array, Float32Array, Float64Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
     atob: (s: string) => Buffer.from(s, 'base64').toString('binary'),
     btoa: (s: string) => Buffer.from(s, 'binary').toString('base64'),
     performance: { now: () => Date.now() },
@@ -1919,9 +1932,12 @@ async function testSwfRuntimeFailureWatchdog() {
   assert.ok(ok2Msg && ok2Msg.report, 'Healthy AVM2 SWF must emit SWF_RUNTIME_VERDICT');
   assert.equal(ok2Msg.report.verdict, 'playable', `Expected healthy AVM2 verdict "playable", got ${JSON.stringify(ok2Msg.report)}`);
   assert.ok(ok2Msg.report.visibleNodes > 0, 'Healthy AVM2 SWF must report visibleNodes > 0');
+  assert.ok(typeof ok2Msg.report.avgFrameMs === 'number' && ok2Msg.report.avgFrameMs >= 0, 'Healthy AVM2 SWF must report avgFrameMs');
+  assert.ok(typeof ok2Msg.report.p95FrameMs === 'number' && ok2Msg.report.p95FrameMs >= 0, 'Healthy AVM2 SWF must report p95FrameMs');
+  assert.ok(typeof ok2Msg.report.peakSvgNodes === 'number' && ok2Msg.report.peakSvgNodes > 0, 'Healthy AVM2 SWF must report peakSvgNodes > 0');
   rtOk2.destroy();
 
-  // 2b. Unsupported API (Stage3D) + Blocked External URLLoader + Blank Stage -> verdict: 'cannot-play'
+  // 2b. Unsupported API (Stage3D + BitmapData + unresolved flash.* package lookup) + Blocked External URLLoader + Blank Stage -> verdict: 'cannot-play'
   avm2Posted.length = 0;
   const brokenAvm2Prog = {
     v: 2, swfVer: 11, fps: 30, w: 500, h: 400, bg: '#000000', fc: 1,
@@ -1930,11 +1946,14 @@ async function testSwfRuntimeFailureWatchdog() {
   const stageBad2 = new MockSvgNode('svg');
   const rtBad2 = new avm2Sandbox.ASTAVM2Runtime(Buffer.from(JSON.stringify(brokenAvm2Prog)).toString('base64'), { engine: { vars: {} } });
   rtBad2.mount(stageBad2, stageBad2);
-  // Trigger Stage3D + URLLoader.load via registered AS3 classes
+  // Trigger Stage3D + BitmapData + unresolved flash.text.engine.TextBlock + URLLoader.load
   const stage3dCls = rtBad2._classes.get('flash.display.Stage3D');
+  const bitmapDataCls = rtBad2._classes.get('flash.display.BitmapData');
   const urlLoaderCls = rtBad2._classes.get('flash.net.URLLoader');
-  assert.ok(stage3dCls && urlLoaderCls, 'AVM2 runtime must expose Stage3D and URLLoader diagnostic stubs');
+  assert.ok(stage3dCls && bitmapDataCls && urlLoaderCls, 'AVM2 runtime must expose Stage3D, BitmapData, and URLLoader diagnostic stubs');
   stage3dCls.nativeCtor();
+  bitmapDataCls.nativeCtor();
+  rtBad2._getProp(rtBad2._globalScope, 'TextBlock', 'flash.text.engine.TextBlock');
   const loader = urlLoaderCls.nativeCtor();
   loader.load({ url: 'https://cdn.example.invalid/level1.swf' });
   for (let i = 0; i < 25; i++) rtBad2.step(1 / 30);
@@ -1942,6 +1961,8 @@ async function testSwfRuntimeFailureWatchdog() {
   assert.ok(bad2Msg && bad2Msg.report, 'Broken AVM2 SWF must emit SWF_RUNTIME_VERDICT');
   assert.equal(bad2Msg.report.verdict, 'cannot-play', `Expected broken AVM2 verdict "cannot-play", got ${JSON.stringify(bad2Msg.report)}`);
   assert.ok(bad2Msg.report.missingApis.some((a: string) => a.includes('Stage3D')), 'AVM2 watchdog must capture unsupported Stage3D API');
+  assert.ok(bad2Msg.report.missingApis.some((a: string) => a.includes('BitmapData')), 'AVM2 watchdog must capture unsupported BitmapData API');
+  assert.ok(bad2Msg.report.missingApis.includes('flash.text.engine.TextBlock'), 'AVM2 watchdog must capture unresolved flash.* namespace lookups');
   assert.ok(bad2Msg.report.externalCalls.some((c: string) => c.includes('URLLoader(')), 'AVM2 watchdog must capture blocked URLLoader call');
   rtBad2.destroy();
 
