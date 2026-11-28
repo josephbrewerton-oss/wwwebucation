@@ -426,19 +426,33 @@
   handlers.SWF_RELEASE_INPUTS = dispatchReleaseAll;
   handlers.MEDIA_RELEASE_INPUTS = dispatchReleaseAll;
 
-  handlers.SET_SWF_QUALITY = ({ engine, data }) => {
+  const handleSetRenderQuality = ({ engine, uiController, data }) => {
     if (!engine) return;
     const raw = String((data && data.quality) || 'HIGH').trim().toUpperCase();
     const next = raw === 'LOW' ? 'LOW' : (raw === 'MEDIUM' || raw === 'MED' ? 'MEDIUM' : 'HIGH');
-    engine._swfQuality = next;
-    const vm = engine._swfVm || engine._avm1Vm;
-    if (vm && typeof vm.setQuality === 'function') {
-      vm.setQuality(next);
-    } else if (engine.stageSvg && typeof engine.stageSvg.setAttribute === 'function') {
-      const sr = next === 'LOW' ? 'optimizeSpeed' : (next === 'MEDIUM' ? 'auto' : 'geometricPrecision');
-      engine.stageSvg.setAttribute('shape-rendering', sr);
+    if (typeof engine.setRenderQuality === 'function') {
+      engine.setRenderQuality(next);
+    } else {
+      engine._renderQuality = next;
+      engine._swfQuality = next;
+      const vm = engine._swfVm || engine._avm1Vm;
+      if (vm && typeof vm.setQuality === 'function') {
+        vm.setQuality(next);
+      } else if (engine.stageSvg && typeof engine.stageSvg.setAttribute === 'function') {
+        const sr = next === 'LOW' ? 'optimizeSpeed' : (next === 'MEDIUM' ? 'auto' : 'geometricPrecision');
+        engine.stageSvg.setAttribute('shape-rendering', sr);
+        engine.stageSvg.setAttribute('data-render-quality', next.toLowerCase());
+      }
+    }
+    if (uiController && uiController.displayConfig) {
+      uiController.displayConfig.renderQuality = next;
+      if (typeof uiController.syncSettingsDrawerUI === 'function') {
+        uiController.syncSettingsDrawerUI();
+      }
     }
   };
+  handlers.SET_RENDER_QUALITY = handleSetRenderQuality;
+  handlers.SET_SWF_QUALITY = handleSetRenderQuality;
 
   handlers.DOWNLOAD_OFFLINE_ZIP = ({ engine }) => {
     if (typeof engine.downloadOfflineZipSuite === 'function') {

@@ -84,6 +84,25 @@
       }
     });
 
+    const qualityBtns = [
+      { el: el.qualityBtnLow, quality: 'LOW' },
+      { el: el.qualityBtnMed, quality: 'MEDIUM' },
+      { el: el.qualityBtnHigh, quality: 'HIGH' },
+    ];
+    qualityBtns.forEach(({ el: qBtn, quality }) => {
+      if (qBtn) {
+        qBtn.addEventListener('click', () => {
+          this.displayConfig.renderQuality = quality;
+          if (this.engine && typeof this.engine.setRenderQuality === 'function') {
+            this.engine.setRenderQuality(quality);
+          }
+          this.saveDisplayConfig(this.displayConfig);
+          this.syncSettingsDrawerUI();
+          this.showToast(`Render Quality: ${quality === 'MEDIUM' ? 'MED' : quality}`);
+        });
+      }
+    });
+
     const configInputs = [
       { el: el.cfgCheckpoints, key: 'showInteractiveCheckpoints' },
       { el: el.cfg3D, key: 'show3DControls' },
@@ -273,6 +292,9 @@
       showLoopToggle: true,
       showVolumeControl: true,
       showPhysicsControls: true,
+      renderQuality: (this.engine && typeof this.engine.getRenderQuality === 'function')
+        ? this.engine.getRenderQuality()
+        : 'HIGH',
     };
 
     if (mode === 'suite' || mode === 'interactive-suite') {
@@ -442,6 +464,10 @@
     if (el.volumeBox) el.volumeBox.style.display = c.showVolumeControl !== false ? 'flex' : 'none';
     if (el.physicsConfigSection) el.physicsConfigSection.style.display = c.showPhysicsControls !== false ? 'block' : 'none';
 
+    if (c.renderQuality && this.engine && typeof this.engine.setRenderQuality === 'function') {
+      this.engine.setRenderQuality(c.renderQuality);
+    }
+
     this.syncSettingsDrawerUI();
 
     // Notify parent wrapper of active configuration
@@ -488,6 +514,23 @@
     cards.forEach(({ el: cardEl, mode: m }) => {
       if (cardEl) cardEl.classList.toggle('active', mode === m);
     });
+
+    const activeQuality = String(
+      c.renderQuality ||
+      (this.engine && typeof this.engine.getRenderQuality === 'function' ? this.engine.getRenderQuality() : 'HIGH')
+    ).toUpperCase();
+    const normQuality = activeQuality === 'LOW' ? 'LOW' : (activeQuality === 'MEDIUM' || activeQuality === 'MED' ? 'MEDIUM' : 'HIGH');
+    if (el.qualityBtnLow) el.qualityBtnLow.classList.toggle('active', normQuality === 'LOW');
+    if (el.qualityBtnMed) el.qualityBtnMed.classList.toggle('active', normQuality === 'MEDIUM');
+    if (el.qualityBtnHigh) el.qualityBtnHigh.classList.toggle('active', normQuality === 'HIGH');
+    if (el.qualityModeBadge) el.qualityModeBadge.textContent = normQuality === 'MEDIUM' ? 'MED' : normQuality;
+    if (el.qualityHint) {
+      el.qualityHint.textContent = normQuality === 'LOW'
+        ? 'Max FPS for older Chromebooks/tablets — fast vector strokes, SVG blur/glow filters bypassed.'
+        : normQuality === 'MEDIUM'
+        ? 'Balanced vector smoothing with full SVG filters & blend layers.'
+        : 'Crisp geometric vectors & full SVG glow/shadow filters.';
+    }
 
     const inputs = [
       { el: el.cfgCheckpoints, val: c.showInteractiveCheckpoints },

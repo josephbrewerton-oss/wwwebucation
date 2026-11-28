@@ -894,6 +894,72 @@
 
     return { mounted, viewBox };
   }
+  const BLEND_MODE_CSS_MAP = Object.freeze({
+    normal: '',
+    none: '',
+    layer: '',
+    '0': '',
+    '1': '',
+    '2': '',
+    multiply: 'multiply',
+    '3': 'multiply',
+    screen: 'screen',
+    '4': 'screen',
+    lighten: 'lighten',
+    '5': 'lighten',
+    darken: 'darken',
+    '6': 'darken',
+    difference: 'difference',
+    '7': 'difference',
+    add: 'plus-lighter',
+    'plus-lighter': 'plus-lighter',
+    '8': 'plus-lighter',
+    subtract: 'difference',
+    '9': 'difference',
+    invert: 'exclusion',
+    exclusion: 'exclusion',
+    '10': 'exclusion',
+    overlay: 'overlay',
+    '13': 'overlay',
+    hardlight: 'hard-light',
+    'hard-light': 'hard-light',
+    '14': 'hard-light',
+    'soft-light': 'soft-light',
+    softlight: 'soft-light',
+    'color-dodge': 'color-dodge',
+    'color-burn': 'color-burn',
+    hue: 'hue',
+    saturation: 'saturation',
+    color: 'color',
+    luminosity: 'luminosity',
+  });
+
+  function normalizeBlendModeCss(val) {
+    if (val === null || val === undefined || val === '') return '';
+    const key = String(val).trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(BLEND_MODE_CSS_MAP, key)
+      ? BLEND_MODE_CSS_MAP[key]
+      : '';
+  }
+
+  function applyNodeBlendMode(node, val) {
+    if (!node) return;
+    const cssVal = normalizeBlendModeCss(val);
+    if (node._lastBlendCss === cssVal) return;
+    node._lastBlendCss = cssVal;
+    if (node.style) {
+      node.style.mixBlendMode = cssVal;
+    } else if (typeof node.setAttribute === 'function') {
+      const prevStyle = typeof node.getAttribute === 'function' ? String(node.getAttribute('style') || '') : '';
+      const stripped = prevStyle.replace(/mix-blend-mode\s*:[^;]+;?/gi, '').trim();
+      const nextStyle = cssVal
+        ? (stripped ? stripped.replace(/;?$/, ';') + 'mix-blend-mode:' + cssVal + ';' : 'mix-blend-mode:' + cssVal + ';')
+        : stripped;
+      if (nextStyle) node.setAttribute('style', nextStyle);
+      else if (typeof node.removeAttribute === 'function') node.removeAttribute('style');
+    }
+  }
+
   /**
    * Zero-GC DOM Attribute / Affine Transform Commit Boundary.
    */
@@ -901,6 +967,10 @@
     if (!node) return;
     if (attr === 'textContent' || attr === 'text') {
       node.textContent = String(val);
+      return;
+    }
+    if (attr === 'mix-blend-mode' || attr === 'blend-mode' || attr === 'blend') {
+      applyNodeBlendMode(node, val);
       return;
     }
     const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;

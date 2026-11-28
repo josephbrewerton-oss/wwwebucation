@@ -9,6 +9,7 @@ import type { SwfRuntimeHealthReport } from '../../services/dbStore';
 import { setBslEnabled, setVoiceEnabled } from '../../services/bslGlobalStore';
 import { dispatchCartridgeSiteDirective } from '../../engine/nanoSiteManager';
 import { appendLabCsvToJotter } from '../../services/jotter-db';
+import { loadSavedPlayerConfig } from '../../types/playerConfig';
 import { normalizePresetId } from './playerCatalog';
 import type { PlayerTransport } from './playerTransport';
 import type { PlayerDrawerController } from './playerDrawerOrchestrator';
@@ -137,6 +138,12 @@ export function bindPlayerMessageBridge(deps: BindPlayerMessageBridgeDeps): Play
       state.isIframeReady = true;
       transport.postToPlayer({ type: 'SET_VOICE', enabled: !state.isMuted });
       transport.postToPlayer({ type: 'SET_MUTED', muted: state.isMuted });
+      try {
+        const savedCfg = loadSavedPlayerConfig();
+        if (savedCfg && savedCfg.renderQuality) {
+          transport.postToPlayer({ type: 'SET_RENDER_QUALITY', quality: savedCfg.renderQuality });
+        }
+      } catch (_) {}
       if (state.bslActive) {
         transport.postToPlayer({ type: 'SET_BSL', enabled: true });
         transport.postToPlayer({ type: 'REQUEST_SUBTITLE' });

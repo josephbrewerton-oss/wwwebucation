@@ -2,6 +2,7 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
+import vm from 'vm';
 import { parseSExpr } from '../../src/utils/sexprParser';
 import { resolveConstraintRegExp, testConstraintRegExp, NANO_ACT_TUPLE_REGEX } from '../../src/engine/aicaller';
 import { SUITE_PRESET, CLASSROOM_PRESET } from '../../src/types/playerConfig';
@@ -475,6 +476,139 @@ export async function runCoreUiInvariants(): Promise<number> {
     assert(astBridge.includes('DOWNLOAD_OFFLINE_ZIP'), 'ast-bridge.js must listen for DOWNLOAD_OFFLINE_ZIP');
 
     console.log(`[✅ PASS] Sim 9: Offline Simulator Suite ZIP Bundle (${(staticZipSize / 1024).toFixed(1)} KB), postMessage protocol, and UI binding verified.`);
+    passedTests++;
+  }
+
+  // =========================================================================
+  // TEST 10: Native AST Player Render Quality (LOW/MED/HIGH) & Isolated Blend Modes
+  // =========================================================================
+  console.log('\n--- TEST 10: Native Render Quality (LOW/MED/HIGH) & Isolated mix-blend-mode Compositing ---');
+  {
+    const playerCss = fs.readFileSync('static/player/player.css', 'utf-8');
+    assert(playerCss.includes('isolation: isolate;'), 'player.css must isolate #scene-root blend compositing');
+    assert(
+      playerCss.includes('#stage-svg[data-render-quality="low"] [filter]'),
+      'player.css must provide pure-CSS LOW quality SVG filter bypass'
+    );
+
+    const indexHtml = fs.readFileSync('static/player/index.html', 'utf-8');
+    assert(indexHtml.includes('id="cfg-quality-low"'), 'index.html must expose LOW quality control');
+    assert(indexHtml.includes('id="cfg-quality-med"'), 'index.html must expose MED quality control');
+    assert(indexHtml.includes('id="cfg-quality-high"'), 'index.html must expose HIGH quality control');
+
+    const sandbox: Record<string, any> = {
+      console,
+      Math,
+      Number,
+      String,
+      Boolean,
+      Array,
+      Object,
+      Map,
+      Set,
+      WeakSet,
+      Float32Array,
+      Uint8Array,
+      Date,
+      setTimeout,
+      clearTimeout,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    sandbox.window = sandbox;
+    sandbox.globalThis = sandbox;
+    const ctx = vm.createContext(sandbox);
+
+    for (const file of [
+      'static/player/ast-render-boundary.js',
+      'static/player/ast-binding-runtime.js',
+      'static/player/ast-scene-mount.js',
+      'static/player/ast-engine.js',
+      'static/player/ast-bridge-cartridge.js',
+    ]) {
+      vm.runInContext(fs.readFileSync(file, 'utf-8'), ctx, { filename: file });
+    }
+
+    // 1. Verify universal setRenderQuality on ASTVectorPlayerEngine + SWF VM delegation + bridge sync
+    const stageAttrs: Record<string, string> = {};
+    const mockStageSvg = {
+      setAttribute: (k: string, v: string) => { stageAttrs[k] = v; },
+      getAttribute: (k: string) => stageAttrs[k] || null,
+    };
+    const parentMsgs: any[] = [];
+    let vmQualitySeen = '';
+    const engine = new sandbox.ASTVectorPlayerEngine({ autoplay: false });
+    engine.stageSvg = mockStageSvg;
+    engine.getStageSvg = () => mockStageSvg;
+    engine.notifyParent = (msg: any) => parentMsgs.push(msg);
+    engine._swfVm = { setQuality: (q: string) => { vmQualitySeen = q; } };
+
+    engine.setRenderQuality('LOW');
+    assert.strictEqual(engine.getRenderQuality(), 'LOW', 'getRenderQuality must return LOW');
+    assert.strictEqual(stageAttrs['shape-rendering'], 'optimizeSpeed', 'LOW quality must set shape-rendering=optimizeSpeed');
+    assert.strictEqual(stageAttrs['data-render-quality'], 'low', 'LOW quality must set data-render-quality=low');
+    assert.strictEqual(vmQualitySeen, 'LOW', 'setRenderQuality must delegate to active SWF VM');
+
+    engine.setRenderQuality('MED');
+    assert.strictEqual(engine.getRenderQuality(), 'MEDIUM', 'MED alias must normalize to MEDIUM');
+    assert.strictEqual(stageAttrs['shape-rendering'], 'auto', 'MEDIUM quality must set shape-rendering=auto');
+    assert.strictEqual(stageAttrs['data-render-quality'], 'medium', 'MEDIUM quality must set data-render-quality=medium');
+
+    // Verify SET_RENDER_QUALITY & SET_SWF_QUALITY bridge aliases route identically
+    const cartridgeHandlers = sandbox.ASTBridgeCartridgeHandlers;
+    assert.strictEqual(typeof cartridgeHandlers.SET_RENDER_QUALITY, 'function', 'SET_RENDER_QUALITY bridge handler must exist');
+    assert.strictEqual(cartridgeHandlers.SET_SWF_QUALITY, cartridgeHandlers.SET_RENDER_QUALITY, 'SET_SWF_QUALITY must alias SET_RENDER_QUALITY');
+    let drawerSynced = false;
+    const mockUi = { displayConfig: { renderQuality: 'MEDIUM' }, syncSettingsDrawerUI: () => { drawerSynced = true; } };
+    cartridgeHandlers.SET_RENDER_QUALITY({ engine, uiController: mockUi, data: { quality: 'HIGH' } });
+    assert.strictEqual(engine.getRenderQuality(), 'HIGH', 'Bridge SET_RENDER_QUALITY must update engine to HIGH');
+    assert.strictEqual(stageAttrs['shape-rendering'], 'geometricPrecision', 'HIGH quality must set shape-rendering=geometricPrecision');
+    assert.strictEqual(stageAttrs['data-render-quality'], 'high', 'HIGH quality must set data-render-quality=high');
+    assert.strictEqual(mockUi.displayConfig.renderQuality, 'HIGH', 'Bridge handler must sync uiController.displayConfig.renderQuality');
+    assert.strictEqual(drawerSynced, true, 'Bridge handler must refresh settings drawer UI');
+
+    // 2. Verify declarative mix-blend-mode / blend-mode bindings via both ASTSharedRenderBoundary and fallback path
+    let styleWrites = 0;
+    const makeTrackedNode = () => {
+      let _mbm = '';
+      return {
+        attrs: {} as Record<string, string>,
+        style: {
+          get mixBlendMode() { return _mbm; },
+          set mixBlendMode(v: string) { _mbm = v; styleWrites++; },
+        },
+        setAttribute(k: string, v: string) { this.attrs[k] = v; },
+      };
+    };
+
+    const glowNode = makeTrackedNode();
+    sandbox.ASTSharedRenderBoundary.commitBindingValue(glowNode, 'mix-blend-mode', 'add');
+    assert.strictEqual(glowNode.style.mixBlendMode, 'plus-lighter', 'add blend shorthand must map to CSS plus-lighter');
+    assert.strictEqual(styleWrites, 1, 'First blend write must commit once');
+
+    // Repeat identical blend value -> 0 redundant style writes
+    sandbox.ASTSharedRenderBoundary.commitBindingValue(glowNode, 'blend-mode', 'plus-lighter');
+    assert.strictEqual(styleWrites, 1, 'Identical blend mode must incur 0 redundant DOM style writes');
+
+    sandbox.ASTSharedRenderBoundary.commitBindingValue(glowNode, 'blend', 'multiply');
+    assert.strictEqual(glowNode.style.mixBlendMode, 'multiply', 'blend alias must apply multiply');
+    assert.strictEqual(styleWrites, 2, 'Changed blend mode must update once');
+
+    sandbox.ASTSharedRenderBoundary.commitBindingValue(glowNode, 'mix-blend-mode', 'normal');
+    assert.strictEqual(glowNode.style.mixBlendMode, '', 'normal blend mode must clear mixBlendMode');
+    assert.strictEqual(glowNode.attrs['mix-blend-mode'], undefined, 'Blend mode must not write invalid SVG attribute');
+
+    // Verify ASTBindingRuntime.applyBindings end-to-end with reactive blend binding
+    const beamNode = makeTrackedNode();
+    engine.scene = { id: 'blend-test', type: 'Sim', vars: { mode: 'screen' } };
+    engine.vars = { mode: 'screen' };
+    engine.activeBindings = [
+      { node: beamNode, attr: 'blend-mode', evalFn: (_t: number, vars: any) => vars.mode, lastVal: undefined },
+    ];
+    engine.applyBindings(0, 0.016, false);
+    assert.strictEqual(beamNode.style.mixBlendMode, 'screen', 'Reactive AST blend-mode binding must set screen');
+
+    console.log('[✅ PASS] Sim 10: Universal native Render Quality (LOW/MED/HIGH) and isolated declarative mix-blend-mode compositing verified.');
     passedTests++;
   }
 

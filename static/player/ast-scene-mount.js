@@ -153,10 +153,16 @@
       this._mountedContainer = container || null;
       this._mountedSceneId = this.activePresetId || scene.id;
       this.setupBackdropVideo(scene);
+      if (container && container.style) {
+        container.style.isolation = 'isolate';
+      }
       const stage = this.getStageSvg();
       if (stage) {
         stage.setAttribute('viewBox', '0 0 800 480');
         this._defaultViewBox = '0 0 800 480';
+      }
+      if (typeof this.setRenderQuality === 'function') {
+        this.setRenderQuality(this._renderQuality || this._swfQuality || 'HIGH');
       }
       if (container) {
         this.ensureMasterDefs(container);
@@ -955,8 +961,9 @@
               scene._swfProgram = vm.program;
             }
             vm.mount(container, stageSvgEl);
-            if (this._swfQuality && typeof vm.setQuality === 'function') {
-              vm.setQuality(this._swfQuality);
+            const activeQ = this._renderQuality || this._swfQuality || 'HIGH';
+            if (typeof vm.setQuality === 'function') {
+              vm.setQuality(activeQ);
             }
             this._avm1Vm = vm;
             this._swfVm = vm;

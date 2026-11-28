@@ -7,6 +7,7 @@
  */
 
 export type PlayerDisplayMode = 'suite' | 'classroom' | 'student' | 'broadcast' | 'developer' | 'embedded' | 'custom';
+export type PlayerRenderQuality = 'LOW' | 'MEDIUM' | 'HIGH';
 
 import { getLocalState, setLocalState } from '../services/localStateStore';
 
@@ -42,6 +43,9 @@ export interface PlayerDisplayConfig {
   showLoopToggle?: boolean;          // 🔁 Auto-repeat loop toggle
   showVolumeControl?: boolean;       // 🔊 Master volume & mute controls
   showPhysicsControls?: boolean;     // 🪐 Micro-physics & gravity controls
+
+  // Native Vector & Filter Render Quality ('LOW' | 'MEDIUM' | 'HIGH')
+  renderQuality?: PlayerRenderQuality;
 
   // Gemini Nano Co-Pilot Beta Integration
   ai_copilot_beta?: boolean;         // ✨ Gemini Nano On-Device Co-Pilot (Bidirectional RPC Beta)

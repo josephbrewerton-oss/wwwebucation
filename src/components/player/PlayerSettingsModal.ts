@@ -9,6 +9,7 @@
 import {
   PlayerDisplayMode,
   PlayerDisplayConfig,
+  PlayerRenderQuality,
   getPresetConfig,
   savePlayerConfig,
   MODE_METADATA,
@@ -136,6 +137,67 @@ export function renderPlayerSettingsModal(props: PlayerSettingsModalProps): HTML
   });
   cardsSection.appendChild(cardsGrid);
   container.appendChild(cardsSection);
+
+  // 2b. Universal Vector & Filter Render Quality (LOW / MED / HIGH)
+  const qualitySection = document.createElement('div');
+  qualitySection.style.cssText = 'border-top: 1px solid var(--stj-border, #334155); padding-top: 10px; display: flex; flex-direction: column; gap: 6px;';
+
+  const activeQuality: PlayerRenderQuality = displayConfig.renderQuality === 'LOW'
+    ? 'LOW'
+    : (displayConfig.renderQuality === 'MEDIUM' ? 'MEDIUM' : 'HIGH');
+
+  const qualityHeader = document.createElement('div');
+  qualityHeader.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;';
+  qualityHeader.innerHTML = `
+    <span style="font-size: 0.72rem; font-weight: 800; color: var(--stj-text-muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.05em;">
+      🎨 Vector &amp; Filter Render Quality
+    </span>
+    <span style="font-size: 0.7rem; color: var(--stj-text-muted, #94a3b8);">
+      ${activeQuality === 'LOW'
+        ? 'Fastest FPS (bypasses SVG blur/glow filters for older Chromebooks/tablets)'
+        : activeQuality === 'MEDIUM'
+        ? 'Balanced vector antialiasing & full SVG filters'
+        : 'Crisp geometricPrecision vectors & full SVG filters'}
+    </span>
+  `;
+  qualitySection.appendChild(qualityHeader);
+
+  const qualityRow = document.createElement('div');
+  qualityRow.style.cssText = 'display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;';
+  const qualityChoices: Array<{ id: PlayerRenderQuality; label: string; title: string }> = [
+    { id: 'LOW', label: 'LOW · Max FPS', title: 'Fastest rendering on low-spec hardware — disables expensive SVG blur/glow filters' },
+    { id: 'MEDIUM', label: 'MED · Balanced', title: 'Auto shape rendering with full SVG filters and blend layers' },
+    { id: 'HIGH', label: 'HIGH · Crisp', title: 'Crisp geometricPrecision vector strokes and full SVG filters' },
+  ];
+  qualityChoices.forEach((choice) => {
+    const isSel = activeQuality === choice.id;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = choice.label;
+    btn.title = choice.title;
+    btn.style.cssText = `
+      padding: 6px 10px;
+      border-radius: 7px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: ${isSel ? '2px solid var(--stj-primary, #38bdf8)' : '1px solid var(--stj-border, #334155)'};
+      background: ${isSel ? 'var(--stj-primary-surface, rgba(56,189,248,0.14))' : 'var(--stj-surface, #1e293b)'};
+      color: ${isSel ? 'var(--stj-primary, #38bdf8)' : 'var(--stj-text, #f8fafc)'};
+    `;
+    btn.onclick = () => {
+      const updated: PlayerDisplayConfig = {
+        ...displayConfig,
+        renderQuality: choice.id,
+      };
+      setDisplayConfig(updated);
+      savePlayerConfig(updated);
+      postToPlayer({ type: 'SET_RENDER_QUALITY', quality: choice.id });
+    };
+    qualityRow.appendChild(btn);
+  });
+  qualitySection.appendChild(qualityRow);
+  container.appendChild(qualitySection);
 
   // 3. Granular Control Toggles
   const accordion = document.createElement('div');

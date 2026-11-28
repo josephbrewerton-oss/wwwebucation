@@ -218,6 +218,12 @@
       const initialFps = (urlParams && urlParams.get('fps')) || isFpsStorage;
       this.targetFps = initialFps && !isNaN(parseInt(initialFps, 10)) ? parseInt(initialFps, 10) : 0;
 
+      // Universal SVG Render Quality ('LOW' | 'MEDIUM' | 'HIGH') for native AST & SWF cartridges
+      const initialQualityRaw = (urlParams && urlParams.get('quality')) || (_store && _store.getItem('app_render_quality')) || this.options.renderQuality || 'HIGH';
+      const qNorm = String(initialQualityRaw).trim().toUpperCase();
+      this._renderQuality = qNorm === 'LOW' ? 'LOW' : (qNorm === 'MEDIUM' || qNorm === 'MED' ? 'MEDIUM' : 'HIGH');
+      this._swfQuality = this._renderQuality;
+
       if (_store && _store.ready && typeof _store.isReady === 'function' && !_store.isReady()) {
         _store.ready.then(() => {
           const fpsVal = (urlParams && urlParams.get('fps')) || _store.getItem('app_target_fps');
@@ -1676,6 +1682,49 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
     this.isBranching = false;
     this.play();
+  }
+
+  getRenderQuality() {
+    return this._renderQuality || 'HIGH';
+  }
+
+  /**
+   * Universal Native SVG Render Quality ('LOW' | 'MEDIUM' | 'HIGH').
+   * Controls vector anti-aliasing (shape-rendering), pure-CSS SVG <filter> bypass in LOW mode,
+   * and delegates seamlessly to active AVM1/AVM2 SWF runtimes.
+   */
+  setRenderQuality(quality) {
+    const raw = String(quality || 'HIGH').trim().toUpperCase();
+    const next = raw === 'LOW' ? 'LOW' : (raw === 'MEDIUM' || raw === 'MED' ? 'MEDIUM' : 'HIGH');
+    this._renderQuality = next;
+    this._swfQuality = next;
+
+    const stageSvg = (typeof this.getStageSvg === 'function' ? this.getStageSvg() : null) || this.stageSvg;
+    if (stageSvg && typeof stageSvg.setAttribute === 'function') {
+      const sr = next === 'LOW' ? 'optimizeSpeed' : (next === 'MEDIUM' ? 'auto' : 'geometricPrecision');
+      stageSvg.setAttribute('shape-rendering', sr);
+      stageSvg.setAttribute('data-render-quality', next.toLowerCase());
+    }
+
+    const vm = this._swfVm || this._avm1Vm;
+    if (vm && typeof vm.setQuality === 'function') {
+      vm.setQuality(next);
+    }
+
+    try {
+      const _qStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+      if (_qStore && typeof _qStore.setItem === 'function') {
+        _qStore.setItem('app_render_quality', next);
+      }
+    } catch (_) {}
+
+    if (typeof this.emit === 'function') {
+      this.emit('renderqualitychange', { quality: next });
+    }
+    if (typeof this.notifyParent === 'function') {
+      this.notifyParent({ type: 'RENDER_QUALITY_UPDATED', quality: next });
+    }
+    return next;
   }
 
   compileAutonomousSvgApplet() {
