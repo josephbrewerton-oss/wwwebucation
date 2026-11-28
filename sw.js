@@ -2,7 +2,7 @@
 // Ultra-Low-Bandwidth Offline Engine & Service Worker for St Joseph's Learning Portal
 // Designed for developing nations, metered data plans, and air-gapped schools.
 // Cache key is bound directly to the curriculum composite digest for content-addressed immutability.
-const MANIFEST_HASH = '0eec9e8e235d';
+const MANIFEST_HASH = 'fdac62a8751c';
 const CACHE_NAME = `stj-manifest-v-${MANIFEST_HASH}`;
 
 // Critical core assets to pre-cache on install for instant offline boot
@@ -156,6 +156,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('/agents.txt') ||
     url.pathname.endsWith('/robots.txt') ||
     url.pathname.endsWith('/sitemap.xml') ||
+    url.pathname.endsWith('/sitemap.ast') ||
     url.pathname.startsWith('/@') ||
     url.pathname.startsWith('/src/') ||
     url.pathname.startsWith('/node_modules/') ||

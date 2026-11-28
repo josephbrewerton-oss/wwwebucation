@@ -223,6 +223,13 @@ main {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   contain: layout style;
+  isolation: isolate;
+}
+
+/* Native Render Quality LOW mode: bypass expensive SVG <filter> passes with 0 DOM churn */
+#stage-svg[data-render-quality="low"] [filter],
+#stage-svg[data-render-quality="low"] [style*="filter"] {
+  filter: none !important;
 }
 
 /* Subtitles Banner Overlay */
@@ -2441,6 +2448,43 @@ body.obs-transparent footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.quality-segment-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.quality-segment-btn {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quality-segment-btn:hover {
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.quality-segment-btn.active {
+  background: rgba(2, 132, 199, 0.22);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+}
+
+.quality-segment-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin-top: -4px;
 }
 
 .config-toggle-row {

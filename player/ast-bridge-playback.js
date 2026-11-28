@@ -367,6 +367,17 @@
   handlers.TOGGLE_SETTINGS_DRAWER = ({ uiController }) => {
     if (uiController && typeof uiController.toggleSettingsDrawer === 'function') uiController.toggleSettingsDrawer();
   };
+  handlers.SET_DISPLAY_CONFIG = ({ engine, uiController, data }) => {
+    if (!data || !data.config || typeof data.config !== 'object') return;
+    if (uiController && typeof uiController.applyDisplayConfig === 'function') {
+      uiController.applyDisplayConfig(data.config);
+      if (typeof uiController.saveDisplayConfig === 'function') {
+        uiController.saveDisplayConfig(uiController.displayConfig || data.config);
+      }
+    } else if (data.config.renderQuality && engine && typeof engine.setRenderQuality === 'function') {
+      engine.setRenderQuality(data.config.renderQuality);
+    }
+  };
 
   // --- 3D Camera ---
   handlers.ROTATE_3D = ({ engine, data }) => {

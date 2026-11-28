@@ -56,7 +56,6 @@
     "site-gestures-input.js",
     "site-gestures.js",
     "player-gestures.ast",
-    "ast-gestures.js",
     "ast-phet-bridge.js",
     "ast-event-bus.js",
     "ast-avm1-vm.js",
@@ -111,6 +110,6 @@
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjosephs/ast-vector-player"
+    "url": "https://github.com/josephbrewerton-oss/wwwebucation"
   }
 }

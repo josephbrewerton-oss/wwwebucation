@@ -401,6 +401,17 @@
           </div>
         </div>
 
+        <div class="config-section-title">
+          <span>🎨 Render Quality (Vector &amp; Filters):</span>
+          <span id="quality-mode-badge" style="color:#38bdf8;">HIGH</span>
+        </div>
+        <div class="quality-segment-group" role="group" aria-label="SVG Render Quality">
+          <button type="button" id="cfg-quality-low" class="quality-segment-btn" data-quality="LOW" title="Fastest FPS for older tablets &amp; Chromebooks — disables SVG blur/glow filters">LOW</button>
+          <button type="button" id="cfg-quality-med" class="quality-segment-btn" data-quality="MEDIUM" title="Balanced vector antialiasing and full SVG filters">MED</button>
+          <button type="button" id="cfg-quality-high" class="quality-segment-btn active" data-quality="HIGH" title="Crisp geometricPrecision vectors and full SVG filters">HIGH</button>
+        </div>
+        <div id="cfg-quality-hint" class="quality-segment-hint">Crisp geometric vectors &amp; full SVG glow/shadow filters.</div>
+
         <div class="config-section-title">Granular Controls:</div>
         <div class="config-toggle-row">
           <span class="config-toggle-label">🎯 Interactive Checkpoints &amp; Quizzes</span>

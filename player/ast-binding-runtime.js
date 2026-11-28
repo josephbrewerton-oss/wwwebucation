@@ -17,6 +17,44 @@
   const _getAstMath = () => global.AstMath || (typeof window !== 'undefined' ? window.AstMath : undefined) || _EMPTY_AST_MATH;
   const _getAST3D = () => global.AST3DEngine || (typeof window !== 'undefined' ? window.AST3DEngine : undefined);
 
+  const _NATIVE_BLEND_CSS_MAP = Object.freeze({
+    normal: '', none: '', layer: '', '0': '', '1': '', '2': '',
+    multiply: 'multiply', '3': 'multiply',
+    screen: 'screen', '4': 'screen',
+    lighten: 'lighten', '5': 'lighten',
+    darken: 'darken', '6': 'darken',
+    difference: 'difference', '7': 'difference',
+    add: 'plus-lighter', 'plus-lighter': 'plus-lighter', '8': 'plus-lighter',
+    subtract: 'difference', '9': 'difference',
+    invert: 'exclusion', exclusion: 'exclusion', '10': 'exclusion',
+    overlay: 'overlay', '13': 'overlay',
+    hardlight: 'hard-light', 'hard-light': 'hard-light', '14': 'hard-light',
+    'soft-light': 'soft-light', softlight: 'soft-light',
+    'color-dodge': 'color-dodge', 'color-burn': 'color-burn',
+    hue: 'hue', saturation: 'saturation', color: 'color', luminosity: 'luminosity',
+  });
+
+  function _applyNativeBlendMode(node, val) {
+    if (!node) return;
+    const key = val === null || val === undefined || val === '' ? '' : String(val).trim().toLowerCase();
+    const cssVal = key && Object.prototype.hasOwnProperty.call(_NATIVE_BLEND_CSS_MAP, key)
+      ? _NATIVE_BLEND_CSS_MAP[key]
+      : '';
+    if (node._lastBlendCss === cssVal) return;
+    node._lastBlendCss = cssVal;
+    if (node.style) {
+      node.style.mixBlendMode = cssVal;
+    } else if (typeof node.setAttribute === 'function') {
+      const prevStyle = typeof node.getAttribute === 'function' ? String(node.getAttribute('style') || '') : '';
+      const stripped = prevStyle.replace(/mix-blend-mode\s*:[^;]+;?/gi, '').trim();
+      const nextStyle = cssVal
+        ? (stripped ? stripped.replace(/;?$/, ';') + 'mix-blend-mode:' + cssVal + ';' : 'mix-blend-mode:' + cssVal + ';')
+        : stripped;
+      if (nextStyle) node.setAttribute('style', nextStyle);
+      else if (typeof node.removeAttribute === 'function') node.removeAttribute('style');
+    }
+  }
+
   class ASTBindingRuntimeMethods {
   applyBindings(t, dt = 0.016, isTickStep = false) {
     // When the lazy-loaded pure-SVG AVM1 Micro-VM is driving an SWF cartridge, delegate frame stepping cleanly to it
@@ -194,6 +232,8 @@
                 renderBoundary.commitBindingValue(b.node, b.attr, val);
               } else if (b.attr === 'textContent' || b.attr === 'text') {
                 b.node.textContent = String(val);
+              } else if (b.attr === 'mix-blend-mode' || b.attr === 'blend-mode' || b.attr === 'blend') {
+                _applyNativeBlendMode(b.node, val);
               } else {
                 const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
                 b.node.setAttribute(b.attr, String(safeVal));
