@@ -424,12 +424,19 @@ function stripHtmlAndDangerousBlocksLinear(input: string): string {
  */
 function stripDangerousSchemesAndHandlers(input: string): string {
   // Decode minimal numeric/named entities only for scheme detection if present, while keeping output plain text
-  let text = input
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
-    .replace(/\b(?:j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t)\s*:/gi, '')
-    .replace(/\bdata\s*:\s*(?:text\/html|image\/svg\+xml|application\/javascript)/gi, '')
-    .replace(/\bdata\s*:/gi, '')
-    .replace(/\bon[a-z]{2,20}\s*=/gi, '');
+  let text = input.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '');
+
+  // Repeat multi-character removals until stable to avoid overlap/re-emergence bypasses.
+  let previous: string;
+  do {
+    previous = text;
+    text = text
+      .replace(/\b(?:j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t|v\s*b\s*s\s*c\s*r\s*i\s*p\s*t)\s*:/gi, '')
+      .replace(/\bdata\s*:\s*(?:text\/html|image\/svg\+xml|application\/javascript)/gi, '')
+      .replace(/\bdata\s*:/gi, '')
+      .replace(/\bon[a-z]{2,20}\s*=/gi, '');
+  } while (text !== previous);
+
   return text.trim();
 }
 
