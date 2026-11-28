@@ -426,6 +426,20 @@
   handlers.SWF_RELEASE_INPUTS = dispatchReleaseAll;
   handlers.MEDIA_RELEASE_INPUTS = dispatchReleaseAll;
 
+  handlers.SET_SWF_QUALITY = ({ engine, data }) => {
+    if (!engine) return;
+    const raw = String((data && data.quality) || 'HIGH').trim().toUpperCase();
+    const next = raw === 'LOW' ? 'LOW' : (raw === 'MEDIUM' || raw === 'MED' ? 'MEDIUM' : 'HIGH');
+    engine._swfQuality = next;
+    const vm = engine._swfVm || engine._avm1Vm;
+    if (vm && typeof vm.setQuality === 'function') {
+      vm.setQuality(next);
+    } else if (engine.stageSvg && typeof engine.stageSvg.setAttribute === 'function') {
+      const sr = next === 'LOW' ? 'optimizeSpeed' : (next === 'MEDIUM' ? 'auto' : 'geometricPrecision');
+      engine.stageSvg.setAttribute('shape-rendering', sr);
+    }
+  };
+
   handlers.DOWNLOAD_OFFLINE_ZIP = ({ engine }) => {
     if (typeof engine.downloadOfflineZipSuite === 'function') {
       engine.downloadOfflineZipSuite();

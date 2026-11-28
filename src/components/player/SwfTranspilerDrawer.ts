@@ -1020,7 +1020,60 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     });
     syncModeUi();
 
-    modeSection.appendChild(segBar);
+    const modeAndQualityRow = document.createElement('div');
+    modeAndQualityRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;';
+    modeAndQualityRow.appendChild(segBar);
+
+    // Classic Flash Quality toggle (LOW = optimizeSpeed + skip SVG filters; MED = auto; HIGH = crisp vectors + filters)
+    const qualityWrap = document.createElement('div');
+    qualityWrap.style.cssText = 'display:inline-flex; align-items:center; gap:6px;';
+    const qualityLbl = document.createElement('span');
+    qualityLbl.style.cssText = 'font-size:0.71rem; font-weight:600; color:#94a3b8; letter-spacing:0.02em;';
+    qualityLbl.textContent = 'Quality:';
+    const qualityBar = document.createElement('div');
+    qualityBar.setAttribute('role', 'group');
+    qualityBar.setAttribute('aria-label', 'Flash vector rendering quality');
+    qualityBar.style.cssText =
+      'display:inline-flex; gap:2px; padding:3px; background:#0f172a; border:1px solid #334155; border-radius:7px;';
+
+    type SwfQualityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+    let activeQuality: SwfQualityLevel = 'HIGH';
+    const qualityItems: Array<{ id: SwfQualityLevel; label: string; title: string }> = [
+      { id: 'LOW', label: 'LOW', title: 'Fastest FPS: optimizeSpeed rendering & bypass SVG blur/glow filters' },
+      { id: 'MEDIUM', label: 'MED', title: 'Balanced vector anti-aliasing & SVG filters' },
+      { id: 'HIGH', label: 'HIGH', title: 'Crisp geometricPrecision vectors & full Flash filters' },
+    ];
+    const qualityButtons: HTMLButtonElement[] = [];
+    const syncQualityUi = () => {
+      qualityButtons.forEach((btn, idx) => {
+        const isSel = qualityItems[idx].id === activeQuality;
+        btn.setAttribute('aria-pressed', String(isSel));
+        btn.style.background = isSel ? '#0284c7' : 'transparent';
+        btn.style.color = isSel ? '#ffffff' : '#94a3b8';
+        btn.style.fontWeight = isSel ? '700' : '600';
+      });
+    };
+    qualityItems.forEach((qi) => {
+      const qb = document.createElement('button');
+      qb.type = 'button';
+      qb.title = qi.title;
+      qb.style.cssText =
+        'padding:3px 7px; border-radius:5px; border:none; font-size:0.69rem; cursor:pointer; white-space:nowrap;';
+      qb.textContent = qi.label;
+      qb.onclick = () => {
+        activeQuality = qi.id;
+        syncQualityUi();
+        postToPlayer({ type: 'SET_SWF_QUALITY', quality: qi.id });
+      };
+      qualityButtons.push(qb);
+      qualityBar.appendChild(qb);
+    });
+    syncQualityUi();
+    qualityWrap.appendChild(qualityLbl);
+    qualityWrap.appendChild(qualityBar);
+    modeAndQualityRow.appendChild(qualityWrap);
+
+    modeSection.appendChild(modeAndQualityRow);
     modeSection.appendChild(modeDescEl);
     resBox.appendChild(modeSection);
 

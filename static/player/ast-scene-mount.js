@@ -955,6 +955,9 @@
               scene._swfProgram = vm.program;
             }
             vm.mount(container, stageSvgEl);
+            if (this._swfQuality && typeof vm.setQuality === 'function') {
+              vm.setQuality(this._swfQuality);
+            }
             this._avm1Vm = vm;
             this._swfVm = vm;
             this.emit('avm1mounted', {

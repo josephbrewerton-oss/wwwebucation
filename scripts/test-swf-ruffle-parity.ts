@@ -1969,6 +1969,292 @@ async function testSwfRuntimeFailureWatchdog() {
   console.log('✓ Test 9 passed: Always-On AVM1 & AVM2 Runtime Failure Watchdog & Honest "Cannot Play" Verdict');
 }
 
+// ============================================================================
+// TEST 10: Zero-Dependency Flash Polish & Speed Upgrades
+//   - Binary PlaceObject3 blendMode (add/multiply) + visible=0 -> CSS mix-blend-mode + isolation:isolate
+//   - Mouse.hide() / Mouse.show() custom vector cursor support + destroy() cursor restore (AVM1 & AVM2)
+//   - Live Web Audio StereoPannerNode updates via FlashSound.setPan() (AVM1)
+//   - Classic Flash Quality switch (LOW / MEDIUM / HIGH) -> shape-rendering + SVG filter bypass (AVM1 & AVM2)
+//   - Pre-resolved AVM1 jump/branch cache parity across multi-iteration loops
+// ============================================================================
+
+async function testFlashPolishAndSpeedUpgrades() {
+  // 1) Build a binary SWF 8 with PlaceObject3 (Tag 70):
+  //    - Depth 1: visible shape with blendMode=8 (ADD) + BlurFilter (type 1)
+  //    - Depth 2: hidden shape (hasVisible=1, visible=0) with blendMode=3 (MULTIPLY)
+  const makeDefineShapeRect = (charId: number): number[] => {
+    const bw = new BitWriter();
+    // Bounds rect (0..1000, 0..1000 twips = 50x50 px)
+    bw.writeBits(12, 5);
+    bw.writeSBits(0, 12);
+    bw.writeSBits(1000, 12);
+    bw.writeSBits(0, 12);
+    bw.writeSBits(1000, 12);
+    bw.align();
+    // 1 solid fill (#ffaa00), 0 line styles
+    bw.writeBits(1, 8); // fillCount
+    bw.writeBits(0, 8); // solid fill
+    bw.writeBits(0xff, 8); bw.writeBits(0xaa, 8); bw.writeBits(0x00, 8);
+    bw.writeBits(0, 8); // lineCount
+    bw.writeBits(1, 4); // numFillBits
+    bw.writeBits(0, 4); // numLineBits
+    // StyleChangeRecord: moveTo(0,0), fillStyle1=1
+    bw.writeBits(0, 1); // non-edge
+    bw.writeBits(0, 1); // newStyles
+    bw.writeBits(0, 1); // lineStyle
+    bw.writeBits(1, 1); // fillStyle1
+    bw.writeBits(0, 1); // fillStyle0
+    bw.writeBits(1, 1); // moveTo
+    bw.writeBits(1, 5); // moveBits
+    bw.writeSBits(0, 1); bw.writeSBits(0, 1);
+    bw.writeBits(1, 1); // fill1 = 1
+    // 4 straight edges forming a 50x50 square
+    const hEdge = (dx: number) => {
+      bw.writeBits(1, 1); bw.writeBits(1, 1); bw.writeBits(10, 4); // 12 bits
+      bw.writeBits(0, 1); bw.writeBits(0, 1); bw.writeSBits(dx, 12);
+    };
+    const vEdge = (dy: number) => {
+      bw.writeBits(1, 1); bw.writeBits(1, 1); bw.writeBits(10, 4); // 12 bits
+      bw.writeBits(0, 1); bw.writeBits(1, 1); bw.writeSBits(dy, 12);
+    };
+    hEdge(1000); vEdge(1000); hEdge(-1000); vEdge(-1000);
+    // EndShapeRecord
+    bw.writeBits(0, 6);
+    bw.align();
+    return [...u16le(charId), ...Array.from(bw.toUint8Array())];
+  };
+
+  // PlaceObject3 (Tag 70): flags1=0x02 (hasChar), flags2=0x01|0x02 (hasFilterList|hasBlendMode)
+  const blurFilterPayload = [
+    1, // 1 filter
+    1, // filterId = 1 (BlurFilter)
+    0x00, 0x00, 0x08, 0x00, // blurX = 8.0 (FIXED 16.16)
+    0x00, 0x00, 0x08, 0x00, // blurY = 8.0
+    0x08, // passes=1
+  ];
+  const placeGlowAdd = [
+    0x02, // flags1: hasChar
+    0x01 | 0x02, // flags2: hasFilterList | hasBlendMode
+    ...u16le(1), // depth 1
+    ...u16le(1), // charId 1
+    ...blurFilterPayload,
+    8, // blendMode = 8 (ADD -> plus-lighter)
+  ];
+  const placeHiddenMul = [
+    0x02, // flags1: hasChar
+    0x02 | 0x20, // flags2: hasBlendMode | hasVisible
+    ...u16le(2), // depth 2
+    ...u16le(1), // charId 1
+    3, // blendMode = 3 (MULTIPLY)
+    0, // visible = 0 (hidden)
+  ];
+
+  // ActionScript loop summing 1..5 via ActionJump + ActionIf + ActionToggleQuality (0x08)
+  // Loop: sum=0; i=5; while (i>0) { sum = sum + i; i = i - 1; }
+  const loopBody = [
+    // sum = sum + i
+    ...actionPush([{ t: 'str', v: 'sum' }, { t: 'str', v: 'sum' }]), 0x1c,
+    ...actionPush([{ t: 'str', v: 'i' }]), 0x1c,
+    0x0a, // ActionAdd
+    0x1d, // ActionSetVariable
+    // i = i - 1
+    ...actionPush([{ t: 'str', v: 'i' }, { t: 'str', v: 'i' }]), 0x1c,
+    ...actionPush([{ t: 'int', v: 1 }]),
+    0x0b, // ActionSubtract
+    0x1d, // ActionSetVariable
+  ];
+  // Cond: if (i > 0) jump back to loopBody
+  const condCheck = [
+    ...actionPush([{ t: 'int', v: 0 }, { t: 'str', v: 'i' }]), 0x1c,
+    0x0f, // ActionLess: 0 < i
+  ];
+  // Jump offset from end of ActionIf (5 bytes) back to start of loopBody
+  const backOffset = -(loopBody.length + condCheck.length + 5);
+  const backU16 = backOffset & 0xffff;
+  const loopAndQualityBytecode = [
+    ...actionPush([{ t: 'str', v: 'sum' }, { t: 'int', v: 0 }]), 0x1d,
+    ...actionPush([{ t: 'str', v: 'i' }, { t: 'int', v: 5 }]), 0x1d,
+    ...loopBody,
+    ...condCheck,
+    0x9d, 0x02, 0x00, backU16 & 0xff, (backU16 >> 8) & 0xff, // ActionIf back to loopBody
+    0x08, // ActionToggleQuality -> toggles HIGH to LOW
+    0x07, // ActionStop
+    0x00,
+  ];
+
+  const swfBytes = buildSwf([
+    makeTag(2, makeDefineShapeRect(1)), // DefineShape char 1
+    makeTag(70, placeGlowAdd), // PlaceObject3 depth 1 (add + blur)
+    makeTag(70, placeHiddenMul), // PlaceObject3 depth 2 (multiply + hidden)
+    makeTag(12, loopAndQualityBytecode), // DoAction
+    makeTag(1, []), // ShowFrame
+  ], { version: 8 });
+
+  const parsed = await transpileSwfToAst(swfBytes, 'flash-polish-test.swf');
+  assert.ok(parsed.svgMarkup.includes('mix-blend-mode:plus-lighter'), 'Static SVG fallback must emit mix-blend-mode:plus-lighter for PlaceObject3 ADD');
+
+  // Extract embedded VM program JSON from AST
+  const vmMatch = parsed.astSource.match(/:swf-vm\s+"([^"]+)"/);
+  assert.ok(vmMatch && vmMatch[1], 'Transpiled SWF must emit :swf-vm bytecode payload');
+  const vmProg = JSON.parse(Buffer.from(vmMatch[1], 'base64').toString('utf8'));
+  const fr1 = vmProg.fr[0];
+  const entry1 = fr1.find((e: any) => e.d === 1);
+  const entry2 = fr1.find((e: any) => e.d === 2);
+  assert.equal(entry1.bm, 8, 'VM program must serialize PlaceObject3 blendMode=8 (add)');
+  assert.equal(entry2.bm, 3, 'VM program must serialize PlaceObject3 blendMode=3 (multiply)');
+  assert.equal(entry2.vis, 0, 'VM program must serialize PlaceObject3 visible=0');
+
+  // 2) Mount in AVM1 runtime & verify PlaceObject3, Quality switch, Loop jump cache, Mouse.hide/show, Live StereoPanner
+  const audioPanners: any[] = [];
+  const audioGains: any[] = [];
+  class MockAudioCtx {
+    state = 'running';
+    destination = {};
+    resume() { return Promise.resolve(); }
+    createBuffer(ch: number, len: number, rate: number) {
+      return { duration: len / rate, copyToChannel() {} };
+    }
+    createBufferSource() {
+      return { buffer: null, loop: false, connect() {}, start() {}, stop() {}, onended: null };
+    }
+    createGain() {
+      const g = { gain: { value: 1 }, connect() {} };
+      audioGains.push(g);
+      return g;
+    }
+    createStereoPanner() {
+      const p = { pan: { value: 0 }, connect() {} };
+      audioPanners.push(p);
+      return p;
+    }
+  }
+
+  const { ASTAVM1Runtime, mockDoc } = createAvm1Sandbox();
+  // Attach a tiny 16-bit PCM sound definition so we can test live setPan()
+  const pcmBytes = new Uint8Array(64);
+  vmProg.sn = { 7: { fmt: 3, rate: 22050, s16: 1, st: 0, sc: 32, b64: Buffer.from(pcmBytes).toString('base64') } };
+  vmProg.exp = { laser: 7 };
+
+  const stageA1 = new MockSvgNode('svg');
+  const rtA1 = new ASTAVM1Runtime(Buffer.from(JSON.stringify(vmProg)).toString('base64'), {
+    engine: { vars: {}, audioSynth: { ctx: new MockAudioCtx() } },
+  });
+  rtA1.mount(stageA1, stageA1);
+
+  // Verify pre-resolved loop sum (5+4+3+2+1 = 15) + ActionToggleQuality switched HIGH -> LOW
+  assert.equal(rtA1.rootClip._vars.sum, 15, 'Pre-resolved ActionIf/ActionJump loop must compute sum=15');
+  assert.equal(rtA1._quality, 'LOW', 'ActionToggleQuality (0x08) must toggle quality from HIGH to LOW');
+  assert.equal(stageA1.getAttribute('shape-rendering'), 'optimizeSpeed', 'LOW quality must set shape-rendering=optimizeSpeed');
+
+  // Re-run the same bytecode block to exercise cached ins._jumpPc path
+  rtA1.rootClip._vars.sum = 0;
+  rtA1._beginEventBudget();
+  rtA1.execBytecode(rtA1._resolveB64(vmProg.ac[0]), rtA1.rootClip);
+  assert.equal(rtA1.rootClip._vars.sum, 15, 'Cached jump target loop must produce identical sum=15 on second run');
+  assert.equal(rtA1._quality, 'HIGH', 'Second ActionToggleQuality must toggle quality back to HIGH');
+  assert.equal(stageA1.getAttribute('shape-rendering'), 'geometricPrecision', 'HIGH quality must set shape-rendering=geometricPrecision');
+
+  // Verify isolation:isolate on stage clip root, blendMode on depth 1, hidden visibility on depth 2, filter bypass in LOW
+  const clipRoot = rtA1.rootClip.svgEl.parentNode;
+  assert.ok(clipRoot && clipRoot.getAttribute('id') === 'avm1-stage-clip-root' && clipRoot.style.isolation === 'isolate', 'AVM1 stage clip root must set isolation:isolate');
+  const slot1 = rtA1.rootClip._childrenByDepth.get(1);
+  const slot2 = rtA1.rootClip._childrenByDepth.get(2);
+  const el1 = (slot1 && slot1.svgEl) || (rtA1._staticLayerEl && rtA1._staticLayerEl.children && rtA1._staticLayerEl.children[0]) || (rtA1._staticLayerEl && rtA1._staticLayerEl.childNodes && rtA1._staticLayerEl.childNodes[0]);
+  const el2 = (slot2 && slot2.svgEl) || (rtA1._staticLayerEl && rtA1._staticLayerEl.children && rtA1._staticLayerEl.children[1]) || (rtA1._staticLayerEl && rtA1._staticLayerEl.childNodes && rtA1._staticLayerEl.childNodes[1]);
+  assert.ok(el1 && el1.style.mixBlendMode === 'plus-lighter', 'AVM1 PlaceObject3 ADD must set mix-blend-mode: plus-lighter');
+  assert.ok(el1.getAttribute('filter')?.startsWith('url(#'), 'HIGH quality must apply BlurFilter SVG filter');
+  assert.ok(el2 && el2.getAttribute('display') === 'none', 'AVM1 PlaceObject3 visible=0 must hide placed object');
+  assert.equal(el2.style.mixBlendMode, 'multiply', 'AVM1 PlaceObject3 MULTIPLY must set mix-blend-mode: multiply');
+
+  // Toggle Quality LOW -> filter must be bypassed; back to MEDIUM -> filter restored & shape-rendering=auto
+  rtA1.setQuality('LOW');
+  assert.equal(el1.getAttribute('filter'), null, 'LOW quality must bypass SVG blur/glow filters');
+  rtA1.setQuality('MEDIUM');
+  assert.equal(stageA1.getAttribute('shape-rendering'), 'auto', 'MEDIUM quality must set shape-rendering=auto');
+  assert.ok(el1.getAttribute('filter')?.startsWith('url(#'), 'MEDIUM quality must restore SVG blur/glow filters');
+
+  // Verify Mouse.hide() / Mouse.show() and destroy() restore
+  rtA1._global.Mouse.hide();
+  assert.equal(stageA1.style.cursor, 'none', 'AVM1 Mouse.hide() must set stage cursor:none');
+  rtA1._global.Mouse.show();
+  assert.equal(stageA1.style.cursor, '', 'AVM1 Mouse.show() must restore stage cursor');
+  rtA1._global.Mouse.hide();
+  assert.equal(stageA1.style.cursor, 'none');
+
+  // Verify live FlashSound stereo panning via StereoPannerNode
+  const snd = new rtA1._global.Sound();
+  snd.attachSound('laser');
+  snd.start(0, 1);
+  assert.equal(audioPanners.length, 1, 'AVM1 Web Audio playback must attach StereoPannerNode when available');
+  assert.equal(audioPanners[0].pan.value, 0, 'Initial pan must be 0');
+  snd.setPan(-75);
+  assert.ok(Math.abs(audioPanners[0].pan.value - (-0.75)) < 1e-6, 'Live FlashSound.setPan(-75) must update active StereoPannerNode to -0.75');
+  snd.setVolume(50);
+  assert.ok(Math.abs(audioGains[0].gain.value - (0.5 * 0.85)) < 1e-6, 'Live FlashSound.setVolume(50) must update active GainNode');
+
+  rtA1.destroy();
+  assert.equal(stageA1.style.cursor, '', 'AVM1 destroy() must restore stage cursor from Mouse.hide()');
+
+  // 3) Verify AVM2 parity: PlaceObject3 blendMode/visible, flash.ui.Mouse.hide/show, stage.quality LOW/HIGH filter bypass
+  const avm2Code = fs.readFileSync(path.resolve('static/player/ast-avm2-vm.js'), 'utf8');
+  const avm2Sandbox: any = {
+    console, Math, Date, Number, String, Boolean, Array, Object, Map, Set, RegExp, JSON,
+    Uint8Array, Float32Array, Float64Array, Int16Array, DataView, ArrayBuffer, TextDecoder, parseInt, parseFloat, isNaN, isFinite,
+    atob: (s: string) => Buffer.from(s, 'base64').toString('binary'),
+    btoa: (s: string) => Buffer.from(s, 'binary').toString('base64'),
+    performance: { now: () => Date.now() },
+    document: mockDoc,
+  };
+  avm2Sandbox.globalThis = avm2Sandbox;
+  avm2Sandbox.window = avm2Sandbox;
+  vm.runInNewContext(avm2Code, avm2Sandbox);
+
+  const avm2Prog = {
+    v: 2, swfVer: 10, fps: 30, w: 400, h: 300, bg: '#0f172a', fc: 1,
+    dc: '', l: [],
+    sh: vmProg.sh,
+    et: {}, bt: {}, sp: {}, sc: {}, abc: [],
+    fr: [[
+      { d: 1, c: 1, bm: 8, fl: [{ t: 'bl', bx: 8, by: 8 }] },
+      { d: 2, c: 1, bm: 3, vis: 0 },
+    ]],
+  };
+  const stageA2 = new MockSvgNode('svg');
+  const rtA2 = new avm2Sandbox.ASTAVM2Runtime(Buffer.from(JSON.stringify(avm2Prog)).toString('base64'), { engine: { vars: {} } });
+  rtA2.mount(stageA2, stageA2);
+
+  assert.equal(rtA2._rootGroup.style.isolation, 'isolate', 'AVM2 #avm2-root must set isolation:isolate');
+  const a2Children = rtA2.rootDoc._children;
+  assert.equal(a2Children.length, 2, 'AVM2 must mount both PlaceObject3 children');
+  assert.equal(a2Children[0].blendMode, 'add', 'AVM2 PlaceObject3 bm=8 must set blendMode="add"');
+  assert.equal(a2Children[0]._svgEl.style.mixBlendMode, 'plus-lighter', 'AVM2 ADD blendMode must set mix-blend-mode: plus-lighter');
+  assert.ok(a2Children[0]._svgEl.getAttribute('filter')?.startsWith('url(#'), 'AVM2 HIGH quality must apply BlurFilter');
+  assert.equal(a2Children[1].visible, false, 'AVM2 PlaceObject3 vis=0 must set visible=false');
+  assert.equal(a2Children[1]._svgEl.getAttribute('display'), 'none', 'AVM2 PlaceObject3 vis=0 must set display="none"');
+  assert.equal(a2Children[1]._svgEl.style.mixBlendMode, 'multiply', 'AVM2 PlaceObject3 bm=3 must set mix-blend-mode: multiply');
+
+  // Quality toggle via stage.quality
+  rtA2.stage.quality = 'LOW';
+  assert.equal(stageA2.getAttribute('shape-rendering'), 'optimizeSpeed', 'AVM2 stage.quality="LOW" must set optimizeSpeed');
+  assert.equal(a2Children[0]._svgEl.getAttribute('filter'), null, 'AVM2 LOW quality must bypass SVG filters');
+  rtA2.stage.quality = 'HIGH';
+  assert.equal(stageA2.getAttribute('shape-rendering'), 'geometricPrecision', 'AVM2 stage.quality="HIGH" must set geometricPrecision');
+  assert.ok(a2Children[0]._svgEl.getAttribute('filter')?.startsWith('url(#'), 'AVM2 HIGH quality must restore SVG filters');
+
+  // flash.ui.Mouse.hide() / show() + destroy() restore
+  const mouseCls = rtA2._classes.get('flash.ui.Mouse');
+  assert.ok(mouseCls && mouseCls.staticObj, 'AVM2 must register flash.ui.Mouse');
+  mouseCls.staticObj.hide();
+  assert.equal(stageA2.style.cursor, 'none', 'AVM2 Mouse.hide() must set stage cursor:none');
+  mouseCls.staticObj.show();
+  assert.equal(stageA2.style.cursor, '', 'AVM2 Mouse.show() must restore stage cursor');
+  mouseCls.staticObj.hide();
+  rtA2.destroy();
+  assert.equal(stageA2.style.cursor, '', 'AVM2 destroy() must restore stage cursor from Mouse.hide()');
+
+  console.log('✓ Test 10 passed: PlaceObject3 Blend Modes & Visibility, Custom Vector Cursors, Live Stereo Panning, Quality Toggle & Pre-Resolved AVM1 Jumps');
+}
+
 (async () => {
   await testSwfSoundEngine();
   await testPureSvgVisualFx();
@@ -1979,6 +2265,7 @@ async function testSwfRuntimeFailureWatchdog() {
   await testAvm1AndAvm2LifecycleCompliance();
   await testAvm1PreloaderSelfCompletion();
   await testSwfRuntimeFailureWatchdog();
+  await testFlashPolishAndSpeedUpgrades();
   console.log('ALL RUFFLE-PARITY SWF ENGINE TESTS PASSED!');
   process.exit(0);
 })();

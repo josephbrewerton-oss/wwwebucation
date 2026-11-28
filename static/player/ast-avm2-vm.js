@@ -1385,6 +1385,7 @@
       this._rotation = 0;
       this._alpha = 1;
       this._visible = true;
+      this._blendMode = 'normal';
       this._filters = [];
       this._colorTransform = new AS3ColorTransform();
       this._matrix = new AS3Matrix();
@@ -1392,6 +1393,7 @@
       this._svgEl = null;
       this._transformDirty = true;
       this._fxDirty = false;
+      this._blendDirty = false;
       this._mask = null;
       this._maskTarget = null;
       this._maskClipPathId = null;
@@ -1445,6 +1447,20 @@
     set alpha(v) { this._alpha = clampNum(v, 0, 1); this._transformDirty = true; }
     get visible() { return this._visible; }
     set visible(v) { this._visible = Boolean(v); this._transformDirty = true; }
+    get blendMode() { return this._blendMode; }
+    set blendMode(v) {
+      const next = this._vm && typeof this._vm._normalizeBlendModeName === 'function'
+        ? this._vm._normalizeBlendModeName(v)
+        : String(v || 'normal').trim().toLowerCase() || 'normal';
+      if (this._blendMode !== next) {
+        this._blendMode = next;
+        this._blendDirty = true;
+        if (this._svgEl && this._vm && typeof this._vm._applyBlendMode === 'function') {
+          this._vm._applyBlendMode(this._svgEl, next);
+          this._blendDirty = false;
+        }
+      }
+    }
     get filters() { return this._filters; }
     set filters(arr) {
       this._filters = Array.isArray(arr) ? arr.slice() : [];
@@ -1649,8 +1665,22 @@
         }
 
         if (this.name) el.setAttribute('data-as3-name', this.name);
-        if (this.buttonMode) el.setAttribute('cursor', 'pointer');
+        const hideCursor = Boolean(this._vm && this._vm._mouseHidden);
+        if (hideCursor) {
+          if (el.style) el.style.cursor = 'none';
+          el.setAttribute('cursor', 'none');
+        } else if (this.buttonMode) {
+          if (el.style) el.style.cursor = 'pointer';
+          el.setAttribute('cursor', 'pointer');
+        } else {
+          if (el.style && el.style.cursor) el.style.cursor = '';
+          el.removeAttribute('cursor');
+        }
         this._transformDirty = false;
+      }
+      if (this._blendDirty && this._vm && typeof this._vm._applyBlendMode === 'function') {
+        this._vm._applyBlendMode(el, this._blendMode);
+        this._blendDirty = false;
       }
       if (this._fxDirty) this._syncSvgFx();
       if (this._maskTarget && (wasDirty || (this.graphics && this.graphics._dirty))) {
@@ -2142,9 +2172,10 @@
       this.frameRate = fps || 24;
       this.scaleMode = 'showAll';
       this.align = '';
-      this.quality = 'HIGH';
       this._focus = null;
     }
+    get quality() { return this._vm ? this._vm._quality : 'HIGH'; }
+    set quality(v) { if (this._vm) this._vm.setQuality(v); }
     get focus() { return this._focus; }
     set focus(target) {
       if (this._focus && this._focus._focused) {
@@ -2638,6 +2669,8 @@
       this._rootGroup = null;
       this._gestureUnregister = null;
       this._standaloneCleanup = null;
+      this._quality = 'HIGH';
+      this._mouseHidden = false;
 
       this._soundEngine = new AVM2SoundEngine(this.program.sn || {});
       this.traits = (this.engine && this.engine.traits) || createTraitRegistry();
@@ -2761,12 +2794,36 @@
         stopAll: () => self._soundEngine.stopAll(),
       });
 
+      // flash.display constants
+      this._registerBuiltin('flash.display.BlendMode', function () { return {}; }, {
+        NORMAL: 'normal', LAYER: 'layer', MULTIPLY: 'multiply', SCREEN: 'screen',
+        LIGHTEN: 'lighten', DARKEN: 'darken', DIFFERENCE: 'difference', ADD: 'add',
+        SUBTRACT: 'subtract', INVERT: 'invert', ALPHA: 'alpha', ERASE: 'erase',
+        OVERLAY: 'overlay', HARDLIGHT: 'hardlight',
+      });
+      this._registerBuiltin('flash.display.StageQuality', function () { return {}; }, {
+        LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH', BEST: 'HIGH',
+      });
+
       // flash.utils & flash.ui
       this._registerBuiltin('flash.utils.Timer', function (d, r) { return new AS3Timer(self, d, r); }, {}, 'flash.events.EventDispatcher');
       this._registerBuiltin('flash.utils.Dictionary', function () { return new Map(); }, {});
       this._registerBuiltin('flash.utils.Endian', function () { return {}; }, AS3Endian);
       this._registerBuiltin('flash.utils.ByteArray', function () { return new AS3ByteArray(); }, {});
       this._registerBuiltin('flash.ui.Keyboard', function () { return {}; }, AS3Keyboard);
+      this._registerBuiltin('flash.ui.Mouse', function () { return {}; }, {
+        hide: () => {
+          self._mouseHidden = true;
+          if (self._stageSvg && self._stageSvg.style) self._stageSvg.style.cursor = 'none';
+          self._syncAllCursors();
+        },
+        show: () => {
+          self._mouseHidden = false;
+          if (self._stageSvg && self._stageSvg.style) self._stageSvg.style.cursor = '';
+          self._syncAllCursors();
+        },
+        cursor: 'auto',
+      });
 
       // __AS3__.vec.Vector
       this._registerBuiltin('__AS3__.vec.Vector', function (len, fixed) { return new AS3Vector(len, fixed, '*'); }, {});
@@ -3888,8 +3945,97 @@
       }
     }
 
+    _normalizeBlendModeName(bm) {
+      if (typeof bm === 'number') {
+        switch (bm) {
+          case 2: return 'layer';
+          case 3: return 'multiply';
+          case 4: return 'screen';
+          case 5: return 'lighten';
+          case 6: return 'darken';
+          case 7: return 'difference';
+          case 8: return 'add';
+          case 9: return 'subtract';
+          case 10: return 'invert';
+          case 11: return 'alpha';
+          case 12: return 'erase';
+          case 13: return 'overlay';
+          case 14: return 'hardlight';
+          default: return 'normal';
+        }
+      }
+      return String(bm || 'normal').trim().toLowerCase() || 'normal';
+    }
+
+    _applyBlendMode(el, bm) {
+      if (!el) return;
+      const name = this._normalizeBlendModeName(bm);
+      let css = '';
+      switch (name) {
+        case 'multiply': css = 'multiply'; break;
+        case 'screen': css = 'screen'; break;
+        case 'lighten': css = 'lighten'; break;
+        case 'darken': css = 'darken'; break;
+        case 'difference': css = 'difference'; break;
+        case 'add': css = 'plus-lighter'; break;
+        case 'subtract': css = 'difference'; break;
+        case 'invert': css = 'exclusion'; break;
+        case 'overlay': css = 'overlay'; break;
+        case 'hardlight': css = 'hard-light'; break;
+        default: css = ''; break;
+      }
+      if (el._lastBlendCss === css) return;
+      el._lastBlendCss = css;
+      if (el.style) {
+        el.style.mixBlendMode = css;
+      } else if (typeof el.setAttribute === 'function') {
+        if (css) el.setAttribute('style', `mix-blend-mode:${css}`);
+        else if (typeof el.removeAttribute === 'function') el.removeAttribute('style');
+      }
+    }
+
+    _syncAllCursors() {
+      const walk = (node) => {
+        if (!node) return;
+        node._transformDirty = true;
+        if (node._children) {
+          for (let i = 0; i < node._children.length; i++) walk(node._children[i]);
+        }
+      };
+      if (this.stage) {
+        walk(this.stage);
+        if (this._doc) this.stage._syncSvg(this._doc);
+      }
+    }
+
+    setQuality(quality) {
+      const raw = String(quality || 'HIGH').trim().toUpperCase();
+      const next = raw === 'LOW' ? 'LOW' : (raw === 'MEDIUM' || raw === 'MED' ? 'MEDIUM' : 'HIGH');
+      const changed = this._quality !== next;
+      this._quality = next;
+      if (this._stageSvg && typeof this._stageSvg.setAttribute === 'function') {
+        const sr = next === 'LOW' ? 'optimizeSpeed' : (next === 'MEDIUM' ? 'auto' : 'geometricPrecision');
+        this._stageSvg.setAttribute('shape-rendering', sr);
+      }
+      if (changed && this.stage) {
+        const walk = (node) => {
+          if (!node) return;
+          if (node._filters && node._filters.length > 0) {
+            node._fxDirty = true;
+            node._syncSvgFx();
+          }
+          if (node._children) {
+            for (let i = 0; i < node._children.length; i++) walk(node._children[i]);
+          }
+        };
+        walk(this.stage);
+      }
+      return this._quality;
+    }
+
     _resolveFilterUrl(filters, colorTransform) {
-      const hasFilters = Array.isArray(filters) && filters.length > 0;
+      // Classic Flash LOW quality mode bypasses expensive SVG filter passes while preserving ColorTransform tints
+      const hasFilters = this._quality !== 'LOW' && Array.isArray(filters) && filters.length > 0;
       const cx = colorTransform;
       const hasCx = Boolean(
         cx &&
@@ -4206,6 +4352,8 @@
           child._transformDirty = true;
         }
         if (item.a !== undefined) child.alpha = item.a;
+        if (item.bm && item.bm > 1) child.blendMode = item.bm;
+        if (item.vis === 0) child.visible = false;
         if (Array.isArray(item.fl) && item.fl.length > 0) child.filters = item.fl;
         if (Array.isArray(item.cx) && item.cx.length >= 8) {
           child.transform.colorTransform = new AS3ColorTransform(
@@ -4256,12 +4404,15 @@
 
         this._rootGroup = doc.createElementNS(SVG_NS, 'g');
         this._rootGroup.setAttribute('id', 'avm2-root');
+        if (this._rootGroup.style) this._rootGroup.style.isolation = 'isolate';
+        else if (typeof this._rootGroup.setAttribute === 'function') this._rootGroup.setAttribute('style', 'isolation:isolate');
         this._container.appendChild(this._rootGroup);
       }
 
       this._budgetRemaining = MAX_OPS_PER_TICK;
       this.stage = new AS3Stage(this, this.width, this.height, this.fps);
       if (this._rootGroup) this.stage._svgEl = this._rootGroup;
+      this.setQuality(this._quality);
 
       // Parse & execute DoABC scripts
       this._loadAbcBlocks();
@@ -4775,6 +4926,8 @@
     }
 
     reset() {
+      this._mouseHidden = false;
+      if (this._stageSvg && this._stageSvg.style) this._stageSvg.style.cursor = '';
       this._soundEngine.stopAll();
       this._timers.forEach((t) => t.stop());
       this._timers.clear();
@@ -4804,6 +4957,11 @@
 
     destroy() {
       this._mounted = false;
+      this._mouseHidden = false;
+      if (this._stageSvg && this._stageSvg.style) this._stageSvg.style.cursor = '';
+      if (this._stageSvg && typeof this._stageSvg.removeAttribute === 'function') {
+        this._stageSvg.removeAttribute('shape-rendering');
+      }
       this._soundEngine.stopAll();
       this._timers.forEach((t) => t.stop());
       this._timers.clear();

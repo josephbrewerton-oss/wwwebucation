@@ -1628,11 +1628,14 @@
       this._rotation = 0;
       this._alpha = 100;
       this._visible = true;
+      this._blendMode = 'normal';
       this.enabled = true;
       this.useHandCursor = true;
       this._rawMatrix = null;
       this._scriptModifiedTransform = false;
       this._scriptModifiedAlpha = false;
+      this._scriptModifiedVisible = false;
+      this._scriptModifiedBlendMode = false;
       this._lastTransform = '';
       this._lastOpacity = '';
       this._lastVis = '';
@@ -1707,19 +1710,20 @@
 
     _syncPointerEvents() {
       const isHiddenMask = Boolean(this._maskTargetClip);
+      const hideCursor = Boolean(this._vm && this._vm._mouseHidden);
       if (!this._visible || isHiddenMask) {
         this.svgEl.setAttribute('pointer-events', 'none');
-        this.svgEl.style.cursor = '';
+        if (this.svgEl.style) this.svgEl.style.cursor = hideCursor ? 'none' : '';
       } else if (this._pointerBound && this.enabled) {
         this.svgEl.setAttribute('pointer-events', 'all');
-        this.svgEl.style.cursor = this.useHandCursor ? 'pointer' : '';
+        if (this.svgEl.style) this.svgEl.style.cursor = hideCursor ? 'none' : (this.useHandCursor ? 'pointer' : '');
       } else if (!this._parent) {
         // #avm1-root defaults to pointer-events="none" so non-interactive overlays never block Start buttons underneath
         this.svgEl.setAttribute('pointer-events', 'none');
-        this.svgEl.style.cursor = '';
+        if (this.svgEl.style) this.svgEl.style.cursor = hideCursor ? 'none' : '';
       } else {
         this.svgEl.removeAttribute('pointer-events');
-        this.svgEl.style.cursor = '';
+        if (this.svgEl.style) this.svgEl.style.cursor = hideCursor ? 'none' : '';
       }
     }
 
@@ -2331,6 +2335,21 @@
             if (e.cx || e.fl) {
               this._vm._applyVisualFx(slot.svgEl, e.cx || null, e.fl || null);
             }
+            if (e.bm && e.bm > 1) {
+              this._vm._applyBlendMode(slot.svgEl, e.bm);
+              if (slot.obj && slot.obj._isMovieClip) {
+                slot.obj._blendMode = this._vm._normalizeBlendModeName(e.bm);
+              }
+            }
+            if (e.vis === 0) {
+              if (slot.obj && slot.obj._isMovieClip) {
+                slot.obj._visible = false;
+                slot.obj._markSvgDirty();
+              } else if (slot.svgEl) {
+                slot.svgEl.setAttribute('display', 'none');
+                slot.svgEl.setAttribute('visibility', 'hidden');
+              }
+            }
             if (slot.obj && slot.obj._isMovieClip) {
               newlySpawnedClips.push(slot.obj);
             }
@@ -2359,6 +2378,27 @@
           // Apply RGB ColorTransform & Flash 8+ SVG filters (unless script Color override is active)
           if (slot.svgEl && !(slot.obj && slot.obj._scriptColorTransform)) {
             this._vm._applyVisualFx(slot.svgEl, e.cx || null, e.fl || null);
+          }
+          // Apply PlaceObject3 blendMode (unless overridden by script)
+          if (slot.svgEl && !(slot.obj && slot.obj._scriptModifiedBlendMode)) {
+            this._vm._applyBlendMode(slot.svgEl, e.bm || 1);
+            if (slot.obj && slot.obj._isMovieClip) {
+              slot.obj._blendMode = this._vm._normalizeBlendModeName(e.bm || 1);
+            }
+          }
+          // Apply PlaceObject3 visible flag (unless overridden by script)
+          if (e.vis !== undefined && !(slot.obj && slot.obj._scriptModifiedVisible)) {
+            const wantVis = e.vis !== 0;
+            if (slot.obj && slot.obj._isMovieClip) {
+              if (slot.obj._visible !== wantVis) {
+                slot.obj._visible = wantVis;
+                slot.obj._markSubtreeDirty();
+                slot.obj._markSvgDirty();
+              }
+            } else if (slot.svgEl) {
+              slot.svgEl.setAttribute('display', wantVis ? 'inline' : 'none');
+              slot.svgEl.setAttribute('visibility', wantVis ? 'visible' : 'hidden');
+            }
           }
           // Update mask wrapper if mask assignment changed
           if (slot.maskId !== maskId) {
@@ -3308,6 +3348,8 @@
       this._reorderScratch = [];
       this._dirtySvgClips = [];
       this._deferSvgCommit = false;
+      this._quality = 'HIGH';
+      this._mouseHidden = false;
 
       // Zero-overhead diagnostic collector state (active ONLY when window.__SWF_DEBUG__ === true)
       this._dbgActiveThisTick = false;
@@ -3476,14 +3518,18 @@
         },
       };
 
-      // Mouse object
+      // Mouse object (supports custom vector cursors by hiding/restoring stage & interactive cursors)
       const MouseObj = {
         show() {
+          vm._mouseHidden = false;
           if (vm.stageSvg && vm.stageSvg.style) vm.stageSvg.style.cursor = '';
+          vm._syncAllCursors();
           return 1;
         },
         hide() {
+          vm._mouseHidden = true;
           if (vm.stageSvg && vm.stageSvg.style) vm.stageSvg.style.cursor = 'none';
+          vm._syncAllCursors();
           return 0;
         },
         addListener(obj) {
@@ -3500,6 +3546,8 @@
       const StageObj = {
         get width() { return vm.stageWidth; },
         get height() { return vm.stageHeight; },
+        get quality() { return vm._quality; },
+        set quality(q) { vm.setQuality(q); },
         scaleMode: 'showAll',
         align: '',
         showMenu: true,
@@ -3635,10 +3683,12 @@
       };
       FlashSound.prototype.setVolume = function (v) {
         this._volume = Math.max(0, Math.min(100, Number(v) || 0));
+        if (this._soundId != null) vm._updateSwfSoundParams(this._soundId, this._volume, null);
       };
       FlashSound.prototype.getVolume = function () { return this._volume; };
       FlashSound.prototype.setPan = function (p) {
         this._pan = Math.max(-100, Math.min(100, Number(p) || 0));
+        if (this._soundId != null) vm._updateSwfSoundParams(this._soundId, null, this._pan);
       };
       FlashSound.prototype.getPan = function () { return this._pan; };
 
@@ -4738,6 +4788,8 @@
             found.n ||
             !matEquals(found.m || null, e.m || null) ||
             (found.a !== undefined ? found.a : 1) !== (e.a !== undefined ? e.a : 1) ||
+            (found.bm || 0) !== (e.bm || 0) ||
+            (found.vis !== 0) !== (e.vis !== 0) ||
             JSON.stringify(found.cx || null) !== JSON.stringify(e.cx || null) ||
             JSON.stringify(found.fl || null) !== JSON.stringify(e.fl || null)
           ) {
@@ -4773,9 +4825,14 @@
         const mat = e.m || [1, 0, 0, 1, 0, 0];
         wrap.setAttribute('transform', `matrix(${mat.map(fmtNum).join(' ')})`);
         if (e.a !== undefined && e.a < 1) wrap.setAttribute('opacity', fmtNum(e.a));
+        if (e.vis === 0) {
+          wrap.setAttribute('display', 'none');
+          wrap.setAttribute('visibility', 'hidden');
+        }
         const inner = this._instantiateStaticCharSvg(e.c);
         if (inner) wrap.appendChild(inner);
         if (e.cx || e.fl) this._applyVisualFx(wrap, e.cx || null, e.fl || null);
+        if (e.bm && e.bm > 1) this._applyBlendMode(wrap, e.bm);
         this._staticLayerEl.appendChild(wrap);
       }
       root._staticFrozenDepths = frozenDepths;
@@ -4849,8 +4906,12 @@
       const sceneClipRoot = createSvgEl(this.doc, 'g');
       sceneClipRoot.setAttribute('id', 'avm1-stage-clip-root');
       sceneClipRoot.setAttribute('clip-path', 'url(#swf-stage-clip)');
+      // Isolate blend modes so SWF add/multiply/screen composite strictly against the stage background
+      if (sceneClipRoot.style) sceneClipRoot.style.isolation = 'isolate';
+      else if (typeof sceneClipRoot.setAttribute === 'function') sceneClipRoot.setAttribute('style', 'isolation:isolate');
       this.rootClip.svgEl.setAttribute('id', 'avm1-root');
       this.rootClip.svgEl.setAttribute('pointer-events', 'none');
+      this.setQuality(this._quality);
 
       const staticLayer = createSvgEl(this.doc, 'g');
       staticLayer.setAttribute('id', 'stage-static-layer');
@@ -5375,9 +5436,126 @@
       return fid;
     }
 
+    _normalizeBlendModeName(bm) {
+      if (typeof bm === 'number') {
+        switch (bm) {
+          case 2: return 'layer';
+          case 3: return 'multiply';
+          case 4: return 'screen';
+          case 5: return 'lighten';
+          case 6: return 'darken';
+          case 7: return 'difference';
+          case 8: return 'add';
+          case 9: return 'subtract';
+          case 10: return 'invert';
+          case 11: return 'alpha';
+          case 12: return 'erase';
+          case 13: return 'overlay';
+          case 14: return 'hardlight';
+          default: return 'normal';
+        }
+      }
+      const s = String(bm || 'normal').trim().toLowerCase();
+      return s || 'normal';
+    }
+
+    _blendModeToCss(bm) {
+      const name = this._normalizeBlendModeName(bm);
+      switch (name) {
+        case 'multiply': return 'multiply';
+        case 'screen': return 'screen';
+        case 'lighten': return 'lighten';
+        case 'darken': return 'darken';
+        case 'difference': return 'difference';
+        case 'add': return 'plus-lighter';
+        case 'subtract': return 'difference';
+        case 'invert': return 'exclusion';
+        case 'overlay': return 'overlay';
+        case 'hardlight': return 'hard-light';
+        default: return '';
+      }
+    }
+
+    _applyBlendMode(el, bm) {
+      if (!el) return;
+      const css = this._blendModeToCss(bm);
+      if (el._lastBlendCss === css) return;
+      el._lastBlendCss = css;
+      if (el.style) {
+        el.style.mixBlendMode = css;
+      } else if (typeof el.setAttribute === 'function') {
+        if (css) el.setAttribute('style', `mix-blend-mode:${css}`);
+        else if (typeof el.removeAttribute === 'function') el.removeAttribute('style');
+      }
+    }
+
+    _syncAllCursors() {
+      const hide = Boolean(this._mouseHidden);
+      const walk = (mc) => {
+        if (!mc || mc._removed) return;
+        if (typeof mc._syncPointerEvents === 'function') mc._syncPointerEvents();
+        if (mc._childrenByDepth) {
+          mc._childrenByDepth.forEach((slot) => {
+            if (slot && slot.obj && slot.obj._isMovieClip) walk(slot.obj);
+          });
+        }
+      };
+      if (this.rootClip) walk(this.rootClip);
+      if (this._liveButtons) {
+        this._liveButtons.forEach((btn) => {
+          if (btn && btn.svgEl && btn.svgEl.style) {
+            btn.svgEl.style.cursor = hide ? 'none' : 'pointer';
+          }
+        });
+      }
+    }
+
+    setQuality(quality) {
+      const raw = String(quality || 'HIGH').trim().toUpperCase();
+      const next = raw === 'LOW' ? 'LOW' : (raw === 'MEDIUM' || raw === 'MED' ? 'MEDIUM' : 'HIGH');
+      const changed = this._quality !== next;
+      this._quality = next;
+      if (this.stageSvg && typeof this.stageSvg.setAttribute === 'function') {
+        const sr = next === 'LOW' ? 'optimizeSpeed' : (next === 'MEDIUM' ? 'auto' : 'geometricPrecision');
+        this.stageSvg.setAttribute('shape-rendering', sr);
+      }
+      if (changed) {
+        const reApplyFx = (mc) => {
+          if (!mc || mc._removed) return;
+          if (mc.svgEl && (mc.svgEl._swfFxCx || mc.svgEl._swfFxFilters)) {
+            this._applyVisualFx(mc.svgEl, mc.svgEl._swfFxCx || null, mc.svgEl._swfFxFilters || null);
+          }
+          if (mc._childrenByDepth) {
+            mc._childrenByDepth.forEach((slot) => {
+              if (!slot) return;
+              if (slot.svgEl && (slot.svgEl._swfFxCx || slot.svgEl._swfFxFilters)) {
+                this._applyVisualFx(slot.svgEl, slot.svgEl._swfFxCx || null, slot.svgEl._swfFxFilters || null);
+              }
+              if (slot.obj && slot.obj._isMovieClip) reApplyFx(slot.obj);
+            });
+          }
+        };
+        if (this.rootClip) reApplyFx(this.rootClip);
+        if (this._staticLayerEl) {
+          const kids = this._staticLayerEl.children || this._staticLayerEl.childNodes || [];
+          for (let i = 0; i < kids.length; i++) {
+            const k = kids[i];
+            if (k && (k._swfFxCx || k._swfFxFilters)) {
+              this._applyVisualFx(k, k._swfFxCx || null, k._swfFxFilters || null);
+            }
+          }
+        }
+      }
+      return this._quality;
+    }
+
     _applyVisualFx(el, cx, filters) {
       if (!el || typeof el.setAttribute !== 'function') return;
-      const fid = this._getOrCreateFxFilter(cx, filters);
+      el._swfFxCx = cx || null;
+      el._swfFxFilters = filters || null;
+      // Classic Flash LOW quality mode bypasses expensive SVG filter passes while preserving ColorTransform tints
+      const effFilters = this._quality === 'LOW' ? null : filters;
+      const fid = this._getOrCreateFxFilter(cx, effFilters);
       const nextVal = fid ? `url(#${fid})` : '';
       if (el._lastFilterVal !== nextVal) {
         el._lastFilterVal = nextVal;
@@ -5579,15 +5757,16 @@
           const gain = ctx.createGain();
           gain.gain.value = (volume / 100) * 0.85;
           let dest = ctx.destination;
-          if (typeof ctx.createStereoPanner === 'function' && Math.abs(pan) > 1) {
-            const panner = ctx.createStereoPanner();
-            panner.pan.value = pan / 100;
+          let panner = null;
+          if (typeof ctx.createStereoPanner === 'function') {
+            panner = ctx.createStereoPanner();
+            panner.pan.value = Math.max(-1, Math.min(1, pan / 100));
             panner.connect(ctx.destination);
             dest = panner;
           }
           src.connect(gain);
           gain.connect(dest);
-          const rec = { soundId, src };
+          const rec = { soundId, src, gain, panner };
           this._activeSoundNodes.add(rec);
           src.onended = () => {
             this._activeSoundNodes.delete(rec);
@@ -5654,6 +5833,18 @@
         armFallback(Math.min(400, estDurationMs));
       }
       return true;
+    }
+
+    _updateSwfSoundParams(soundId, volume, pan) {
+      for (const rec of this._activeSoundNodes) {
+        if (rec.soundId !== soundId) continue;
+        if (volume !== null && volume !== undefined && rec.gain && rec.gain.gain) {
+          rec.gain.gain.value = (Math.max(0, Math.min(100, Number(volume) || 0)) / 100) * 0.85;
+        }
+        if (pan !== null && pan !== undefined && rec.panner && rec.panner.pan) {
+          rec.panner.pan.value = Math.max(-1, Math.min(1, (Number(pan) || 0) / 100));
+        }
+      }
     }
 
     _stopSwfSound(soundId) {
@@ -6797,6 +6988,11 @@
 
     destroy(keepCaches = false) {
       this._mounted = false;
+      this._mouseHidden = false;
+      if (this.stageSvg && this.stageSvg.style) this.stageSvg.style.cursor = '';
+      if (!keepCaches && this.stageSvg && typeof this.stageSvg.removeAttribute === 'function') {
+        this.stageSvg.removeAttribute('shape-rendering');
+      }
       this.stopAllSounds();
       this._intervals.clear();
       this._dragClip = null;
@@ -7021,8 +7217,9 @@
         }
         case '_droptarget': return clip._isMovieClip ? (clip._droptarget || '') : '';
         case '_url': return 'file:///swf';
-        case '_quality': return 'HIGH';
-        case '_highquality': return 1;
+        case '_quality': return this._quality || 'HIGH';
+        case '_highquality': return this._quality === 'LOW' ? 0 : 1;
+        case 'blendmode': return clip._blendMode || 'normal';
         case '_focusrect': return true;
         case '_soundbuftime': return 5;
         default: return undefined;
@@ -7038,7 +7235,10 @@
         case '_yscale': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_yscale'); if (clip._yscale !== n || !clip._scriptModifiedTransform) { clip._yscale = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
         case '_rotation': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_rotation'); if (clip._rotation !== n || !clip._scriptModifiedTransform) { clip._rotation = n; clip._scriptModifiedTransform = true; if (clip._markTransformDirty) { clip._markTransformDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
         case '_alpha': { const n = toAvm1Number(val); if (Number.isNaN(n)) this._recordDbgNanFault(clip, '_alpha'); if (clip._alpha !== n || !clip._scriptModifiedAlpha) { clip._alpha = n; clip._scriptModifiedAlpha = true; if (clip._markSvgDirty) clip._markSvgDirty(); else clip.commitSvg(); } return true; }
-        case '_visible': { const b = this._toBool(val); if (clip._visible !== b) { clip._visible = b; if (clip._markSubtreeDirty) { clip._markSubtreeDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case '_visible': { const b = this._toBool(val); clip._scriptModifiedVisible = true; if (clip._visible !== b) { clip._visible = b; if (clip._markSubtreeDirty) { clip._markSubtreeDirty(); clip._markSvgDirty(); } else clip.commitSvg(); } return true; }
+        case 'blendmode': { const name = this._normalizeBlendModeName(val); clip._blendMode = name; clip._scriptModifiedBlendMode = true; if (clip.svgEl) this._applyBlendMode(clip.svgEl, name); return true; }
+        case '_quality': this.setQuality(val); return true;
+        case '_highquality': this.setQuality(Number(val) === 0 ? 'LOW' : 'HIGH'); return true;
         case '_name': clip._name = this._toStr(val); this._treeVersion++; return true;
         case '_width': {
           if (clip._isMovieClip) {
@@ -7866,23 +8066,32 @@
             break;
           }
           case 0x08: // ActionToggleQuality
+            this.setQuality(this._quality === 'LOW' ? 'HIGH' : 'LOW');
             break;
           case 0x09: // ActionStopSounds
             this.stopAllSounds();
             break;
           case 0x81: { // ActionGotoFrame (0-based UI16); fuse trailing 0x06 ActionPlay into gotoAndPlay
-            const frame0 = readUI16(bytes, ins.pStart);
+            let frame1 = ins._frame1;
+            if (frame1 === undefined) {
+              frame1 = readUI16(bytes, ins.pStart) + 1;
+              ins._frame1 = frame1;
+            }
             const fusePlay = pc < total && instrs[pc].code === 0x06;
             if (fusePlay) pc++;
             const tlTgt = getTimelineTarget();
             if (tlTgt && tlTgt._isMovieClip) {
-              if (fusePlay) tlTgt.gotoAndPlay(frame0 + 1);
-              else tlTgt.gotoAndStop(frame0 + 1);
+              if (fusePlay) tlTgt.gotoAndPlay(frame1);
+              else tlTgt.gotoAndStop(frame1);
             }
             break;
           }
           case 0x8C: { // ActionGoToLabel; fuse trailing 0x06 ActionPlay into gotoAndPlay
-            const lbl = readCString(bytes, ins.pStart, ins.pEnd).value;
+            let lbl = ins._label;
+            if (lbl === undefined) {
+              lbl = readCString(bytes, ins.pStart, ins.pEnd).value;
+              ins._label = lbl;
+            }
             const fusePlay = pc < total && instrs[pc].code === 0x06;
             if (fusePlay) pc++;
             const tlTgt = getTimelineTarget();
@@ -7909,7 +8118,11 @@
             break;
           }
           case 0x8B: { // ActionSetTarget
-            const tName = readCString(bytes, ins.pStart, ins.pEnd).value;
+            let tName = ins._targetName;
+            if (tName === undefined) {
+              tName = readCString(bytes, ins.pStart, ins.pEnd).value;
+              ins._targetName = tName;
+            }
             if (!tName) {
               curTarget = initialTarget;
             } else {
@@ -8426,28 +8639,41 @@
             break;
           }
 
-          // --- Branching & Scoping ---
+          // --- Branching & Scoping (pre-resolved jump targets for zero-lookup hot loops) ---
           case 0x99: { // ActionJump (unconditional SI16 relative offset)
-            const off = readSI16(bytes, ins.pStart);
-            pc = _resolveJump(offsetToIdx, instrs, total, ins.end + off);
+            let targetPc = ins._jumpPc;
+            if (targetPc === undefined) {
+              targetPc = _resolveJump(offsetToIdx, instrs, total, ins.end + readSI16(bytes, ins.pStart));
+              ins._jumpPc = targetPc;
+            }
+            pc = targetPc;
             break;
           }
           case 0x9D: { // ActionIf (conditional SI16 relative offset: jump if truthy!)
-            const off = readSI16(bytes, ins.pStart);
             const cond = stack.pop();
             if (this._toBool(cond)) {
-              pc = _resolveJump(offsetToIdx, instrs, total, ins.end + off);
+              let targetPc = ins._jumpPc;
+              if (targetPc === undefined) {
+                targetPc = _resolveJump(offsetToIdx, instrs, total, ins.end + readSI16(bytes, ins.pStart));
+                ins._jumpPc = targetPc;
+              }
+              pc = targetPc;
             }
             break;
           }
           case 0x94: { // ActionWith
-            const size = readUI16(bytes, ins.pStart);
+            let endOff = ins._withEndOff;
+            if (endOff === undefined) {
+              endOff = ins.end + readUI16(bytes, ins.pStart);
+              ins._withEndOff = endOff;
+              ins._withEndPc = _resolveJump(offsetToIdx, instrs, total, endOff);
+            }
             const obj = stack.pop();
             if (obj != null && (typeof obj === 'object' || typeof obj === 'function')) {
               withStack.push(obj);
-              withEndOffsets.push(ins.end + size);
+              withEndOffsets.push(endOff);
             } else {
-              pc = _resolveJump(offsetToIdx, instrs, total, ins.end + size);
+              pc = ins._withEndPc;
             }
             break;
           }
@@ -8480,6 +8706,7 @@
                 catchDecoded: (hasCatch && catchSize > 0) ? decodeBytecodeSlice(bytes, tryEnd, tryEnd + catchSize) : null,
                 finDecoded: (hasFinally && finallySize > 0) ? decodeBytecodeSlice(bytes, tryEnd + catchSize, afterAll) : null,
                 afterAll,
+                afterPc: _resolveJump(offsetToIdx, instrs, total, afterAll),
               };
               ins._tryMeta = tm;
             }
@@ -8519,7 +8746,7 @@
               return subRet.value;
             }
             if (hasUncaught) throw caughtErr;
-            pc = _resolveJump(offsetToIdx, instrs, total, tm.afterAll);
+            pc = tm.afterPc;
             break;
           }
           case 0x2A: { // ActionThrow
@@ -8550,6 +8777,7 @@
                 fnName,
                 params,
                 bodyEnd,
+                bodyEndPc: _resolveJump(offsetToIdx, instrs, total, bodyEnd),
                 bodyDecoded: decodeBytecodeSlice(bytes, bodyStart, bodyEnd),
               };
               ins._fnMeta = fm;
@@ -8572,7 +8800,7 @@
             } else {
               stack.push(fnObj);
             }
-            pc = _resolveJump(offsetToIdx, instrs, total, fm.bodyEnd);
+            pc = fm.bodyEndPc;
             break;
           }
           case 0x8E: { // ActionDefineFunction2
@@ -8604,6 +8832,7 @@
                 flags2,
                 params,
                 bodyEnd,
+                bodyEndPc: _resolveJump(offsetToIdx, instrs, total, bodyEnd),
                 bodyDecoded: decodeBytecodeSlice(bytes, bodyStart, bodyEnd),
               };
               ins._fn2Meta = fm;
@@ -8636,7 +8865,7 @@
             } else {
               stack.push(fnObj);
             }
-            pc = _resolveJump(offsetToIdx, instrs, total, fm.bodyEnd);
+            pc = fm.bodyEndPc;
             break;
           }
           case 0x3E: { // ActionReturn

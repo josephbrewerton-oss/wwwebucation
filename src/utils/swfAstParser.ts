@@ -1590,10 +1590,28 @@ export interface SwfDisplayEntry {
   matrix?: SwfMatrix | null;
   cxform?: SwfColorTransform | null;
   filters?: SwfSurfaceFilter[];
+  blendMode?: number;
+  visible?: boolean;
   ratio?: number;
   name?: string;
   clipDepth?: number;
   clipActions?: SwfClipAction[];
+}
+
+function swfBlendModeToCss(bm?: number): string {
+  switch (bm) {
+    case 3: return 'multiply';
+    case 4: return 'screen';
+    case 5: return 'lighten';
+    case 6: return 'darken';
+    case 7: return 'difference';
+    case 8: return 'plus-lighter';
+    case 9: return 'difference';
+    case 10: return 'exclusion';
+    case 13: return 'overlay';
+    case 14: return 'hard-light';
+    default: return '';
+  }
 }
 
 export interface SwfFrameSnapshot {
@@ -2939,6 +2957,8 @@ interface ParsedPlaceTag {
   matrix?: SwfMatrix;
   cxform?: SwfColorTransform;
   filters?: SwfSurfaceFilter[];
+  blendMode?: number;
+  visible?: boolean;
   ratio?: number;
   name?: string;
   clipDepth?: number;
@@ -3018,9 +3038,9 @@ function parsePlaceObjectTag(
     const name = hasName ? reader.readString() : undefined;
     const clipDepth = hasClipDepth ? reader.readUI16() : undefined;
     const filters = hasFilterList ? parseSwfFilterList(reader, tagEndOffset) : undefined;
-    if (hasBlendMode) reader.readUI8();
+    const blendMode = hasBlendMode ? reader.readUI8() : undefined;
     if (hasCacheAsBitmap) reader.readUI8();
-    if (hasVisible) reader.readUI8();
+    const visible = hasVisible ? reader.readUI8() !== 0 : undefined;
     if (hasOpaqueBg) reader.readRGBA(true);
     const clipPrefix = name ? sanitizeAstIdent(name) : `depth_${depth}`;
     const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix, fileLength) : undefined;
@@ -3032,6 +3052,8 @@ function parsePlaceObjectTag(
       matrix,
       cxform,
       filters: filters && filters.length > 0 ? filters : undefined,
+      blendMode,
+      visible,
       ratio,
       name,
       clipDepth,
@@ -3051,6 +3073,8 @@ function applyPlaceToDisplayMap(activeDisplay: Map<number, SwfDisplayEntry>, pla
       matrix: placed.matrix !== undefined ? placed.matrix : existing.matrix,
       cxform: placed.cxform !== undefined ? placed.cxform : existing.cxform,
       filters: placed.filters !== undefined ? placed.filters : existing.filters,
+      blendMode: placed.blendMode !== undefined ? placed.blendMode : existing.blendMode,
+      visible: placed.visible !== undefined ? placed.visible : existing.visible,
       ratio: placed.ratio !== undefined ? placed.ratio : existing.ratio,
       name: placed.name !== undefined ? placed.name : existing.name,
       clipDepth: placed.clipDepth !== undefined ? placed.clipDepth : existing.clipDepth,
@@ -3063,6 +3087,8 @@ function applyPlaceToDisplayMap(activeDisplay: Map<number, SwfDisplayEntry>, pla
       matrix: placed.matrix || null,
       cxform: placed.cxform || null,
       filters: placed.filters,
+      blendMode: placed.blendMode,
+      visible: placed.visible,
       ratio: placed.ratio,
       name: placed.name,
       clipDepth: placed.clipDepth,
@@ -4492,8 +4518,14 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
 
         const matchingMask = activeStaticMasks.find((m) => entry.depth <= m.clipDepth);
-        const innerPlaced = entry.matrix
-          ? `<g id="swf-place-${entry.depth}" data-character-id="${entry.characterId}" transform="${formatMatrixAttr(entry.matrix)}"${entry.cxform && entry.cxform.alpha < 1 ? ` opacity="${formatNum(entry.cxform.alpha)}"` : ''}>\n      ${innerSvg}\n    </g>`
+        const cssBlend = swfBlendModeToCss(entry.blendMode);
+        const needsWrap = Boolean(entry.matrix || (entry.cxform && entry.cxform.alpha < 1) || cssBlend || entry.visible === false);
+        const tAttr = entry.matrix ? ` transform="${formatMatrixAttr(entry.matrix)}"` : '';
+        const opAttr = entry.cxform && entry.cxform.alpha < 1 ? ` opacity="${formatNum(entry.cxform.alpha)}"` : '';
+        const bmAttr = cssBlend ? ` style="mix-blend-mode:${cssBlend}"` : '';
+        const visAttr = entry.visible === false ? ' display="none" visibility="hidden"' : '';
+        const innerPlaced = needsWrap
+          ? `<g id="swf-place-${entry.depth}" data-character-id="${entry.characterId}"${tAttr}${opAttr}${bmAttr}${visAttr}>\n      ${innerSvg}\n    </g>`
           : innerSvg;
         if (matchingMask) {
           placedSvgElements.push(`<g clip-path="url(#${matchingMask.maskId})">\n      ${innerPlaced}\n    </g>`);
@@ -4725,7 +4757,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
         const initMat = entryState.matrix || { scaleX: 1, scaleY: 1, rotateSkew0: 0, rotateSkew1: 0, transX: 0, transY: 0 };
         const initAlpha = entryState.cxform ? entryState.cxform.alpha : 1;
-        const visibleOnEntry = track.frameStates.has(entryFrame);
+        const visibleOnEntry = track.frameStates.has(entryFrame) && entryState.visible !== false;
         const parentActiveWhen = buildActivePresenceGuard(track.frameStates);
         const trackFirstActiveFrame = Math.max(entryFrame, track.firstFrame);
 
@@ -4784,12 +4816,14 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         });
         const transformAttr = entryState.matrix ? ` transform="${formatMatrixAttr(initMat)}"` : '';
         const opacityAttr = initAlpha < 1 ? ` opacity="${formatNum(initAlpha)}"` : '';
+        const cssBlend = swfBlendModeToCss(entryState.blendMode);
+        const blendStyleAttr = cssBlend ? ` style="mix-blend-mode:${cssBlend}"` : '';
         const visibilityAttr = safeName
           ? (startsVisible ? ' visibility="visible" pointer-events="auto"' : ' visibility="hidden" pointer-events="none" display="none"')
           : (!visibleOnEntry ? ' display="none"' : '');
         const nameAttr = track.name ? ` data-swf-name="${track.name}"` : '';
 
-        const trackGroup = `<g id="${domId}" data-character-id="${entryState.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${visibilityAttr}>\n      ${innerSvg}\n    </g>`;
+        const trackGroup = `<g id="${domId}" data-character-id="${entryState.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${blendStyleAttr}${visibilityAttr}>\n      ${innerSvg}\n    </g>`;
         placedSvgElements.push(
           matchingMask
             ? `<g clip-path="url(#${matchingMask.maskId})">\n      ${trackGroup}\n    </g>`
@@ -5356,6 +5390,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               }
             }
             if (e.filters && e.filters.length > 0) item.fl = e.filters;
+            if (e.blendMode && e.blendMode > 1) item.bm = e.blendMode;
+            if (e.visible === false) item.vis = 0;
             if (e.name) item.n = e.name;
             if (e.clipDepth && e.clipDepth > d) item.cd = e.clipDepth;
             if (e.ratio !== undefined && e.ratio > 0) item.r = e.ratio;
