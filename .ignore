@@ -1,0 +1,17 @@
+# Search & context hygiene (ripgrep / fd / AI tooling)
+# Keep generated substrates, large static knowledge datasets, and binary bundles
+# out of routine code search while preserving git tracking and runtime bundling.
+
+# Generated curriculum substrate payloads
+src/engine/substrates/*.substrate.ts
+
+# Large static data/lexicon payloads
+src/utils/bslLexicon.ts
+src/data/curriculumKnowledgeExpansion.ts
+src/data/oakCurriculumKnowledge.ts
+src/data/player/embeddedCoreCartridges.ts
+
+# Precompiled binary artifacts & distribution archives
+static/bytecode/
+static/lumina-vector-player.zip
+static/player/lumina-vector-player.zip

@@ -3043,10 +3043,26 @@
 
       // If this class is bound to a SymbolClass Sprite or Document Class (charId === 0), attach timeline children
       const isRootDocClass = clsDesc.qname === this.program.dc || clsDesc.simpleName === this.program.dc;
+      let attachedRootSilently = false;
       if (isRootDocClass && this.stage && !this.rootDoc && obj instanceof AS3DisplayObject) {
         this.rootDoc = obj;
         this.rootClip = obj;
-        this.stage.addChild(obj);
+        // Attach to stage silently before iinit so `this.stage` is non-null inside the
+        // Document Class constructor (Flash Player parity), then fire ADDED / ADDED_TO_STAGE
+        // right after iinit so constructor-registered ADDED_TO_STAGE listeners also trigger.
+        obj.parent = this.stage;
+        if (!this.stage._children.includes(obj)) {
+          this.stage._children.push(obj);
+        }
+        if (this._doc) {
+          const parentEl = this.stage._ensureSvg(this._doc);
+          const childEl = obj._ensureSvg(this._doc);
+          if (parentEl && childEl && childEl.parentNode !== parentEl) {
+            parentEl.appendChild(childEl);
+          }
+          obj._syncSvg(this._doc);
+        }
+        attachedRootSilently = true;
       }
       if (clsDesc.symbolCharId > 0 && this.program.sp && this.program.sp[clsDesc.symbolCharId]) {
         if (obj instanceof AS3MovieClip) obj._syncTimeline();
@@ -3062,6 +3078,11 @@
         if (initM && initM.body) {
           this._execMethod(clsDesc.abc, clsDesc.instInfo.iinit, obj, args || [], clsDesc.scopeChain);
         }
+      }
+
+      if (attachedRootSilently && this.stage) {
+        obj.dispatchEvent(new AS3Event(AS3Event.ADDED, true));
+        this.stage._notifyAddedToStageSubtree(obj);
       }
 
       return obj;
@@ -4303,7 +4324,21 @@
         }
       }
       if (node._isStage) return node;
-      if (node.mouseEnabled !== false && typeof node.hitTestPoint === 'function' && node.hitTestPoint(sx, sy)) {
+      const shapeHasMouseListener =
+        node instanceof AS3Shape &&
+        node._astListeners &&
+        (node._astListeners.has('click') ||
+          node._astListeners.has('mouseDown') ||
+          node._astListeners.has('mouseUp') ||
+          node._astListeners.has('mouseOver') ||
+          node._astListeners.has('mouseOut') ||
+          node._astListeners.has('rollOver') ||
+          node._astListeners.has('rollOut'));
+      if (
+        (node.mouseEnabled !== false || shapeHasMouseListener) &&
+        typeof node.hitTestPoint === 'function' &&
+        node.hitTestPoint(sx, sy)
+      ) {
         return node;
       }
       return null;

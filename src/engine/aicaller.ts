@@ -1,6 +1,11 @@
 // src/engine/aicaller.ts
 import { edgeCognitiveEngine } from './EdgeCognitiveEngine';
-import { validateStudentInput, sanitizeAiOutput } from '../services/childSafetyFilter';
+import {
+  validateStudentInput,
+  sanitizeAiOutput,
+  evaluateStreamSafety,
+  CHILD_SAFEGUARDING_SYSTEM_PROMPT,
+} from '../services/childSafetyFilter';
 import {
   CONSENT_STORAGE_KEY,
   hasUserGrantedAiConsent,
@@ -299,11 +304,19 @@ class AiRuntimeCaller {
 
     // Model weight downloading might take longer, allow 45s if monitoring progress, otherwise 25s
     const creationTimeoutMs = opts?.onDownloadProgress ? 45000 : 25000;
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`[AiCaller] Session initialization timed out after ${creationTimeoutMs}ms`)), creationTimeoutMs)
-    );
+    let createTimer: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      createTimer = setTimeout(
+        () => reject(new Error(`[AiCaller] Session initialization timed out after ${creationTimeoutMs}ms`)),
+        creationTimeoutMs
+      );
+    });
 
-    return Promise.race([createPromise, timeoutPromise]);
+    try {
+      return await Promise.race([createPromise, timeoutPromise]);
+    } finally {
+      if (createTimer !== null) clearTimeout(createTimer);
+    }
   }
 
   /**
@@ -467,9 +480,13 @@ const executeCall = async (s: any) => {
   }
 };
       const inferencePromise = executeCall(session);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`[AiCaller] Inference prompt timed out after ${timeoutMs}ms`)), timeoutMs)
-      );
+      let promptTimer: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        promptTimer = setTimeout(
+          () => reject(new Error(`[AiCaller] Inference prompt timed out after ${timeoutMs}ms`)),
+          timeoutMs
+        );
+      });
 
       try {
         rawOutput = await Promise.race([inferencePromise, timeoutPromise]);
@@ -478,6 +495,7 @@ const executeCall = async (s: any) => {
         console.warn('[AiCaller] Chrome AI prompt failed, invoking WebLLM fallback:', err);
         // Fall through to Tier 2
       } finally {
+        if (promptTimer !== null) clearTimeout(promptTimer);
         if (isEphemeral && session?.destroy) {
           try { session.destroy(); } catch {}
         }
@@ -513,6 +531,56 @@ const executeCall = async (s: any) => {
       return;
     }
 
+    // Helper: sanitizes streaming chunks across token boundaries so split tags like `<scr` + `ipt>`
+    // or harmful/PII phrases are never leaked raw to downstream UI consumers.
+    const STREAM_LOOKAHEAD_CHARS = 24;
+    const drainSafeStream = async function* (
+      sourceIter: AsyncIterable<string>
+    ): AsyncGenerator<string, void, unknown> {
+      let accumulated = '';
+      let emittedLength = 0;
+
+      for await (const rawDelta of sourceIter) {
+        if (!rawDelta) continue;
+        accumulated += rawDelta;
+
+        const safety = evaluateStreamSafety(accumulated);
+        if (!safety.safe) {
+          if (emittedLength === 0) {
+            yield safety.replacementText || sanitizeAiOutput('', 'your lesson');
+          }
+          return;
+        }
+
+        // Hold back tail while inside an unclosed '<' tag or within lookahead window for split schemes/words
+        const lastOpenAngle = accumulated.lastIndexOf('<');
+        const lastCloseAngle = accumulated.lastIndexOf('>');
+        const insideTag = lastOpenAngle > lastCloseAngle;
+        if (insideTag) continue;
+
+        const safeText = safety.sanitizedText;
+        const safeFlushEnd = Math.max(emittedLength, safeText.length - STREAM_LOOKAHEAD_CHARS);
+        if (safeFlushEnd > emittedLength) {
+          yield safeText.slice(emittedLength, safeFlushEnd);
+          emittedLength = safeFlushEnd;
+        }
+      }
+
+      if (accumulated.length > 0) {
+        const finalCheck = evaluateStreamSafety(accumulated);
+        if (!finalCheck.safe) {
+          if (emittedLength === 0) {
+            yield finalCheck.replacementText || sanitizeAiOutput('', 'your lesson');
+          }
+          return;
+        }
+        const finalText = finalCheck.sanitizedText;
+        if (finalText.length > emittedLength) {
+          yield finalText.slice(emittedLength);
+        }
+      }
+    };
+
     // Tier 1: Chrome Native Prompt API Streaming
     if (this.hasNativePromptApi()) {
       const isEphemeral = !opts.preserveContext;
@@ -537,32 +605,39 @@ const executeCall = async (s: any) => {
           if (constraintRegex && !testConstraintRegExp(constraintRegex, text)) {
             throw new Error('[AiCaller] Chromium Issue 576432037: Stream fallback output failed responseConstraint RegExp verification.');
           }
-          yield text;
+          yield sanitizeAiOutput(text);
           return;
         }
 
         if (Symbol.asyncIterator in stream) {
-          let previous = '';
-          for await (const chunk of stream) {
-            const delta = chunk.startsWith(previous) ? chunk.slice(previous.length) : chunk;
-            previous = chunk;
-            yield delta;
-          }
-        } else if (typeof stream.getReader === 'function') {
-          const reader = stream.getReader();
-          let previous = '';
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              const chunk = typeof value === 'string' ? value : new TextDecoder().decode(value);
-              const delta = chunk.startsWith(previous) ? chunk.slice(previous.length) : chunk;
-              previous = chunk;
+          const deltaSource = (async function* () {
+            let previous = '';
+            for await (const chunk of stream) {
+              const s = String(chunk ?? '');
+              const delta = s.startsWith(previous) ? s.slice(previous.length) : s;
+              previous = s;
               yield delta;
             }
-          } finally {
-            reader.releaseLock();
-          }
+          })();
+          yield* drainSafeStream(deltaSource);
+        } else if (typeof stream.getReader === 'function') {
+          const reader = stream.getReader();
+          const deltaSource = (async function* () {
+            let previous = '';
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = typeof value === 'string' ? value : new TextDecoder().decode(value);
+                const delta = chunk.startsWith(previous) ? chunk.slice(previous.length) : chunk;
+                previous = chunk;
+                yield delta;
+              }
+            } finally {
+              reader.releaseLock();
+            }
+          })();
+          yield* drainSafeStream(deltaSource);
         }
         return;
       } catch (err) {
@@ -578,9 +653,7 @@ const executeCall = async (s: any) => {
 
     // Tier 2: WebLLM / WebGPU real-time token stream
     if (edgeCognitiveEngine.isSupported()) {
-      for await (const token of edgeCognitiveEngine.inferStream(opts.prompt, opts.systemPrompt)) {
-        yield token;
-      }
+      yield* drainSafeStream(edgeCognitiveEngine.inferStream(opts.prompt, opts.systemPrompt));
       return;
     }
 
@@ -674,13 +747,13 @@ export interface AiVisualCommandPacket {
 function sanitizeSvgSelector(rawSelector: string): string | null {
   if (!rawSelector || typeof rawSelector !== 'string') return null;
   const clean = rawSelector.trim().replace(/^['"]|['"]$/g, '');
-  // Disallow javascript protocol, script tags, or dangerous syntax
-  if (/[<>'"`;(){}]/.test(clean) || clean.toLowerCase().includes('script')) {
+  // Disallow colons (pseudo-classes), script tags, or dangerous syntax
+  if (/[<>'"`;(){}:]/.test(clean) || clean.toLowerCase().includes('script')) {
     return null;
   }
-  // Must look like an ID (#...), class (....), or attribute ([...])
-  if (/^[#\.]?[a-zA-Z0-9_\-\:]+$/.test(clean) || /^\[[a-zA-Z0-9_\-]+(=['"]?[a-zA-Z0-9_\-]+['"]?)?\]$/.test(clean)) {
-    return clean.startsWith('#') || clean.startsWith('.') || clean.startsWith('[') ? clean : `#${clean}`;
+  // Strictly allow simple ID (#id) or class (.cls) identifiers up to 64 chars
+  if (/^[#\.]?[a-zA-Z_][a-zA-Z0-9_-]{0,63}$/.test(clean)) {
+    return clean.startsWith('#') || clean.startsWith('.') ? clean : `#${clean}`;
   }
   return null;
 }
@@ -880,6 +953,22 @@ export async function promptAiCoPilotDemonstration(
   pupilQuestion: string,
   opts?: { targetScene?: string; availableSelectors?: string[] }
 ): Promise<AiVisualCommandPacket> {
+  // Deterministic safeguarding check before assembling prompt or calling on-device AI
+  const safety = validateStudentInput(pupilQuestion || '');
+  if (!safety.isSafe) {
+    const safeSay =
+      safety.safeReplacementText ||
+      'Let us keep our learning safe and focused on your school lessons.';
+    return {
+      type: 'AI_VISUAL_COMMAND',
+      transactionId: `nano_safe_${Date.now()}`,
+      actions: [{ type: 'NARRATE', text: safeSay }],
+      pedagogicalIntent: 'ENCOURAGE',
+      rawSExpr: '',
+      sayText: safeSay,
+    };
+  }
+
   const sceneId = telemetry?.sceneId || opts?.targetScene || 'simulation';
   const progressPercent = Math.round((telemetry?.progress ?? 0) * 100);
   const varsObj = telemetry?.variables || {};
@@ -894,7 +983,8 @@ export async function promptAiCoPilotDemonstration(
   const hitTarget = telemetry?.spatialTelemetry?.hit?.target || '#coil-core';
 
   // Compact, high-instruction-density system prompt constrained by betaplans.md grammar and Proprioceptive Awareness
-  const systemPrompt = `You are Gemini Nano, an on-device AI Co-Pilot embedded in the St Joseph's Vector Classroom Whiteboard.
+  const systemPrompt = `${CHILD_SAFEGUARDING_SYSTEM_PROMPT}
+You are Gemini Nano, an on-device AI Co-Pilot embedded in the St Joseph's Vector Classroom Whiteboard.
 CURRENT SCENE: "${sceneId}" | PROGRESS: ${progressPercent}% (Step #${keyframeIdx}) | VARIABLES: ${varsStr}.
 
 PROPRIOCEPTIVE SPATIAL TELEMETRY (Zero-Raster Token Stream):
@@ -922,10 +1012,9 @@ RULES:
 2. Explanations must be UK Curriculum aligned, pedagogically accurate, and under 30 words.
 3. Incorporate proprioceptive ray-hit coordinates when asked about what is being looked at.`;
 
-  const userPrompt = `Pupil asks: "${pupilQuestion.trim()}". Spatial token: ${spatialTelemetryToken}. Show and actuate on the simulation stage.`;
+  const userPrompt = `Pupil asks: "${pupilQuestion.trim().slice(0, 600)}". Spatial token: ${spatialTelemetryToken}. Show and actuate on the simulation stage.`;
 
-  // Execute on-device inference (Chrome Prompt API with WebLLM fallback)
-// Execute on-device inference with RegExp sampling constraint
+  // Execute on-device inference with RegExp sampling constraint
   const rawOutput = await aiCaller.promptText({
     prompt: userPrompt,
     systemPrompt,
@@ -934,13 +1023,14 @@ RULES:
     omitResponseConstraintInput: true,
   });
   const parsed = parseAiActionTuples(rawOutput);
+  const safeSayText = sanitizeAiOutput(parsed.sayText, sceneId);
 
   return {
     type: 'AI_VISUAL_COMMAND',
     transactionId: `nano_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    actions: parsed.actions,
+    actions: parsed.actions.map((a) => (a.type === 'NARRATE' ? { ...a, text: sanitizeAiOutput(a.text, sceneId) } : a)),
     pedagogicalIntent: 'STEP_BY_STEP_DEMO',
     rawSExpr: parsed.rawSExpr,
-    sayText: parsed.sayText,
+    sayText: safeSayText,
   };
 }

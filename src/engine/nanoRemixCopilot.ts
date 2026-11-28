@@ -8,9 +8,12 @@
 import {
   aiCaller,
   hasUserGrantedAiConsent,
-  setUserAiConsent,
 } from './aicaller';
-import { validateStudentInput, sanitizeAiOutput } from '../services/childSafetyFilter';
+import {
+  validateStudentInput,
+  sanitizeAiOutput,
+  CHILD_SAFEGUARDING_SYSTEM_PROMPT,
+} from '../services/childSafetyFilter';
 
 export interface RemixSvgElementInfo {
   id: string;
@@ -134,15 +137,24 @@ export function extractBalancedScene(raw: string): string | null {
 
 export function sanitizeSvgFragment(xml: string): string {
   const clean = String(xml || '').trim();
-  if (!clean) return '';
-  if (/<script\b|on[a-z]+\s*=|javascript:/i.test(clean)) {
+  if (!clean || clean.length > 16384) return '';
+  const stripped = clean.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '');
+  // Reject script/foreignObject/iframe/object/embed/style/SMIL-href-mutation/event handlers/unsafe URI or CSS functions
+  if (
+    /<(?:script|foreignobject|iframe|object|embed|style|link|meta)\b/i.test(stripped) ||
+    /\bon[a-z]{2,20}\s*=/i.test(stripped) ||
+    /(?:javascript|vbscript|data)\s*:/i.test(stripped) ||
+    /\bxlink:href\b/i.test(stripped) ||
+    /\battributeName\s*=\s*["']?\s*(?:href|xlink:href|src|style|on[a-z]+)/i.test(stripped) ||
+    /\bstyle\s*=\s*["'][^"']*(?:expression\s*\(|url\s*\(|@import|behavior\s*:)/i.test(stripped)
+  ) {
     return '';
   }
   // Allow safe geometric SVG primitives only
-  if (!/<(g|circle|rect|ellipse|line|polygon|polyline|path|text)\b/i.test(clean)) {
+  if (!/<(g|circle|rect|ellipse|line|polygon|polyline|path|text)\b/i.test(stripped)) {
     return '';
   }
-  return clean;
+  return stripped;
 }
 
 function extractAstTargets(astText: string): string[] {
@@ -461,8 +473,9 @@ export async function promptAiRemixAssistant(ctx: NanoRemixContext): Promise<Nan
     };
   }
 
+  // Honor Eco Mode & UK GDPR consent: stay deterministic unless the user explicitly enabled local AI
   if (!hasUserGrantedAiConsent()) {
-    setUserAiConsent(true);
+    return synthesizeDeterministicRemix(ctx);
   }
 
   const canUseLlm = aiCaller.hasNativePromptApi() || aiCaller.hasWebLlmFallback();
@@ -475,7 +488,8 @@ export async function promptAiRemixAssistant(ctx: NanoRemixContext): Promise<Nan
     .map((s) => `#${s.id} (<${s.tag}>)`)
     .join(', ');
 
-  const systemPrompt = `You are Gemini Nano, an on-device coding remix co-pilot for school pupils (KS2-KS4) editing SVG + AST S-Expression simulations.
+  const systemPrompt = `${CHILD_SAFEGUARDING_SYSTEM_PROMPT}
+You are Gemini Nano, an on-device coding remix co-pilot for school pupils (KS2-KS4) editing SVG + AST S-Expression simulations.
 SCENE: id="${ctx.sceneId}" title="${ctx.sceneTitle}" stage="${ctx.stage || 'STEM'}"
 SELECTED ELEMENT: ${ctx.selectedSvgId ? `#${ctx.selectedSvgId}` : 'none'}
 EXISTING SVG ELEMENT IDs: ${svgListStr || 'none'}

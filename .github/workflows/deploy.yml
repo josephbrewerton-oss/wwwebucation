@@ -37,8 +37,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run End-to-End AST & Manifest Determinism Test Suite
-        run: npm run test:ast
+      - name: TypeScript Type Check
+        run: npm run lint
+
+      - name: Run Full Core Verification Suite
+        run: npm test
+
+      - name: Run Extended SWF, Skill & PhET Parity Suite
+        run: npm run test:extended
 
       - name: Build website
         run: |

@@ -442,8 +442,10 @@ export async function runAiWebMcpInvariants(): Promise<number> {
     assert(playerUiSrc.includes('askNanoAboutCheckpoint('), 'PlayerUI must expose askNanoAboutCheckpoint method');
 
     const mediaPlayerSrc = fs.readFileSync(path.join(process.cwd(), 'src', 'pages', 'media-player.ts'), 'utf8');
-    assert(mediaPlayerSrc.includes("e.data.type === 'ASK_NANO_CHECKPOINT'"), 'media-player.ts must handle ASK_NANO_CHECKPOINT');
-    assert(mediaPlayerSrc.includes('mountedAiTutorHandle?.updateTelemetry'), 'media-player.ts must update Nano drawer telemetry without DOM teardown');
+    const playerBridgeSrc = fs.readFileSync(path.join(process.cwd(), 'src', 'pages', 'player', 'playerMessageBridge.ts'), 'utf8');
+    const combinedPlayerHostSrc = `${mediaPlayerSrc}\n${playerBridgeSrc}`;
+    assert(combinedPlayerHostSrc.includes("e.data.type === 'ASK_NANO_CHECKPOINT'"), 'media-player host bridge must handle ASK_NANO_CHECKPOINT');
+    assert(combinedPlayerHostSrc.includes('mountedAiTutorHandle?.updateTelemetry'), 'media-player host bridge must update Nano drawer telemetry without DOM teardown');
 
     const engAi = createHeadlessEngine();
     const astTxt = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'rates-of-reaction.ast'), 'utf8');

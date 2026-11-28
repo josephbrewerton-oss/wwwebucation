@@ -10,11 +10,15 @@
 import {
   aiCaller,
   hasUserGrantedAiConsent,
-  setUserAiConsent,
   promptAiCoPilotDemonstration,
   type PlayerTelemetryEvent,
   type AiVisualCommandPacket,
 } from '../../engine/aicaller';
+import {
+  validateStudentInput,
+  sanitizeAiOutput,
+  CHILD_SAFEGUARDING_SYSTEM_PROMPT,
+} from '../../services/childSafetyFilter';
 import {
   getNanoStateSnapshot,
   probeNanoAvailability,
@@ -921,14 +925,32 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
     const promptToRun = (queryText || userQuery).trim();
     if (!promptToRun || isInferring) return;
 
-    if (!hasConsent) {
-      setUserAiConsent(true);
-      hasConsent = true;
+    const safety = validateStudentInput(promptToRun);
+    if (!safety.isSafe) {
+      userQuery = '';
+      chatLog.push({
+        sender: 'nano',
+        text: safety.safeReplacementText || 'Let us keep our learning safe and focused on your school lessons.',
+      });
+      refresh();
+      return;
     }
 
     const effectiveQuiz = quizCtx !== undefined ? quizCtx : activeQuiz;
     chatLog.push({ sender: 'user', text: promptToRun });
     userQuery = '';
+    hasConsent = hasUserGrantedAiConsent();
+
+    // Respect Eco Mode: do not silently opt in or spin up neural models without explicit user consent
+    if (!hasConsent) {
+      const ecoText = effectiveQuiz
+        ? `${effectiveQuiz.distractorNudge || ''} ${effectiveQuiz.explanation || `Look closely at how the active variables (${JSON.stringify(effectiveQuiz.vars || {})}) relate to the question in ${preset}.`}`.trim()
+        : `[Eco Mode · Local Rules] In this ${preset} simulation, adjusting the input sliders updates the SVG geometry deterministically. Use "Activate Private AI" above if you want on-device Gemini Nano explanations.`;
+      chatLog.push({ sender: 'nano', text: ecoText });
+      refresh();
+      return;
+    }
+
     isInferring = true;
     refresh();
 
@@ -1000,19 +1022,34 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
   // Generate Lab handler
   async function handleGenerateLab() {
-    if (!generatorPrompt.trim() || isInferring) return;
+    const rawPrompt = generatorPrompt.trim();
+    if (!rawPrompt || isInferring) return;
 
-    if (!hasConsent) {
-      setUserAiConsent(true);
-      hasConsent = true;
+    const safety = validateStudentInput(rawPrompt);
+    if (!safety.isSafe) {
+      generateError = safety.safeReplacementText || 'Please keep lab ideas focused on safe school topics.';
+      refresh();
+      return;
     }
 
+    const safeAstLabel = sanitizeAiOutput(rawPrompt, 'STEM lab')
+      .replace(/["()\\;\r\n]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 48) || 'STEM Lab';
+
+    hasConsent = hasUserGrantedAiConsent();
     isInferring = true;
     generateError = null;
     refresh();
 
     try {
-      const systemPrompt = `You are an expert compiler for the St Joseph's AST Vector Player specification.
+      if (!hasConsent) {
+        throw new Error('Eco Mode active — generated deterministic starter AST template locally.');
+      }
+
+      const systemPrompt = `${CHILD_SAFEGUARDING_SYSTEM_PROMPT}
+You are an expert compiler for the St Joseph's AST Vector Player specification.
 Output strictly an AST S-Expression conforming to this grammar:
 (:scene :id "id" :title "Title" :stage "Stage" :duration 10.0
   (:static ((:element :target "#bg" :cache true)))
@@ -1029,7 +1066,7 @@ Rules:
 3. No Markdown blocks, no commentary, no quotes outside strings.`;
 
       const response = await aiCaller.promptText({
-        prompt: `Generate an AST interactive lab for: "${generatorPrompt}"`,
+        prompt: `Generate an AST interactive lab for: "${safeAstLabel}"`,
         systemPrompt,
         temperature: 0.2,
         timeoutMs: 22000,
@@ -1038,8 +1075,10 @@ Rules:
       const cleaned = response.replace(/^```[a-z]*\n?/im, '').replace(/\n?```$/im, '').trim();
       generatedAst = cleaned;
     } catch (err: any) {
-      generateError = `Generation error: ${err?.message || 'Please check Prompt API availability'}`;
-      generatedAst = `(:scene :id "generated-lab" :title "${generatorPrompt.slice(0, 30)}" :stage "KS2/KS3 STEM" :duration 10.0
+      generateError = hasConsent
+        ? `Generation notice: ${err?.message || 'Please check Prompt API availability'}`
+        : 'Eco Mode active: generated deterministic starter AST template (0 W GPU).';
+      generatedAst = `(:scene :id "generated-lab" :title "${safeAstLabel.slice(0, 30)}" :stage "KS2/KS3 STEM" :duration 10.0
   (:static (
     (:element :target "#lab-background" :cache true)
     (:element :target "#grid-axes" :cache true)
@@ -1054,7 +1093,7 @@ Rules:
     (:slider :var "energy" :label "Parameter Intensity" :min 1 :max 10 :step 1)
   ))
   (:keyframes (
-    (:t 0.0 :title "Initial State" :rule "Beginning state of ${generatorPrompt}")
+    (:t 0.0 :title "Initial State" :rule "Beginning state of ${safeAstLabel}")
     (:t 0.5 :title "Midpoint Action" :rule "Dynamic transformation under parameter conservation")
     (:t 1.0 :title "Steady Equilibrium" :rule "System achieves balanced harmonic state")
   ))
@@ -1078,31 +1117,42 @@ Rules:
 
   // Grade Answer handler
   async function handleGradeAnswer() {
-    if (!studentAnswer.trim() || isInferring) return;
+    const rawAns = studentAnswer.trim();
+    if (!rawAns || isInferring) return;
 
-    if (!hasConsent) {
-      setUserAiConsent(true);
-      hasConsent = true;
+    const safety = validateStudentInput(rawAns);
+    if (!safety.isSafe) {
+      gradingResult = {
+        feedback: safety.safeReplacementText || 'Let us keep our explanations focused on your schoolwork.',
+        score: 0,
+      };
+      refresh();
+      return;
     }
 
+    hasConsent = hasUserGrantedAiConsent();
     isInferring = true;
     refresh();
 
     try {
+      if (!hasConsent) {
+        throw new Error('Eco Mode active');
+      }
       const keyframeContext = activeQuiz?.prompt
         ? `Quiz Question: "${activeQuiz.prompt}". Concept Explanation: "${activeQuiz.explanation || ''}"`
         : activeKeyframe
           ? `Topic: "${activeKeyframe.title}" Rule: "${activeKeyframe.rule}"`
           : `Simulation: ${preset}`;
-      const systemPrompt = `You are a UK National Curriculum formative assessment specialist.
+      const systemPrompt = `${CHILD_SAFEGUARDING_SYSTEM_PROMPT}
+You are a UK National Curriculum formative assessment specialist.
 Current Assessment: ${keyframeContext}.
-Evaluate student answer: "${studentAnswer}".
+Evaluate the student answer objectively.
 Format:
 Score: [1 to 5]/5
 Feedback: 2 sentences identifying conceptual strengths and one area for mastery polish.`;
 
       const response = await aiCaller.promptText({
-        prompt: studentAnswer,
+        prompt: rawAns,
         systemPrompt,
         temperature: 0.2,
         timeoutMs: 15000,

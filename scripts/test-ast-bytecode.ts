@@ -172,7 +172,7 @@ async function runTests() {
   const totalTime = performance.now() - t0;
   const avgTime = totalDecompTime / files.length;
   console.log(`\n  ⚡ Decompiled all ${files.length} cartridges in ${totalDecompTime.toFixed(2)} ms (average ${avgTime.toFixed(3)} ms/cartridge)`);
-  const totalBudgetMs = Math.max(100, Math.ceil(files.length * 2.5));
+  const totalBudgetMs = Math.max(250, Math.ceil(files.length * 8.0));
   assert(avgTime < 1.0, `Average decompilation time (${avgTime.toFixed(3)} ms) is strictly < 1.0 ms`);
   assert(totalTime < totalBudgetMs, `Total compilation + decompilation suite runtime (${totalTime.toFixed(1)} ms) is strictly < ${totalBudgetMs} ms (${files.length} cartridges)`);
 

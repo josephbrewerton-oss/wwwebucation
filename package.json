@@ -27,6 +27,7 @@
     "test:swf": "npx tsx scripts/simulate-swf-import.ts",
     "test:ink": "npx tsx scripts/simulate-whiteboard-ink.ts",
     "test:invariants": "npx tsx scripts/simulate-sim-engine-invariants.ts",
+    "test:extended": "npx tsx scripts/test-swf-avm2-parity.ts && npx tsx scripts/test-swf-ruffle-parity.ts && npx tsx scripts/test-skill-inheritance.ts && npx tsx scripts/test-phet-import.ts && npx tsx scripts/test-crypto-and-swf-input.ts && npx tsx scripts/test-swf-distiller.ts && npx tsx scripts/test-swf-legacy-gaps.ts && npx tsx tests/test-lisp-curriculum.ts && npx tsx scripts/test-security-boundaries.ts",
     "ingest:oak": "npx tsx scripts/ingest-oak.ts",
     "export:dist": "npx tsx scripts/export-distribution.ts",
     "lint": "tsc --noEmit",

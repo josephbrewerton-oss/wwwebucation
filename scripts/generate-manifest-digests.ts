@@ -57,7 +57,6 @@ function scanAndDigest() {
     'player/site-gestures-input.js',
     'player/site-gestures.js',
     'player/player-gestures.ast',
-    'player/ast-gestures.js',
     'player/player.css'
   ];
   for (const f of rootSubstrates) {

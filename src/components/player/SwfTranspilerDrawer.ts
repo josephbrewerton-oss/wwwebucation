@@ -121,6 +121,57 @@ function buildSwfRecodeBrief(
   return lines.join('\n');
 }
 
+function triggerTextDownload(filename: string, content: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 500);
+}
+
+async function compileAndDownloadAstb(opts: {
+  id: string;
+  title?: string;
+  astSource: string;
+  svgMarkup: string;
+  btn: HTMLButtonElement;
+}): Promise<void> {
+  const origLabel = opts.btn.textContent || 'Download .astb';
+  opts.btn.disabled = true;
+  opts.btn.textContent = 'Compiling .astb...';
+  try {
+    const [{ compileAstTextToBytecode, isAstBytecode }, { downloadAstbBinary }] = await Promise.all([
+      import('../../utils/astBytecode'),
+      import('../../services/localCartridgeBuilder'),
+    ]);
+    const astbBytes = compileAstTextToBytecode(opts.astSource, {
+      svgMarkup: opts.svgMarkup,
+      idOverride: opts.id,
+      titleOverride: opts.title,
+    });
+    if (!isAstBytecode(astbBytes)) {
+      throw new Error('Compiled output failed ASTB header verification.');
+    }
+    downloadAstbBinary(opts.id, astbBytes);
+    opts.btn.textContent = `Downloaded .astb (${formatKb(astbBytes.byteLength)})`;
+  } catch (err: any) {
+    console.error('[SwfTranspilerDrawer] Failed compiling .astb:', err);
+    opts.btn.textContent = '.astb compile failed';
+  } finally {
+    opts.btn.disabled = false;
+    setTimeout(() => {
+      if (opts.btn.isConnected) opts.btn.textContent = origLabel;
+    }, 2200);
+  }
+}
+
 function renderPromotionReviewPanel(
   review: SwfDistillReviewState,
   onUpdate: (patch: Partial<SwfDistillReviewState>) => void,
@@ -409,15 +460,36 @@ function renderPromotionReviewPanel(
   dlSvgBtn.type = 'button';
   dlSvgBtn.style.cssText =
     'padding:6px 10px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.75rem; font-weight:600; cursor:pointer; white-space:nowrap;';
-  dlSvgBtn.textContent = 'Download Native SVG';
+  dlSvgBtn.textContent = 'Download .svg';
+  dlSvgBtn.title = `Download ${previewCartridge.id}.svg (pure W3C vector stage)`;
   dlSvgBtn.onclick = () => {
-    const blob = new Blob([previewCartridge.svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${previewCartridge.id}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    triggerTextDownload(`${previewCartridge.id}.svg`, previewCartridge.svgMarkup, 'image/svg+xml;charset=utf-8');
+  };
+
+  const dlAstBtn = document.createElement('button');
+  dlAstBtn.type = 'button';
+  dlAstBtn.style.cssText =
+    'padding:6px 10px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.75rem; font-weight:600; cursor:pointer; white-space:nowrap;';
+  dlAstBtn.textContent = 'Download .ast';
+  dlAstBtn.title = `Download ${previewCartridge.id}.ast (pure declarative S-expression source)`;
+  dlAstBtn.onclick = () => {
+    triggerTextDownload(`${previewCartridge.id}.ast`, previewCartridge.astSource, 'text/plain;charset=utf-8');
+  };
+
+  const dlAstbBtn = document.createElement('button');
+  dlAstbBtn.type = 'button';
+  dlAstbBtn.style.cssText =
+    'padding:6px 10px; border-radius:6px; background:#0f172a; color:#38bdf8; border:1px solid #0284c7; font-size:0.75rem; font-weight:700; cursor:pointer; white-space:nowrap;';
+  dlAstbBtn.textContent = 'Download .astb';
+  dlAstbBtn.title = `Compile and download standalone binary ${previewCartridge.id}.astb (embedded SVG + bytecode)`;
+  dlAstbBtn.onclick = () => {
+    void compileAndDownloadAstb({
+      id: previewCartridge.id,
+      title: previewCartridge.title,
+      astSource: previewCartridge.astSource,
+      svgMarkup: previewCartridge.svgMarkup,
+      btn: dlAstbBtn,
+    });
   };
 
   const saveLaunchBtn = document.createElement('button');
@@ -427,8 +499,10 @@ function renderPromotionReviewPanel(
   saveLaunchBtn.textContent = 'Save & Launch Native Cartridge';
   saveLaunchBtn.onclick = () => onSavePromoted(previewCartridge);
 
-  ctaGroup.appendChild(copyAstBtn);
   ctaGroup.appendChild(dlSvgBtn);
+  ctaGroup.appendChild(dlAstBtn);
+  ctaGroup.appendChild(dlAstbBtn);
+  ctaGroup.appendChild(copyAstBtn);
   ctaGroup.appendChild(saveLaunchBtn);
 
   footer.appendChild(statusTag);
@@ -977,19 +1051,24 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       }, 1500);
     };
 
+    const exportBaseName = sanitizeSlugId((swfFileName || 'transpiled-swf').replace(/\.swf$/i, ''));
+
     const downloadBtn = document.createElement('button');
     downloadBtn.type = 'button';
     downloadBtn.style.cssText =
       'padding:6px 10px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.74rem; font-weight:600; cursor:pointer; white-space:nowrap;';
-    downloadBtn.textContent = 'Download SVG';
+    downloadBtn.textContent = 'Download .svg';
     downloadBtn.onclick = () => {
-      const blob = new Blob([swfResult.svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${swfFileName || 'transpiled-swf'}.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
+      triggerTextDownload(`${exportBaseName}.svg`, swfResult.svgMarkup, 'image/svg+xml;charset=utf-8');
+    };
+
+    const downloadAstBtn = document.createElement('button');
+    downloadAstBtn.type = 'button';
+    downloadAstBtn.style.cssText =
+      'padding:6px 10px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.74rem; font-weight:600; cursor:pointer; white-space:nowrap;';
+    downloadAstBtn.textContent = 'Download .ast';
+    downloadAstBtn.onclick = () => {
+      triggerTextDownload(`${exportBaseName}.ast`, swfResult.astSource, 'text/plain;charset=utf-8');
     };
 
     const copyBtn = document.createElement('button');
@@ -1007,6 +1086,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
 
     secGroup.appendChild(recodeBriefBtn);
     secGroup.appendChild(downloadBtn);
+    secGroup.appendChild(downloadAstBtn);
     secGroup.appendChild(copyBtn);
 
     actionsRow.appendChild(primaryCtaBtn);

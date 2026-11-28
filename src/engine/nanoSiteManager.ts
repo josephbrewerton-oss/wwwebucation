@@ -15,6 +15,13 @@ import { getAllCartridges } from '../services/cartridgeStore';
 import { setBslEnabled, getBslEnabled } from '../services/bslGlobalStore';
 import { setSoundEnabled, isSoundEnabled } from '../services/soundHaptics';
 import { getBaseUrl } from '../utils/url';
+import {
+  validateStudentInput,
+  sanitizeAiOutput,
+  CHILD_SAFEGUARDING_SYSTEM_PROMPT,
+} from '../services/childSafetyFilter';
+import { hasUserGrantedAiConsent } from './nanoAvailability';
+import { compileTupleMatcher, freezePattern, type PatternNode } from '../utils/safePatternKernel';
 
 export type SiteRouteNavigator = (path: string) => void | Promise<void>;
 
@@ -121,7 +128,212 @@ const VALID_ROUTES = [
   '/settings',
 ];
 
-const SAFE_PRESET_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+const ALL_VALID_SITE_ACTIONS: ReadonlySet<NanoSiteAction> = new Set<NanoSiteAction>([
+  'read_manifest',
+  'navigate',
+  'load_cartridge',
+  'set_render_mode',
+  'dispatch_tuple',
+  'set_var',
+  'highlight_target',
+  'toggle_bsl',
+  'toggle_sound',
+  'open_tutor',
+]);
+
+const VALID_ROUTE_SET: ReadonlySet<string> = new Set(VALID_ROUTES);
+
+const IDENT_CHARS: PatternNode = freezePattern(['set', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-']);
+const ALPHA_UNDER: PatternNode = freezePattern(['set', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_']);
+const ALNUM: PatternNode = freezePattern(['set', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789']);
+
+const SAFE_PRESET_ID_MATCHER = compileTupleMatcher(
+  'site:presetId',
+  freezePattern([
+    'seq',
+    [['anchor', 'start'], ALNUM, ['rep', IDENT_CHARS, 0, 32], ['rep', IDENT_CHARS, 0, 31], ['anchor', 'end']],
+  ]),
+  ''
+);
+
+const SAFE_VAR_NAME_MATCHER = compileTupleMatcher(
+  'site:varName',
+  freezePattern([
+    'seq',
+    [['anchor', 'start'], ALPHA_UNDER, ['rep', IDENT_CHARS, 0, 32], ['rep', IDENT_CHARS, 0, 31], ['anchor', 'end']],
+  ]),
+  ''
+);
+
+const SAFE_SELECTOR_MATCHER = compileTupleMatcher(
+  'site:selector',
+  freezePattern([
+    'seq',
+    [['anchor', 'start'], ['lit', '#'], ALPHA_UNDER, ['rep', IDENT_CHARS, 0, 32], ['rep', IDENT_CHARS, 0, 31], ['anchor', 'end']],
+  ]),
+  ''
+);
+
+const SAFE_SURFACE_ID_MATCHER = compileTupleMatcher(
+  'site:surfaceId',
+  freezePattern([
+    'seq',
+    [['anchor', 'start'], IDENT_CHARS, ['rep', IDENT_CHARS, 0, 32], ['rep', IDENT_CHARS, 0, 31], ['anchor', 'end']],
+  ]),
+  ''
+);
+
+const ALLOWED_TUPLE_OPS: ReadonlySet<number> = new Set([1, 2, 3, 4, 5, 6, 7]);
+const MAX_SAFE_NUMERIC_ARG = 1_000_000;
+const MAX_SLOT_ID = 1023;
+const MAX_GOAL_CHARS = 400;
+
+export type DirectiveValidationResult =
+  | { ok: true; directive: NanoSiteDirective }
+  | { ok: false; reason: string; blockedBySafety?: boolean; category?: string; safeMessage?: string };
+
+/**
+ * Deterministic structural validator for all Ask Nano / WebMCP / cartridge site directives.
+ * Enforces explicit allowlists and finite bounds before any state mutation occurs.
+ */
+export function validateSiteDirective(raw: unknown): DirectiveValidationResult {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, reason: 'Directive must be a plain object' };
+  }
+  const d = raw as Record<string, unknown>;
+  const action = typeof d.action === 'string' ? d.action.trim() : '';
+  if (!action || !ALL_VALID_SITE_ACTIONS.has(action as NanoSiteAction)) {
+    return { ok: false, reason: `Unsupported action: ${action || '(empty)'}` };
+  }
+
+  let surfaceId: string | undefined;
+  if (d.surfaceId !== undefined && d.surfaceId !== null && d.surfaceId !== '') {
+    if (typeof d.surfaceId !== 'string' || !SAFE_SURFACE_ID_MATCHER(d.surfaceId.trim())) {
+      return { ok: false, reason: 'Invalid surfaceId' };
+    }
+    surfaceId = d.surfaceId.trim();
+  }
+
+  switch (action as NanoSiteAction) {
+    case 'read_manifest':
+      return { ok: true, directive: { action: 'read_manifest', surfaceId } };
+
+    case 'navigate': {
+      const route = typeof d.route === 'string' ? d.route.trim() : '';
+      if (!route || !VALID_ROUTE_SET.has(route)) {
+        return { ok: false, reason: `Route not in hypervisor allowlist: ${route || '(empty)'}` };
+      }
+      return { ok: true, directive: { action: 'navigate', route, surfaceId } };
+    }
+
+    case 'load_cartridge': {
+      const presetId = typeof d.presetId === 'string' ? d.presetId.trim() : '';
+      if (!presetId || !SAFE_PRESET_ID_MATCHER(presetId)) {
+        return { ok: false, reason: 'Invalid or missing presetId' };
+      }
+      return {
+        ok: true,
+        directive: {
+          action: 'load_cartridge',
+          presetId,
+          autoplay: typeof d.autoplay === 'boolean' ? d.autoplay : undefined,
+          surfaceId,
+        },
+      };
+    }
+
+    case 'set_render_mode': {
+      if (d.mode !== 'svg' && d.mode !== 'canvas' && d.mode !== 'hybrid') {
+        return { ok: false, reason: `Invalid render mode: ${String(d.mode)}` };
+      }
+      return { ok: true, directive: { action: 'set_render_mode', mode: d.mode, surfaceId } };
+    }
+
+    case 'dispatch_tuple': {
+      const slotId = d.slotId === undefined ? 0 : Number(d.slotId);
+      const op = d.op === undefined ? 6 : Number(d.op);
+      const arg1 = d.arg1 === undefined ? 0 : Number(d.arg1);
+      const arg2 = d.arg2 === undefined ? 0 : Number(d.arg2);
+      if (!Number.isInteger(slotId) || slotId < 0 || slotId > MAX_SLOT_ID) {
+        return { ok: false, reason: `slotId out of bounds [0..${MAX_SLOT_ID}]` };
+      }
+      if (!Number.isInteger(op) || !ALLOWED_TUPLE_OPS.has(op)) {
+        return { ok: false, reason: `Opcode ${String(op)} not in WASM allowlist (1..7)` };
+      }
+      if (
+        !Number.isFinite(arg1) ||
+        !Number.isFinite(arg2) ||
+        Math.abs(arg1) > MAX_SAFE_NUMERIC_ARG ||
+        Math.abs(arg2) > MAX_SAFE_NUMERIC_ARG
+      ) {
+        return { ok: false, reason: 'Tuple numeric arguments must be finite and within safe bounds' };
+      }
+      return {
+        ok: true,
+        directive: { action: 'dispatch_tuple', slotId, op, arg1, arg2, surfaceId },
+      };
+    }
+
+    case 'set_var': {
+      const name = typeof d.name === 'string' ? d.name.trim() : '';
+      const value = Number(d.value);
+      if (!name || !SAFE_VAR_NAME_MATCHER(name)) {
+        return { ok: false, reason: 'Invalid variable name' };
+      }
+      if (!Number.isFinite(value) || Math.abs(value) > MAX_SAFE_NUMERIC_ARG) {
+        return { ok: false, reason: 'Variable value must be a finite number within safe bounds' };
+      }
+      return { ok: true, directive: { action: 'set_var', name, value, surfaceId } };
+    }
+
+    case 'highlight_target': {
+      const selector = typeof d.selector === 'string' ? d.selector.trim() : '';
+      if (!selector || !SAFE_SELECTOR_MATCHER(selector)) {
+        return { ok: false, reason: `Unsafe selector rejected: ${selector || '(empty)'}` };
+      }
+      return { ok: true, directive: { action: 'highlight_target', selector, surfaceId } };
+    }
+
+    case 'toggle_bsl':
+      return {
+        ok: true,
+        directive: {
+          action: 'toggle_bsl',
+          enabled: typeof d.enabled === 'boolean' ? d.enabled : undefined,
+          surfaceId,
+        },
+      };
+
+    case 'toggle_sound':
+      return {
+        ok: true,
+        directive: {
+          action: 'toggle_sound',
+          enabled: typeof d.enabled === 'boolean' ? d.enabled : undefined,
+          surfaceId,
+        },
+      };
+
+    case 'open_tutor': {
+      let safePrompt: string | undefined;
+      if (typeof d.prompt === 'string' && d.prompt.trim().length > 0) {
+        const rawPrompt = d.prompt.trim().slice(0, MAX_GOAL_CHARS);
+        const safety = validateStudentInput(rawPrompt);
+        if (!safety.isSafe) {
+          return {
+            ok: false,
+            reason: safety.reason || 'Tutor prompt blocked by child safety policy',
+            blockedBySafety: true,
+            category: safety.category,
+            safeMessage: safety.safeReplacementText,
+          };
+        }
+        safePrompt = sanitizeAiOutput(rawPrompt, 'your lesson').slice(0, MAX_GOAL_CHARS);
+      }
+      return { ok: true, directive: { action: 'open_tutor', prompt: safePrompt, surfaceId } };
+    }
+  }
+}
 
 const DIRECTIVE_JSON_SCHEMA = {
   type: 'object',
@@ -260,25 +472,43 @@ export async function executeSiteDirective(
   detail: Record<string, any>;
   manifest: NanoSiteManifest;
 }> {
+  const validated = validateSiteDirective(directive);
+  if (!validated.ok) {
+    const fallbackAction: NanoSiteAction =
+      directive && typeof directive.action === 'string' && ALL_VALID_SITE_ACTIONS.has(directive.action)
+        ? directive.action
+        : 'read_manifest';
+    return {
+      ok: false,
+      action: fallbackAction,
+      detail: {
+        reason: validated.reason,
+        ...(validated.blockedBySafety
+          ? {
+              blockedBySafety: true,
+              category: validated.category,
+              safeMessage: validated.safeMessage,
+            }
+          : {}),
+      },
+      manifest: getSiteManifest(),
+    };
+  }
+
+  const validDir = validated.directive;
   const boundary = getSharedRenderBoundary();
   const nav = explicitNavigator || boundNavigator;
   const detail: Record<string, any> = {};
   let ok = true;
 
-  switch (directive.action) {
+  switch (validDir.action) {
     case 'read_manifest': {
       detail.note = 'Returned current site and render boundary manifest';
       break;
     }
 
     case 'navigate': {
-      const requested = typeof directive.route === 'string' ? directive.route.trim() : '';
-      if (!requested || !VALID_ROUTES.includes(requested)) {
-        ok = false;
-        detail.reason = `Route not in hypervisor allowlist: ${requested || '(empty)'}`;
-        break;
-      }
-      const targetRoute = requested;
+      const targetRoute = validDir.route!;
       if (nav) {
         await nav(targetRoute);
         detail.navigatedTo = targetRoute;
@@ -296,14 +526,9 @@ export async function executeSiteDirective(
     }
 
     case 'load_cartridge': {
-      const presetId = (directive.presetId || '').trim();
-      if (!presetId || !SAFE_PRESET_ID_RE.test(presetId)) {
-        ok = false;
-        detail.reason = 'Invalid or missing presetId';
-        break;
-      }
+      const presetId = validDir.presetId!;
       if (boundPlayerBridge) {
-        boundPlayerBridge.loadPreset(presetId, Boolean(directive.autoplay));
+        boundPlayerBridge.loadPreset(presetId, Boolean(validDir.autoplay));
         detail.loadedVia = 'active-player-adapter';
         detail.presetId = presetId;
       } else if (nav) {
@@ -323,27 +548,24 @@ export async function executeSiteDirective(
     }
 
     case 'set_render_mode': {
-      const nextMode: RenderMode =
-        directive.mode === 'canvas' || directive.mode === 'hybrid' || directive.mode === 'svg'
-          ? directive.mode
-          : 'hybrid';
-      const res = boundary.setRenderMode(directive.surfaceId, nextMode);
+      const nextMode: RenderMode = validDir.mode!;
+      const res = boundary.setRenderMode(validDir.surfaceId, nextMode);
       ok = res.ok;
       Object.assign(detail, res);
       break;
     }
 
     case 'dispatch_tuple': {
-      const targetBios = getActiveBiosFromBoundary(directive.surfaceId);
+      const targetBios = getActiveBiosFromBoundary(validDir.surfaceId);
       if (!targetBios) {
         ok = false;
         detail.reason = 'No active Everyman WASM Kernel mounted on Shared Render Boundary';
         break;
       }
-      const slotId = Number(directive.slotId || 0);
-      const op = Number(directive.op || 6);
-      const arg1 = Number(directive.arg1 || 0);
-      const arg2 = Number(directive.arg2 || 0);
+      const slotId = validDir.slotId ?? 0;
+      const op = validDir.op ?? 6;
+      const arg1 = validDir.arg1 ?? 0;
+      const arg2 = validDir.arg2 ?? 0;
       const rc = targetBios.bios.dispatchTuple(slotId, op, arg1, arg2);
       ok = rc >= 0;
       detail.surfaceId = targetBios.surfaceId;
@@ -353,25 +575,26 @@ export async function executeSiteDirective(
     }
 
     case 'set_var': {
-      const varName = (directive.name || '').trim();
-      const varVal = Number(directive.value);
-      if (!varName || !Number.isFinite(varVal)) {
-        ok = false;
-        detail.reason = 'Invalid variable name or numeric value';
-        break;
-      }
-      const targetBios = getActiveBiosFromBoundary(directive.surfaceId);
+      const varName = validDir.name!;
+      const varVal = validDir.value!;
+      const targetBios = getActiveBiosFromBoundary(validDir.surfaceId);
+      let matchedKernel = false;
       if (targetBios) {
         const rows = targetBios.bios.readManifest();
         const match = rows.find((r) => r.kind === 'var' && r.semanticTag === varName);
         if (match) {
           targetBios.bios.dispatchTuple(match.slotId, 4, varVal, 0);
           detail.updatedKernelSlot = match.slotId;
+          matchedKernel = true;
         }
       }
       if (boundPlayerBridge?.setVar) {
         boundPlayerBridge.setVar(varName, varVal);
         detail.updatedPlayerVar = varName;
+      } else if (!matchedKernel) {
+        ok = false;
+        detail.reason = `Variable "${varName}" not found in active manifest or player adapter`;
+        break;
       }
       detail.name = varName;
       detail.value = varVal;
@@ -379,53 +602,50 @@ export async function executeSiteDirective(
     }
 
     case 'highlight_target': {
-      const sel = directive.selector || '';
-      const hl = boundary.highlightTarget(sel, 2400, directive.surfaceId);
-      if (boundPlayerBridge?.highlight) {
-        boundPlayerBridge.highlight(sel);
-      }
+      const sel = validDir.selector!;
+      const hl = boundary.highlightTarget(sel, 2400, validDir.surfaceId);
       ok = hl.ok;
       Object.assign(detail, hl);
+      // Only forward to player bridge if render boundary accepted the selector
+      if (hl.ok && boundPlayerBridge?.highlight) {
+        boundPlayerBridge.highlight(sel);
+      }
       break;
     }
 
     case 'toggle_bsl': {
-      const nextBsl = typeof directive.enabled === 'boolean' ? directive.enabled : !getBslEnabled();
+      const nextBsl = typeof validDir.enabled === 'boolean' ? validDir.enabled : !getBslEnabled();
       setBslEnabled(nextBsl);
       detail.bslEnabled = nextBsl;
       break;
     }
 
     case 'toggle_sound': {
-      const nextSound = typeof directive.enabled === 'boolean' ? directive.enabled : !isSoundEnabled();
+      const nextSound = typeof validDir.enabled === 'boolean' ? validDir.enabled : !isSoundEnabled();
       setSoundEnabled(nextSound);
       detail.soundEnabled = nextSound;
       break;
     }
 
     case 'open_tutor': {
-      const prompt = typeof directive.prompt === 'string' ? directive.prompt.trim().slice(0, 400) : '';
+      const safePrompt = validDir.prompt || '';
       if (boundPlayerBridge?.openTutor) {
-        boundPlayerBridge.openTutor(prompt || undefined);
+        boundPlayerBridge.openTutor(safePrompt || undefined);
         detail.openedTutor = true;
-        if (prompt) detail.prompt = prompt;
+        if (safePrompt) detail.prompt = safePrompt;
       } else {
         ok = false;
         detail.reason = 'No active player tutor surface mounted';
       }
       break;
     }
-
-    default:
-      ok = false;
-      detail.reason = `Unsupported action: ${String((directive as any).action)}`;
   }
 
   return {
     ok,
-    action: directive.action,
+    action: validDir.action,
     detail,
-    manifest: getSiteManifest(directive.surfaceId),
+    manifest: getSiteManifest(validDir.surfaceId),
   };
 }
 
@@ -480,6 +700,29 @@ export async function runNanoSitePrompt(
   result: Awaited<ReturnType<typeof executeSiteDirective>>;
 }> {
   const manifest = getSiteManifest();
+  const boundedGoal = typeof goal === 'string' ? goal.trim().slice(0, MAX_GOAL_CHARS) : '';
+
+  // Deterministic fail-closed safeguarding gate BEFORE any LLM invocation or state routing
+  const safety = validateStudentInput(boundedGoal);
+  if (!safety.isSafe) {
+    const blockedDirective: NanoSiteDirective = { action: 'read_manifest' };
+    return {
+      source: 'deterministic-router',
+      directive: blockedDirective,
+      result: {
+        ok: false,
+        action: 'read_manifest',
+        detail: {
+          blockedBySafety: true,
+          category: safety.category,
+          reason: safety.reason || 'Blocked by child safeguarding policy',
+          safeMessage: safety.safeReplacementText,
+        },
+        manifest,
+      },
+    };
+  }
+
   const lm =
     typeof window !== 'undefined'
       ? (window as any).LanguageModel || (typeof self !== 'undefined' ? (self as any).LanguageModel : null)
@@ -488,7 +731,8 @@ export async function runNanoSitePrompt(
   let directive: NanoSiteDirective | null = null;
   let source: 'gemini-nano' | 'deterministic-router' = 'deterministic-router';
 
-  if (lm && typeof lm.create === 'function') {
+  // Honor Eco Mode / UK GDPR consent: only invoke LanguageModel if user explicitly opted in
+  if (hasUserGrantedAiConsent() && lm && typeof lm.create === 'function') {
     try {
       const avail = typeof lm.availability === 'function' ? await lm.availability() : 'available';
       if (avail === 'available' || avail === 'readily') {
@@ -496,17 +740,17 @@ export async function runNanoSitePrompt(
           initialPrompts: [
             {
               role: 'system',
-              content:
-                'You are an on-device site controller. Convert the user request into ONE JSON action matching the schema using the provided compact site manifest.',
+              content: `${CHILD_SAFEGUARDING_SYSTEM_PROMPT}\nYou are an on-device site controller. Convert the user request into ONE JSON action matching the schema using the provided compact site manifest.`,
             },
           ],
         });
         try {
-          const promptText = `Manifest:\n${JSON.stringify(manifest)}\n\nGoal: ${goal}`;
+          const promptText = `Manifest:\n${JSON.stringify(manifest)}\n\nGoal: ${boundedGoal}`;
           const raw = await session.prompt(promptText, { responseConstraint: DIRECTIVE_JSON_SCHEMA });
           const parsed = JSON.parse(String(raw));
-          if (parsed && typeof parsed.action === 'string') {
-            directive = parsed as NanoSiteDirective;
+          const checked = validateSiteDirective(parsed);
+          if (checked.ok) {
+            directive = checked.directive;
             source = 'gemini-nano';
           }
         } finally {
@@ -520,7 +764,7 @@ export async function runNanoSitePrompt(
   }
 
   if (!directive) {
-    directive = parseDeterministicSiteGoal(goal, manifest);
+    directive = parseDeterministicSiteGoal(boundedGoal, manifest);
   }
 
   const result = await executeSiteDirective(directive, explicitNavigator);

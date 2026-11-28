@@ -2,8 +2,11 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import vm from 'vm';
-import { createHeadlessEngine } from './harness';
+import {
+  createHeadlessEngine,
+  loadSiteGesturesRuntimeIntoSandbox,
+  SITE_GESTURES_RUNTIME_MODULES,
+} from './harness';
 
 export async function runGesturesStemParamsInvariants(): Promise<number> {
   let passedTests = 0;
@@ -13,11 +16,13 @@ export async function runGesturesStemParamsInvariants(): Promise<number> {
   // =========================================================================
   {
     console.log('\n[Test 24] Auditing Batch 2 STEM declarative VM migration (electric-circuits, kinetic-gas, dna-helix)...');
-    const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+    const gesturesSrc = SITE_GESTURES_RUNTIME_MODULES.map((m) =>
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', m), 'utf8')
+    ).join('\n');
     for (const legacySym of ['handlePistonDrag', 'toggleSwitch', 'dna-control-ribbon']) {
       assert(
         !gesturesSrc.includes(legacySym),
-        `ast-gestures.js must not contain removed Batch 2 symbol "${legacySym}"`
+        `site-gestures*.js must not contain removed Batch 2 symbol "${legacySym}"`
       );
     }
 
@@ -108,7 +113,7 @@ export async function runGesturesStemParamsInvariants(): Promise<number> {
       };
       gSb.globalThis = gSb;
       gSb.self = gSb.window;
-      vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+      loadSiteGesturesRuntimeIntoSandbox(gSb);
 
       const gVm = new gSb.window.ASTDirectGestureSubsystem(vmEngine);
       gVm.playAudioTone = (hz: number) => tones.push(hz);
@@ -223,7 +228,9 @@ export async function runGesturesStemParamsInvariants(): Promise<number> {
   // =========================================================================
   {
     console.log('\n[Test 25] Auditing Batch 3 STEM declarative VM migration (mountain-elevation, calculus-curves, pythagoras)...');
-    const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+    const gesturesSrc = SITE_GESTURES_RUNTIME_MODULES.map((m) =>
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', m), 'utf8')
+    ).join('\n');
     for (const legacySym of [
       'handleClimberDrag',
       'handleTangentProbeDrag',
@@ -234,7 +241,7 @@ export async function runGesturesStemParamsInvariants(): Promise<number> {
     ]) {
       assert(
         !gesturesSrc.includes(legacySym),
-        `ast-gestures.js must not contain removed Batch 3 symbol "${legacySym}"`
+        `site-gestures*.js must not contain removed Batch 3 symbol "${legacySym}"`
       );
     }
 
@@ -328,7 +335,7 @@ export async function runGesturesStemParamsInvariants(): Promise<number> {
       };
       gSb.globalThis = gSb;
       gSb.self = gSb.window;
-      vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+      loadSiteGesturesRuntimeIntoSandbox(gSb);
 
       const tones: number[] = [];
       const gVm = new gSb.window.ASTDirectGestureSubsystem(engine);

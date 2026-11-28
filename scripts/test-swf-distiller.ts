@@ -16,6 +16,11 @@ import {
   inferRecommendedFormat,
   normalizeCapturedSnapshot,
 } from '../src/utils/swfNativeDistiller';
+import {
+  compileAstTextToBytecode,
+  decompileBytecodeToScene,
+  isAstBytecode,
+} from '../src/utils/astBytecode';
 
 class MockEl {
   tagName: string;
@@ -217,6 +222,21 @@ async function runSampleDistillTest(
       const astTree = ASTCompiler.parse(distilled.astSource);
       assert.ok(astTree, `${name} (${fmt}): ASTCompiler.parse returned empty`);
     }
+
+    // Verify distilled .ast + .svg pair compiles directly into standalone .astb bytecode & round-trips
+    const astbBytes = compileAstTextToBytecode(distilled.astSource, {
+      svgMarkup: distilled.svgMarkup,
+      idOverride: distilled.id,
+      titleOverride: distilled.title,
+    });
+    assert.equal(isAstBytecode(astbBytes), true, `${name} (${fmt}): compiled .astb header invalid`);
+    const roundTrip = decompileBytecodeToScene(astbBytes);
+    assert.equal(roundTrip.id, distilled.id, `${name} (${fmt}): .astb round-trip id mismatch`);
+    assert.equal(roundTrip.type, fmt, `${name} (${fmt}): .astb round-trip type mismatch`);
+    assert.ok(
+      typeof roundTrip.svgMarkup === 'string' && roundTrip.svgMarkup.includes('<svg'),
+      `${name} (${fmt}): .astb round-trip missing embedded SVG`
+    );
   }
 
   runtime.destroy();

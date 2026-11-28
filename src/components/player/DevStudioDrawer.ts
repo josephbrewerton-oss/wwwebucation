@@ -7,8 +7,6 @@
  */
 
 import { renderSvgInspectorDrawer, type InspectedElementData } from './SvgInspectorDrawer';
-import { renderSwfTranspilerDrawer } from './SwfTranspilerDrawer';
-import { renderPhetTranspilerDrawer } from './PhetTranspilerDrawer';
 import { type SwfTranspileResult } from '../../utils/swfAstParser';
 import { compileAstTextToBytecode, decompileBytecodeToScene } from '../../utils/astBytecode';
 import { downloadAstbBinary } from '../../services/localCartridgeBuilder';
@@ -308,31 +306,51 @@ export function renderDevStudioDrawer(props: DevStudioDrawerProps): HTMLElement 
 
     contentArea.appendChild(tmplGrid);
   } else if (studioTab === 'swf') {
-    contentArea.appendChild(
-      renderSwfTranspilerDrawer({
-        swfResult,
-        setSwfResult,
-        isParsingSwf,
-        setIsParsingSwf,
-        swfError,
-        setSwfError,
-        swfDragActive,
-        setSwfDragActive,
-        setCustomSvgCode,
-        setCustomAstCode,
-        postToPlayer,
-        setHotReloadFlash,
+    const swfHost = document.createElement('div');
+    swfHost.innerHTML = `<div style="padding: 1rem; color: var(--stj-text-muted, #94a3b8); font-size: 0.78rem;">Loading SWF Transpiler…</div>`;
+    contentArea.appendChild(swfHost);
+    import('./SwfTranspilerDrawer')
+      .then(({ renderSwfTranspilerDrawer }) => {
+        swfHost.innerHTML = '';
+        swfHost.appendChild(
+          renderSwfTranspilerDrawer({
+            swfResult,
+            setSwfResult,
+            isParsingSwf,
+            setIsParsingSwf,
+            swfError,
+            setSwfError,
+            swfDragActive,
+            setSwfDragActive,
+            setCustomSvgCode,
+            setCustomAstCode,
+            postToPlayer,
+            setHotReloadFlash,
+          })
+        );
       })
-    );
+      .catch(() => {
+        swfHost.innerHTML = `<div style="padding: 1rem; color: #f87171; font-size: 0.78rem;">Failed to load SWF Transpiler module.</div>`;
+      });
   } else if (studioTab === 'phet') {
-    contentArea.appendChild(
-      renderPhetTranspilerDrawer({
-        setCustomSvgCode,
-        setCustomAstCode,
-        postToPlayer,
-        setHotReloadFlash,
+    const phetHost = document.createElement('div');
+    phetHost.innerHTML = `<div style="padding: 1rem; color: var(--stj-text-muted, #94a3b8); font-size: 0.78rem;">Loading PhET Transpiler…</div>`;
+    contentArea.appendChild(phetHost);
+    import('./PhetTranspilerDrawer')
+      .then(({ renderPhetTranspilerDrawer }) => {
+        phetHost.innerHTML = '';
+        phetHost.appendChild(
+          renderPhetTranspilerDrawer({
+            setCustomSvgCode,
+            setCustomAstCode,
+            postToPlayer,
+            setHotReloadFlash,
+          })
+        );
       })
-    );
+      .catch(() => {
+        phetHost.innerHTML = `<div style="padding: 1rem; color: #f87171; font-size: 0.78rem;">Failed to load PhET Transpiler module.</div>`;
+      });
   }
 
   container.appendChild(contentArea);

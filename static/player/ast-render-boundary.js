@@ -55,6 +55,77 @@
   ];
 
   const DANGEROUS_TAGS = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'link', 'meta', 'style'];
+  const SMIL_TAGS = new Set(['animate', 'animatemotion', 'animatetransform', 'set']);
+  const SAFE_SMIL_ATTR_NAMES = new Set([
+    'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
+    'width', 'height', 'd', 'points', 'transform', 'opacity', 'fill',
+    'fill-opacity', 'stroke', 'stroke-opacity', 'stroke-width',
+    'stroke-dasharray', 'stroke-dashoffset', 'visibility', 'display',
+    'offset', 'stop-color', 'stop-opacity', 'stddeviation', 'dx', 'dy',
+    'viewbox', 'flood-opacity', 'flood-color',
+  ]);
+  const SAFE_INLINE_STYLE_PROPS = new Set([
+    'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
+    'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'stroke-dashoffset',
+    'stroke-miterlimit', 'opacity', 'visibility', 'display', 'cursor', 'pointer-events',
+    'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor',
+    'letter-spacing', 'word-spacing', 'dominant-baseline', 'text-transform',
+    'color', 'transform', 'transform-origin', 'mix-blend-mode', 'isolation',
+    'vector-effect', 'shape-rendering', 'text-rendering', 'image-rendering',
+    'stop-color', 'stop-opacity', 'clip-path', 'mask', 'filter',
+    'user-select', '-webkit-user-select',
+  ]);
+  const SAFE_LOCAL_URL_RX = /^url\(\s*#[A-Za-z_][A-Za-z0-9_-]{0,63}\s*\)$/;
+  const SAFE_ID_SELECTOR_RX = /^#[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
+  const MAX_SVG_TOKENS = 50000;
+  const MAX_SVG_DEPTH = 64;
+
+  function sanitizeUntrustedSvgHrefGlobal(tagName, hrefValue) {
+    const tagLower = String(tagName || '').toLowerCase();
+    if (tagLower !== 'use' && tagLower !== 'image') return null;
+    const trimmed = String(hrefValue || '').trim();
+    if (!trimmed) return null;
+    if (/[\u0000-\u001F\u007F]/.test(trimmed)) return null;
+    if (/\s/.test(trimmed)) return null;
+    if (/^#[A-Za-z_][A-Za-z0-9_.-]{0,63}$/.test(trimmed)) return trimmed;
+    if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)) return trimmed;
+    return null;
+  }
+
+  function sanitizeInlineStyle(rawStyle) {
+    if (!rawStyle || typeof rawStyle !== 'string') return '';
+    if (rawStyle.length > 4096) return '';
+    const cleaned = rawStyle.replace(/[\u0000-\u001F\u007F]/g, '');
+    const decls = cleaned.split(';');
+    const safeDecls = [];
+    for (let i = 0; i < decls.length; i++) {
+      const part = decls[i].trim();
+      if (!part) continue;
+      const colonIdx = part.indexOf(':');
+      if (colonIdx <= 0) continue;
+      const prop = part.slice(0, colonIdx).trim().toLowerCase();
+      const val = part.slice(colonIdx + 1).trim();
+      if (!val || !SAFE_INLINE_STYLE_PROPS.has(prop)) continue;
+      const valLower = val.toLowerCase();
+      if (
+        valLower.includes('expression(') ||
+        valLower.includes('javascript:') ||
+        valLower.includes('vbscript:') ||
+        valLower.includes('data:') ||
+        valLower.includes('@import') ||
+        valLower.includes('-moz-binding') ||
+        valLower.includes('behavior:') ||
+        valLower.includes('/*')
+      ) {
+        continue;
+      }
+      if (valLower.includes('url(') && !SAFE_LOCAL_URL_RX.test(val)) {
+        continue;
+      }
+      safeDecls.push(prop + ':' + val);
+    }
+    return safeDecls.join(';');
+  }
 
   const surfaces = new Map();
   const listeners = new Set();
@@ -233,22 +304,50 @@
     for (let j = 0; j < allElements.length; j++) {
       const el = allElements[j];
       if (!el || !el.attributes) continue;
+      const tagLower = (el.tagName || '').toLowerCase();
+
+      // Remove SMIL nodes attempting to animate unsafe attributes (e.g. href, xlink:href, style, on*)
+      if (SMIL_TAGS.has(tagLower) && typeof el.getAttribute === 'function') {
+        const targetAttr = (el.getAttribute('attributeName') || el.getAttribute('attributename') || '').trim().toLowerCase();
+        if (targetAttr && !SAFE_SMIL_ATTR_NAMES.has(targetAttr)) {
+          if (typeof el.remove === 'function') el.remove();
+          continue;
+        }
+      }
+
       const toRemove = [];
+      const styleReplacements = [];
       for (let i = 0; i < el.attributes.length; i++) {
         const attr = el.attributes[i];
         const name = attr.name.toLowerCase();
-        const val = (attr.value || '').trim().toLowerCase();
+        const rawVal = String(attr.value || '');
         if (name.startsWith('on')) {
           toRemove.push(attr.name);
-        } else if (
-          (name === 'href' || name.endsWith(':href') || name === 'src') &&
-          /^(javascript:|vbscript:|data:(?!image\/(png|jpe?g|gif|webp|svg\+xml)))/i.test(val)
-        ) {
+        } else if (name === 'xlink:href') {
           toRemove.push(attr.name);
+        } else if (name === 'href' || name.endsWith(':href') || name === 'src') {
+          if (!sanitizeUntrustedSvgHrefGlobal(tagLower, rawVal)) {
+            toRemove.push(attr.name);
+          }
+        } else if (name === 'style') {
+          const safeStyle = sanitizeInlineStyle(rawVal);
+          if (!safeStyle) {
+            toRemove.push(attr.name);
+          } else if (safeStyle !== rawVal) {
+            styleReplacements.push(safeStyle);
+          }
+        } else if (SMIL_TAGS.has(tagLower) && (name === 'from' || name === 'to' || name === 'by' || name === 'values')) {
+          const vLower = rawVal.replace(/[\u0000-\u001F\u007F\s]/g, '').toLowerCase();
+          if (vLower.includes('javascript:') || vLower.includes('vbscript:') || vLower.includes('data:')) {
+            toRemove.push(attr.name);
+          }
         }
       }
       for (let k = 0; k < toRemove.length; k++) {
         el.removeAttribute(toRemove[k]);
+      }
+      if (styleReplacements.length > 0 && typeof el.setAttribute === 'function') {
+        el.setAttribute('style', styleReplacements[0]);
       }
     }
     return rootSvg;
@@ -516,28 +615,106 @@
           .replace(/&quot;/g, '"')
           .replace(/&apos;/g, "'")
           .replace(/&amp;/g, '&');
-        const sanitizeUntrustedSvgHref = (tagName, hrefValue) => {
-          const tagLower = String(tagName || '').toLowerCase();
-          if (tagLower !== 'use' && tagLower !== 'image') return null;
-          const trimmed = String(hrefValue || '').trim();
-          if (!trimmed) return null;
-          if (/[\u0000-\u001F\u007F]/.test(trimmed)) return null;
-          if (/\s/.test(trimmed)) return null;
-          if (/^#[A-Za-z_][\w:.-]*$/.test(trimmed)) return trimmed;
-          if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)) return trimmed;
-          return null;
+        const sanitizeUntrustedSvgHref = sanitizeUntrustedSvgHrefGlobal;
+
+        // Linear O(n) character-scanner for SVG attributes (zero regex backtracking)
+        const scanSvgAttributes = (str, start, end) => {
+          const attrs = [];
+          let p = start;
+          while (p < end) {
+            while (p < end && (str.charCodeAt(p) <= 32)) p++;
+            if (p >= end || str[p] === '/') break;
+            const nameStart = p;
+            while (p < end) {
+              const ch = str[p];
+              if (
+                (ch >= 'a' && ch <= 'z') ||
+                (ch >= 'A' && ch <= 'Z') ||
+                (ch >= '0' && ch <= '9') ||
+                ch === '-' || ch === ':' || ch === '_'
+              ) {
+                p++;
+              } else {
+                break;
+              }
+            }
+            if (p === nameStart) {
+              p++;
+              continue;
+            }
+            const rawName = str.slice(nameStart, p);
+            while (p < end && str.charCodeAt(p) <= 32) p++;
+            let rawVal = '';
+            if (p < end && str[p] === '=') {
+              p++;
+              while (p < end && str.charCodeAt(p) <= 32) p++;
+              if (p < end && (str[p] === '"' || str[p] === "'")) {
+                const quote = str[p++];
+                const valStart = p;
+                const closeQ = str.indexOf(quote, p);
+                if (closeQ !== -1 && closeQ < end) {
+                  rawVal = str.slice(valStart, closeQ);
+                  p = closeQ + 1;
+                } else {
+                  rawVal = str.slice(valStart, end);
+                  p = end;
+                }
+              } else {
+                const valStart = p;
+                while (p < end && str.charCodeAt(p) > 32 && str[p] !== '/' && str[p] !== '>') {
+                  p++;
+                }
+                rawVal = str.slice(valStart, p);
+              }
+            }
+            attrs.push([rawName, rawVal]);
+          }
+          return attrs;
         };
 
         let rootSvg = null;
         const stack = [];
         const skipStack = [];
-        const tokenRx = /<!--[\s\S]*?-->|<\/([a-zA-Z0-9:-]+)\s*>|<([a-zA-Z0-9:-]+)((?:\s+[a-zA-Z0-9:-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*(\/?)>|([^<]+)/g;
-        let match;
+        const len = svgMarkup.length;
+        let pos = 0;
+        let tokenCount = 0;
 
-        while ((match = tokenRx.exec(svgMarkup)) !== null) {
-          const [, closeTag, openTag, attrStr, selfClose, textNode] = match;
-          if (closeTag) {
-            const closeLower = closeTag.toLowerCase();
+        // Strictly linear O(n) SVG tag/text scanner — immune to ReDoS on malformed unclosed tags
+        while (pos < len && tokenCount < MAX_SVG_TOKENS) {
+          tokenCount++;
+          const lt = svgMarkup.indexOf('<', pos);
+          if (lt === -1) {
+            if (skipStack.length === 0 && stack.length > 0 && pos < len) {
+              stack[stack.length - 1].appendChild(document.createTextNode(decodeEntities(svgMarkup.slice(pos))));
+            }
+            break;
+          }
+          if (lt > pos) {
+            if (skipStack.length === 0 && stack.length > 0) {
+              stack[stack.length - 1].appendChild(document.createTextNode(decodeEntities(svgMarkup.slice(pos, lt))));
+            }
+            pos = lt;
+          }
+
+          // Comment <!-- ... -->
+          if (svgMarkup.startsWith('<!--', pos)) {
+            const endComment = svgMarkup.indexOf('-->', pos + 4);
+            pos = endComment === -1 ? len : endComment + 3;
+            continue;
+          }
+          // Processing instruction <? ... ?> or declaration <! ... >
+          if (svgMarkup[pos + 1] === '?' || svgMarkup[pos + 1] === '!') {
+            const endDecl = svgMarkup.indexOf('>', pos + 2);
+            pos = endDecl === -1 ? len : endDecl + 1;
+            continue;
+          }
+
+          // Closing tag </tag>
+          if (svgMarkup[pos + 1] === '/') {
+            const gt = svgMarkup.indexOf('>', pos + 2);
+            if (gt === -1) break;
+            const closeLower = svgMarkup.slice(pos + 2, gt).trim().toLowerCase();
+            pos = gt + 1;
             if (skipStack.length > 0) {
               if (skipStack[skipStack.length - 1] === closeLower) {
                 skipStack.pop();
@@ -547,53 +724,126 @@
             if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === closeLower) {
               stack.pop();
             }
-          } else if (openTag) {
-            const tagLower = openTag.toLowerCase();
-            if (skipStack.length > 0 || !ALLOWED_TAGS.has(tagLower)) {
+            continue;
+          }
+
+          // Opening tag <tag ...> — scan linearly respecting quoted attribute values
+          let nameEnd = pos + 1;
+          while (nameEnd < len) {
+            const ch = svgMarkup[nameEnd];
+            if (
+              (ch >= 'a' && ch <= 'z') ||
+              (ch >= 'A' && ch <= 'Z') ||
+              (ch >= '0' && ch <= '9') ||
+              ch === '-' || ch === ':'
+            ) {
+              nameEnd++;
+            } else {
+              break;
+            }
+          }
+          if (nameEnd === pos + 1) {
+            pos++;
+            continue;
+          }
+          const openTag = svgMarkup.slice(pos + 1, nameEnd);
+          let scan = nameEnd;
+          let inQuote = '';
+          let tagClose = -1;
+          while (scan < len) {
+            const ch = svgMarkup[scan];
+            if (inQuote) {
+              if (ch === inQuote) inQuote = '';
+            } else if (ch === '"' || ch === "'") {
+              inQuote = ch;
+            } else if (ch === '>') {
+              tagClose = scan;
+              break;
+            }
+            scan++;
+          }
+          if (tagClose === -1) {
+            // Unclosed malformed tag at tail: bail cleanly in O(n)
+            break;
+          }
+
+          let attrEnd = tagClose;
+          while (attrEnd > nameEnd && svgMarkup.charCodeAt(attrEnd - 1) <= 32) attrEnd--;
+          const selfClose = attrEnd > nameEnd && svgMarkup[attrEnd - 1] === '/';
+          if (selfClose) attrEnd--;
+          pos = tagClose + 1;
+
+          const tagLower = openTag.toLowerCase();
+          if (skipStack.length > 0 || !ALLOWED_TAGS.has(tagLower) || stack.length >= MAX_SVG_DEPTH) {
+            if (!selfClose && !VOID_TAGS.has(tagLower)) {
+              skipStack.push(tagLower);
+            }
+            continue;
+          }
+
+          const parsedAttrs = nameEnd < attrEnd ? scanSvgAttributes(svgMarkup, nameEnd, attrEnd) : [];
+
+          // Block SMIL nodes targeting unsafe attributeName (e.g. href, xlink:href, style, on*)
+          if (SMIL_TAGS.has(tagLower)) {
+            let unsafeSmil = false;
+            for (let a = 0; a < parsedAttrs.length; a++) {
+              const aName = parsedAttrs[a][0].toLowerCase();
+              if (aName === 'attributename') {
+                const targetAttr = decodeEntities(parsedAttrs[a][1]).trim().toLowerCase();
+                if (!targetAttr || !SAFE_SMIL_ATTR_NAMES.has(targetAttr)) {
+                  unsafeSmil = true;
+                  break;
+                }
+              }
+            }
+            if (unsafeSmil) {
               if (!selfClose && !VOID_TAGS.has(tagLower)) {
                 skipStack.push(tagLower);
               }
               continue;
             }
-            const canonicalTag = TAG_CANONICAL[tagLower] || openTag;
-            const el = document.createElementNS(SVG_NS, canonicalTag);
-            if (attrStr) {
-              const attrRx = /([a-zA-Z0-9:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
-              let aMatch;
-              while ((aMatch = attrRx.exec(attrStr)) !== null) {
-                const rawName = aMatch[1];
-                const nameLower = rawName.toLowerCase();
-                if (nameLower.startsWith('on')) continue;
-                if (!ALLOWED_ATTRS.has(nameLower) && !nameLower.startsWith('data-') && !nameLower.startsWith('aria-')) {
-                  continue;
-                }
-                const canonicalAttr = ATTR_CANONICAL[nameLower] || rawName;
-                const val = decodeEntities(aMatch[2] ?? aMatch[3] ?? aMatch[4] ?? '');
-                if (nameLower === 'xlink:href') {
-                  // Reject legacy xlink URL attributes from untrusted SVG input.
-                  continue;
-                } else if (nameLower === 'href') {
-                  const safeHref = sanitizeUntrustedSvgHref(el.tagName, val);
-                  if (!safeHref) {
-                    // Block navigational and non-canonical href values on untrusted SVG nodes.
-                    continue;
-                  }
-                  el.setAttribute('href', safeHref);
-                } else {
-                  el.setAttribute(canonicalAttr, val);
-                }
+          }
+
+          const canonicalTag = TAG_CANONICAL[tagLower] || openTag;
+          const el = document.createElementNS(SVG_NS, canonicalTag);
+          for (let a = 0; a < parsedAttrs.length; a++) {
+            const rawName = parsedAttrs[a][0];
+            const nameLower = rawName.toLowerCase();
+            if (nameLower.startsWith('on')) continue;
+            if (!ALLOWED_ATTRS.has(nameLower) && !nameLower.startsWith('data-') && !nameLower.startsWith('aria-')) {
+              continue;
+            }
+            const canonicalAttr = ATTR_CANONICAL[nameLower] || rawName;
+            const val = decodeEntities(parsedAttrs[a][1]);
+            if (nameLower === 'xlink:href') {
+              // Reject legacy xlink URL attributes from untrusted SVG input.
+              continue;
+            } else if (nameLower === 'href') {
+              const safeHref = sanitizeUntrustedSvgHref(el.tagName, val);
+              if (!safeHref) continue;
+              el.setAttribute('href', safeHref);
+            } else if (nameLower === 'style') {
+              const safeStyle = sanitizeInlineStyle(val);
+              if (!safeStyle) continue;
+              el.setAttribute('style', safeStyle);
+            } else if (SMIL_TAGS.has(tagLower) && (nameLower === 'from' || nameLower === 'to' || nameLower === 'by' || nameLower === 'values')) {
+              const vLower = val.replace(/[\u0000-\u001F\u007F\s]/g, '').toLowerCase();
+              if (vLower.includes('javascript:') || vLower.includes('vbscript:') || vLower.includes('data:')) {
+                continue;
               }
+              el.setAttribute(canonicalAttr, val);
+            } else {
+              el.setAttribute(canonicalAttr, val);
             }
-            if (stack.length > 0) {
-              stack[stack.length - 1].appendChild(el);
-            } else if (tagLower === 'svg') {
-              rootSvg = el;
-            }
-            if (!selfClose && !VOID_TAGS.has(tagLower) && (stack.length > 0 || tagLower === 'svg')) {
-              stack.push(el);
-            }
-          } else if (textNode && skipStack.length === 0 && stack.length > 0) {
-            stack[stack.length - 1].appendChild(document.createTextNode(decodeEntities(textNode)));
+          }
+
+          if (stack.length > 0) {
+            stack[stack.length - 1].appendChild(el);
+          } else if (tagLower === 'svg') {
+            rootSvg = el;
+          }
+          if (!selfClose && !VOID_TAGS.has(tagLower) && (stack.length > 0 || tagLower === 'svg')) {
+            stack.push(el);
           }
         }
         return rootSvg;
@@ -822,9 +1072,10 @@
   function highlightTarget(selector, durationMs, surfaceId) {
     if (!selector || typeof selector !== 'string') return { ok: false, reason: 'invalid_selector' };
     const cleanSel = selector.trim();
-    if (!/^#[a-zA-Z0-9_\-:]+$/.test(cleanSel)) {
+    if (!SAFE_ID_SELECTOR_RX.test(cleanSel)) {
       return { ok: false, reason: 'unsafe_selector', selector: cleanSel };
     }
+    const rawId = cleanSel.slice(1);
     const surf = getSurface(surfaceId);
     const roots = [];
     if (surf && surf.svgContainer) roots.push(surf.svgContainer);
@@ -833,8 +1084,13 @@
 
     let targetEl = null;
     for (let i = 0; i < roots.length; i++) {
-      if (roots[i] && typeof roots[i].querySelector === 'function') {
-        targetEl = roots[i].querySelector(cleanSel);
+      const root = roots[i];
+      if (!root) continue;
+      if (typeof root.getElementById === 'function') {
+        targetEl = root.getElementById(rawId);
+        if (targetEl) break;
+      } else if (typeof root.querySelector === 'function') {
+        targetEl = root.querySelector(cleanSel);
         if (targetEl) break;
       }
     }

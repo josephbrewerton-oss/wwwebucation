@@ -2,8 +2,11 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import vm from 'vm';
-import { createHeadlessEngine } from './harness';
+import {
+  createHeadlessEngine,
+  loadSiteGesturesRuntimeIntoSandbox,
+  SITE_GESTURES_RUNTIME_MODULES,
+} from './harness';
 
 export async function runGesturesCoreInvariants(): Promise<number> {
   let passedTests = 0;
@@ -13,7 +16,10 @@ export async function runGesturesCoreInvariants(): Promise<number> {
   // =========================================================================
   console.log('\n--- TEST 22: Section 10 Declarative Gesture VM Invariants ---');
   {
-    const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+    const gesturesSrc = SITE_GESTURES_RUNTIME_MODULES.map((m) =>
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', m), 'utf8')
+    ).join('\n');
+    const gesturesInputSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-input.js'), 'utf8');
     const engParse = createHeadlessEngine();
 
     // 22a. Verify ast-engine.js :gestures parser extracts :var-x, :var-y, :cx, :cy, :expr, :tone, :speak, and numeric :step
@@ -41,14 +47,15 @@ export async function runGesturesCoreInvariants(): Promise<number> {
     assert.strictEqual(sliderG?.stepVar, null, 'Numeric :step must not pollute stepVar');
     assert.strictEqual(speakG?.speak, 'Metric updated', 'Parser must extract :speak directive');
 
-    // Verify Section 10 does not contain removed scene hacks
-    const section10Idx = gesturesSrc.indexOf('10. Dynamic Declarative Scene Gestures');
-    const section10EndIdx = gesturesSrc.indexOf('handleBindInputDrag(');
-    const section10Block = gesturesSrc.slice(section10Idx, section10EndIdx);
-    assert(!section10Block.includes("activePresetId === 'algebra-balance'"), 'handleGenericDrag must not contain algebra-balance hack');
-    assert(!section10Block.includes("varName === 'selectedRite'"), 'handleGenericDrag must not contain selectedRite hack');
-    assert(!section10Block.includes("flipUnderside"), 'handleTrackballDrag must not contain flipUnderside hack');
-    assert(!section10Block.includes("targetTx"), 'handleRotateDrag must not reference undeclared targetTx');
+    // Verify declarative gesture VM does not contain removed scene hacks
+    assert(!gesturesSrc.includes("activePresetId === 'algebra-balance'"), 'site-gestures runtime must not contain algebra-balance hack');
+    assert(!gesturesSrc.includes("varName === 'selectedRite'"), 'site-gestures runtime must not contain selectedRite hack');
+    assert(!gesturesSrc.includes("flipUnderside"), 'site-gestures runtime must not contain flipUnderside hack');
+    const rotateStartIdx = gesturesInputSrc.indexOf('function handleRotateDrag(');
+    assert(rotateStartIdx !== -1, 'site-gestures-input.js must define handleRotateDrag');
+    const rotateEndIdx = gesturesInputSrc.indexOf('\n  function ', rotateStartIdx + 1);
+    const rotateBlock = gesturesInputSrc.slice(rotateStartIdx, rotateEndIdx === -1 ? gesturesInputSrc.length : rotateEndIdx);
+    assert(!rotateBlock.includes('targetTx'), 'handleRotateDrag must not reference undeclared targetTx');
 
     // 22b. Execute ASTDirectGestureSubsystem inside isolated VM with lightweight DOM stubs
     const makeMockEl = (id: string, attrs: Record<string, string> = {}) => {
@@ -164,7 +171,7 @@ export async function runGesturesCoreInvariants(): Promise<number> {
     };
     gSb.globalThis = gSb;
     gSb.self = gSb.window;
-    vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+    loadSiteGesturesRuntimeIntoSandbox(gSb);
 
     const gesturesVm = new gSb.window.ASTDirectGestureSubsystem(mockEngine);
     const tonesPlayed: number[] = [];
@@ -248,7 +255,9 @@ export async function runGesturesCoreInvariants(): Promise<number> {
   // =========================================================================
   console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartridges) ---');
   {
-    const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+    const gesturesSrc = SITE_GESTURES_RUNTIME_MODULES.map((m) =>
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', m), 'utf8')
+    ).join('\n');
     const removedSymbols = [
       'setupCatholicRitesInteractivity',
       'handleRiteSelectorDrag',
@@ -260,7 +269,7 @@ export async function runGesturesCoreInvariants(): Promise<number> {
       'handleCategoryKnobDrag',
     ];
     for (const sym of removedSymbols) {
-      assert(!gesturesSrc.includes(sym), `Legacy Batch 1 handler "${sym}" must be deleted from static/player/ast-gestures.js`);
+      assert(!gesturesSrc.includes(sym), `Legacy Batch 1 handler "${sym}" must not exist in static/player/site-gestures*.js`);
     }
 
     const reCases = [
@@ -407,7 +416,7 @@ export async function runGesturesCoreInvariants(): Promise<number> {
       };
       gSb.globalThis = gSb;
       gSb.self = gSb.window;
-      vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+      loadSiteGesturesRuntimeIntoSandbox(gSb);
 
       const gVm = new gSb.window.ASTDirectGestureSubsystem(vmEngine);
       gVm.playAudioTone = (hz: number) => tones.push(hz);
